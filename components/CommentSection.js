@@ -2,19 +2,33 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { subscribeToComments, addComment, deleteComment } from '@/lib/firestore-helpers';
+import { subscribeToComments, addComment, deleteComment, toggleCommentLike } from '@/lib/firestore-helpers';
 import { useAuth } from '@/components/AuthProvider';
 import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
 import Avatar from '@/components/Avatar';
 import TextoComLinks from '@/components/TextoComLinks';
 import { formatDateTimeBR } from '@/lib/dateUtils';
-import { Send, Trash2 } from 'lucide-react';
+import { Send, Trash2, Heart } from 'lucide-react';
 
-function LinhaComentario({ comentario, podeExcluir, onExcluir }) {
+function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir }) {
   const autor = useUsuarioAtual(comentario.autorId, {
     nome: comentario.autorNome,
     fotoURL: comentario.autorFoto,
   });
+  const [curtindo, setCurtindo] = useState(false);
+
+  // Item 20 — Curtir comentários
+  const jaCurtiu = comentario.curtidas?.includes(uidAtual);
+
+  async function handleCurtir() {
+    if (!uidAtual || curtindo) return;
+    setCurtindo(true);
+    try {
+      await toggleCommentLike(postId, comentario.id, uidAtual, jaCurtiu);
+    } finally {
+      setCurtindo(false);
+    }
+  }
 
   return (
     <li className="flex items-start gap-2.5">
@@ -38,10 +52,20 @@ function LinhaComentario({ comentario, podeExcluir, onExcluir }) {
             <TextoComLinks texto={comentario.texto} />
           </p>
         </div>
-        <div className="mt-1 flex items-center gap-2 px-1">
+        <div className="mt-1 flex items-center gap-3 px-1">
           <span className="text-[11px] text-coffee-300">
             {comentario.createdAt ? formatDateTimeBR(comentario.createdAt) : 'agora'}
           </span>
+          <button
+            onClick={handleCurtir}
+            disabled={curtindo}
+            className={`flex items-center gap-1 text-[11px] font-medium ${
+              jaCurtiu ? 'text-red-500' : 'text-coffee-300 hover:text-red-400'
+            }`}
+          >
+            <Heart size={11} fill={jaCurtiu ? 'currentColor' : 'none'} />
+            {comentario.curtidas?.length > 0 && comentario.curtidas.length}
+          </button>
           {podeExcluir && (
             <button
               onClick={onExcluir}
@@ -103,7 +127,9 @@ export default function CommentSection({ postId }) {
           {comentarios.map((c) => (
             <LinhaComentario
               key={c.id}
+              postId={postId}
               comentario={c}
+              uidAtual={perfil?.uid}
               podeExcluir={c.autorId === perfil?.uid || perfil?.isAdmin}
               onExcluir={() => handleExcluir(c.id)}
             />

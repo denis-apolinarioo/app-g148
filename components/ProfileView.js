@@ -12,7 +12,7 @@ import ImageViewerModal from '@/components/ImageViewerModal';
 import { subscribeToUserPosts, subscribeToUserPrayers } from '@/lib/firestore-helpers';
 import { getConquistasDoUsuario } from '@/lib/achievements';
 
-export default function ProfileView({ usuario }) {
+export default function ProfileView({ usuario, usuarioAtual }) {
   const [posts, setPosts] = useState(null);
   const [pedidosAtivos, setPedidosAtivos] = useState([]);
   const [conquistas, setConquistas] = useState([]);
@@ -108,7 +108,7 @@ export default function ProfileView({ usuario }) {
             {posts === null && <div className="h-24 animate-pulse rounded-xl2 bg-coffee-100/60" />}
             {posts?.length === 0 && <EmptyState titulo="Nenhum post ainda" />}
             {posts?.map((post) => (
-              <PostCard key={post.id} post={post} />
+              <PostCard key={post.id} post={post} usuarioAtual={usuarioAtual} />
             ))}
           </div>
         )}
