@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { subscribeToComments, addComment, deleteComment } from '@/lib/firestore-helpers';
 import { useAuth } from '@/components/AuthProvider';
 import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
@@ -10,7 +11,6 @@ import { formatDateTimeBR } from '@/lib/dateUtils';
 import { Send, Trash2 } from 'lucide-react';
 
 function LinhaComentario({ comentario, podeExcluir, onExcluir }) {
-  // CORREÇÃO DE BUG: nome/foto sempre atuais em vez do dado congelado.
   const autor = useUsuarioAtual(comentario.autorId, {
     nome: comentario.autorNome,
     fotoURL: comentario.autorFoto,
@@ -18,10 +18,17 @@ function LinhaComentario({ comentario, podeExcluir, onExcluir }) {
 
   return (
     <li className="flex gap-2.5">
-      <Avatar src={autor.fotoURL} nome={autor.nome} tamanho="sm" />
+      <Link href={`/u/${autor.username || comentario.autorId}`}>
+        <Avatar src={autor.fotoURL} nome={autor.nome} tamanho={28} />
+      </Link>
       <div className="min-w-0 flex-1">
         <div className="rounded-2xl bg-coffee-50 px-3 py-2">
-          <p className="text-xs font-semibold text-coffee-700">{autor.nome}</p>
+          <Link
+            href={`/u/${autor.username || comentario.autorId}`}
+            className="text-xs font-semibold text-coffee-700 hover:underline"
+          >
+            {autor.nome}
+          </Link>
           <p className="break-words text-sm text-coffee-700">
             <TextoComLinks texto={comentario.texto} />
           </p>
@@ -92,7 +99,7 @@ export default function CommentSection({ postId }) {
             <LinhaComentario
               key={c.id}
               comentario={c}
-              podeExcluir={c.autorId === perfil.uid || perfil.isAdmin}
+              podeExcluir={c.autorId === perfil?.uid || perfil?.isAdmin}
               onExcluir={() => handleExcluir(c.id)}
             />
           ))}
@@ -100,7 +107,7 @@ export default function CommentSection({ postId }) {
       )}
 
       <form onSubmit={handleEnviar} className="flex items-center gap-2">
-        <Avatar src={perfil.fotoURL} nome={perfil.nome} tamanho="sm" />
+        <Avatar src={perfil?.fotoURL} nome={perfil?.nome || ''} tamanho={28} />
         <input
           value={texto}
           onChange={(e) => setTexto(e.target.value)}
