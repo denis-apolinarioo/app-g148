@@ -29,7 +29,7 @@ export default function Avatar({ src, nome, tamanho = 'md', className = '' }) {
 
   return (
     <div
-      className={`${classe} flex flex-shrink-0 items-center justify-center rounded-full bg-coffee-200 font-display font-medium text-coffee-700 ${className}`}
+      className={`${classe} flex flex-shrink-0 items-center justify-center rounded-full bg-coffee-200 font-destaque font-semibold text-coffee-700 ${className}`}
     >
       {iniciais(nome)}
     </div>

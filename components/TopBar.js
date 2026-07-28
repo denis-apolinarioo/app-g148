@@ -12,7 +12,7 @@ export default function TopBar({ titulo, voltarPara, acao }) {
           <ChevronLeft size={22} />
         </Link>
       )}
-      <h1 className="flex-1 truncate font-display text-lg font-medium text-coffee-800">
+      <h1 className="flex-1 truncate font-destaque text-lg font-semibold text-coffee-800">
         {titulo}
       </h1>
       {acao}

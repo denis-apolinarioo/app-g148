@@ -35,7 +35,7 @@ export default function MissionCard({ missao, concluida, onClick, bloqueada }) {
       </span>
       <span className="min-w-0 flex-1">
         <span
-          className={`block text-sm font-semibold ${
+          className={`block font-destaque text-sm font-semibold ${
             concluida ? 'text-coffee-400 line-through' : 'text-coffee-800'
           }`}
         >

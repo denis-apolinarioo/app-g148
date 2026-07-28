@@ -119,7 +119,7 @@ function GrupoPontos({ titulo, missoes, mapa, onSalvar, salvandoId, salvoId }) {
 
   return (
     <div>
-      <h3 className="mb-2 font-display text-sm font-medium text-coffee-700">{titulo}</h3>
+      <h3 className="mb-2 font-destaque text-sm font-semibold text-coffee-700">{titulo}</h3>
       <div className="space-y-2">
         {missoes.map((m) => (
           <div
@@ -177,7 +177,7 @@ function AbaUsuarios() {
             <p className="truncate text-sm font-semibold text-coffee-800">{u.nome}</p>
             <p className="text-xs text-coffee-300">@{u.username}</p>
           </div>
-          <span className="font-display text-sm font-semibold text-coffee-600">{u.pontos || 0}</span>
+          <span className="font-destaque text-sm font-bold text-coffee-600">{u.pontos || 0}</span>
           {u.isAdmin && (
             <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold">
               admin
@@ -307,7 +307,7 @@ function AbaDesafios() {
       )}
 
       <div>
-        <h3 className="mb-2 font-display text-sm font-medium text-coffee-700">
+        <h3 className="mb-2 font-destaque text-sm font-semibold text-coffee-700">
           Aguardando aprovação
         </h3>
         {pendentes === null && <div className="h-16 animate-pulse rounded-xl bg-coffee-100/60" />}

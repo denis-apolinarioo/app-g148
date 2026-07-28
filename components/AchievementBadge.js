@@ -15,7 +15,7 @@ export default function AchievementBadge({ conquista }) {
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gold/15">
         <Icone size={24} className="text-gold" strokeWidth={1.8} />
       </div>
-      <p className="text-[11px] font-medium leading-tight text-coffee-600">{conquista.nome}</p>
+      <p className="font-destaque text-[11px] font-semibold leading-tight text-coffee-600">{conquista.nome}</p>
     </div>
   );
 }

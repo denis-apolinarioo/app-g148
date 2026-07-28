@@ -120,7 +120,7 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-cream px-6 py-10">
       <div className="mx-auto w-full max-w-sm">
-        <h1 className="font-display text-2xl font-medium text-coffee-800">Quase lá</h1>
+        <h1 className="font-destaque text-2xl font-semibold text-coffee-800">Quase lá</h1>
         <p className="mt-1 text-sm text-coffee-400">
           Preencha seus dados pra entrar na comunidade G148.
         </p>

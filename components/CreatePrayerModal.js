@@ -35,7 +35,7 @@ export default function CreatePrayerModal({ onFechar, onCriado }) {
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center">
       <div className="w-full max-w-md rounded-t-2xl bg-cream sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-coffee-100 px-5 py-4">
-          <h2 className="font-display text-lg font-medium text-coffee-800">Pedido ou agradecimento</h2>
+          <h2 className="font-destaque text-lg font-semibold text-coffee-800">Pedido ou agradecimento</h2>
           <button onClick={onFechar} className="text-coffee-400">
             <X size={20} />
           </button>

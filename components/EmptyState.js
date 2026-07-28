@@ -6,7 +6,7 @@ export default function EmptyState({ icone: Icone, titulo, descricao }) {
           <Icone size={26} strokeWidth={1.5} className="text-coffee-400" />
         </div>
       )}
-      <p className="font-display text-base font-medium text-coffee-700">{titulo}</p>
+      <p className="font-destaque text-base font-semibold text-coffee-700">{titulo}</p>
       {descricao && <p className="max-w-xs text-sm text-coffee-400">{descricao}</p>}
     </div>
   );

@@ -90,7 +90,7 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
           <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-gold">
             Nova conquista!
           </p>
-          <p className="mt-1 font-display text-xl font-medium text-coffee-800">
+          <p className="mt-1 font-destaque text-xl font-semibold text-coffee-800">
             {conquistaNova.nome}
           </p>
           <p className="mt-2 text-sm text-coffee-400">{conquistaNova.descricao}</p>
@@ -112,7 +112,7 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center">
       <div className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-coffee-100 px-5 py-4">
-          <h2 className="font-display text-lg font-medium text-coffee-800">{missao.titulo}</h2>
+          <h2 className="font-destaque text-lg font-semibold text-coffee-800">{missao.titulo}</h2>
           <button onClick={onFechar} className="text-coffee-400">
             <X size={20} />
           </button>

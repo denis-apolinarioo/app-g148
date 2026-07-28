@@ -53,7 +53,7 @@ export default function ProfileView({ usuario }) {
 
         <div className="mt-4 flex items-center gap-3">
           <div className="rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-2.5 text-center shadow-card">
-            <p className="font-display text-lg font-semibold text-coffee-800">{usuario.pontos || 0}</p>
+            <p className="font-destaque text-lg font-bold text-coffee-800">{usuario.pontos || 0}</p>
             <p className="text-[11px] text-coffee-300">pontos</p>
           </div>
           {usuario.streakAtual > 0 && (
@@ -82,7 +82,7 @@ export default function ProfileView({ usuario }) {
 
       {conquistas.length > 0 && (
         <div className="mt-7">
-          <h2 className="mb-3 font-display text-base font-medium text-coffee-800">Conquistas</h2>
+          <h2 className="mb-3 font-destaque text-base font-semibold text-coffee-800">Conquistas</h2>
           <div className="grid grid-cols-4 gap-3">
             {conquistas.map((c) => (
               <AchievementBadge key={c.id} conquista={c} />

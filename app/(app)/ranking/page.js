@@ -30,7 +30,7 @@ export default function RankingPage() {
       <div className="px-4 py-4">
         <div className="mb-5 rounded-xl2 bg-coffee-700 px-5 py-5 text-center shadow-soft">
           <p className="text-xs font-medium uppercase tracking-wide text-coffee-200">Sua posição</p>
-          <p className="mt-1 font-display text-3xl font-semibold text-cream">
+          <p className="mt-1 font-destaque text-3xl font-bold text-cream">
             {minhaPosicao >= 0 ? `${minhaPosicao + 1}º` : '—'}
           </p>
           <p className="mt-1 text-sm text-coffee-200">{perfil?.pontos || 0} pontos</p>

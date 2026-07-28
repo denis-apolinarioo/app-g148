@@ -12,7 +12,7 @@ export default function StreakBadge({ dias = 0, tamanho = 'md' }) {
       }`}
     >
       <Flame size={grande ? 18 : 13} className="text-gold" fill="currentColor" />
-      <span className={`font-semibold text-coffee-700 ${grande ? 'text-base' : 'text-xs'}`}>
+      <span className={`font-destaque font-semibold text-coffee-700 ${grande ? 'text-base' : 'text-xs'}`}>
         {dias} {dias === 1 ? 'dia' : 'dias'}
       </span>
     </div>

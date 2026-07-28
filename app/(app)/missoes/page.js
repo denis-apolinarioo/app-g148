@@ -76,7 +76,7 @@ export default function MissoesPage() {
         <div className="flex items-center justify-between rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-3.5 shadow-card">
           <div>
             <p className="text-xs font-medium text-coffee-400">Hoje</p>
-            <p className="font-display text-lg font-medium text-coffee-800">
+            <p className="font-destaque text-lg font-semibold text-coffee-800">
               {totalHoje} de {MISSOES_DIARIAS.length} cumpridas
             </p>
           </div>
@@ -133,7 +133,7 @@ function Secao({ titulo, subtitulo, children }) {
   return (
     <section>
       <div className="mb-2.5 flex items-baseline justify-between">
-        <h2 className="font-display text-base font-medium text-coffee-800">{titulo}</h2>
+        <h2 className="font-destaque text-base font-semibold text-coffee-800">{titulo}</h2>
         <span className="text-xs text-coffee-300">{subtitulo}</span>
       </div>
       <div className="space-y-2">{children}</div>
