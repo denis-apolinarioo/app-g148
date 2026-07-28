@@ -1,49 +1,91 @@
-import './globals.css';
-import { AuthProvider } from '@/components/AuthProvider';
+'use client';
+import { useState, useEffect } from 'react';
 
-export const metadata = {
-  title: 'G148 — Geração 148',
-  description: 'Comunidade G148 Itumbiara: Mural, missões, oração e ranking.',
-  manifest: '/manifest.json',
-  icons: {
-    icon: '/icons/icon-192.png',
-    apple: '/icons/apple-touch-icon.png',
-  },
-};
+export default function SplashScreen() {
+  const [isVisible, setIsVisible] = useState(true);
+  const [shouldRender, setShouldRender] = useState(true);
 
-export const viewport = {
-  themeColor: '#3F2C1C',
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-  viewportFit: 'cover',
-};
+  useEffect(() => {
+    // Tempo total de exibição da Splash (2 segundos de brilho + 0.5s de transição)
+    const timer = setTimeout(() => {
+      setIsVisible(false);
+    }, 2000);
 
-export default function RootLayout({ children }) {
+    // Remove o componente do HTML após a animação de fade acabar
+    const removeTimer = setTimeout(() => {
+      setShouldRender(false);
+    }, 2500);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(removeTimer);
+    };
+  }, []);
+
+  if (!shouldRender) return null;
+
   return (
-    <html lang="pt-BR">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        {/*
-          Esse aviso do linter ("no-page-custom-font") foi escrito pensando no Pages
-          Router antigo, onde existia um pages/_document.js separado. No App Router
-          (o que este projeto usa), este app/layout.js já envolve TODAS as páginas,
-          então carregar a fonte aqui é o padrão correto, não um problema.
-        */}
-        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-        <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Poppins:wght@500;600;700&display=swap"
-          rel="stylesheet"
-        />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="G148" />
-      </head>
-      <body className="font-body">
-        <AuthProvider>{children}</AuthProvider>
-      </body>
-    </html>
+    <div
+      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#5B3A29] transition-opacity duration-500 ease-in-out ${
+        isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
+      }`}
+    >
+      <div className="flex flex-col items-center animate-pulse">
+        {/* LOGO G148 VETORIZADO */}
+        <svg
+          width="180"
+          height="120"
+          viewBox="0 0 200 120"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          {/* Texto G148 */}
+          <text
+            x="50%"
+            y="60"
+            textAnchor="middle"
+            fill="#F5EDE3"
+            style={{
+              fontFamily: 'Poppins, sans-serif',
+              fontWeight: '700',
+              fontSize: '68px',
+            }}
+          >
+            G148
+          </text>
+          {/* Retângulo Arredondado para ITUMBIARA */}
+          <rect
+            x="10"
+            y="75"
+            width="180"
+            height="35"
+            rx="8"
+            fill="#F5EDE3"
+          />
+          {/* Texto ITUMBIARA */}
+          <text
+            x="50%"
+            y="100"
+            textAnchor="middle"
+            fill="#5B3A29"
+            style={{
+              fontFamily: 'Poppins, sans-serif',
+              fontWeight: '600',
+              fontSize: '22px',
+              letterSpacing: '1px'
+            }}
+          >
+            ITUMBIARA
+          </text>
+        </svg>
+      </div>
+      
+      {/* Indicador de carregamento discreto */}
+      <div className="mt-8 flex gap-1">
+        <div className="w-2 h-2 rounded-full bg-[#F5EDE3] animate-bounce [animation-delay:-0.3s]"></div>
+        <div className="w-2 h-2 rounded-full bg-[#F5EDE3] animate-bounce [animation-delay:-0.15s]"></div>
+        <div className="w-2 h-2 rounded-full bg-[#F5EDE3] animate-bounce"></div>
+      </div>
+    </div>
   );
 }
