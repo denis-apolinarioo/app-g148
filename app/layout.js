@@ -3,7 +3,7 @@ import { AuthProvider } from '@/components/AuthProvider';
 
 export const metadata = {
   title: 'G148 — Geração 148',
-  description: 'Comunidade G148 Itumbiara: Mural, missões, oração e ranking.',
+  description: 'Comunidade G148 Itumbiara: Feed, missões, oração e ranking.',
   manifest: '/manifest.json',
   icons: {
     icon: '/icons/icon-192.png',

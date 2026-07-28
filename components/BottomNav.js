@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Home, ListChecks, HandHeart, Trophy, User } from 'lucide-react';
 
 const ITENS = [
-  { href: '/feed', label: 'Mural', icone: Home },
+  { href: '/feed', label: 'Feed', icone: Home },
   { href: '/missoes', label: 'Missões', icone: ListChecks },
   { href: '/oracao', label: 'Oração', icone: HandHeart },
   { href: '/ranking', label: 'Ranking', icone: Trophy },

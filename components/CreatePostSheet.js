@@ -4,7 +4,7 @@ import { useState, useRef } from 'react';
 import { X, Image as ImageIcon, Mic as MicIcon, Type, Loader2 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { createPost } from '@/lib/firestore-helpers';
-import { pontuarPostMural } from '@/lib/points';
+import { pontuarPostFeed } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
 import { uploadFoto, uploadAudio } from '@/lib/storage';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
@@ -60,7 +60,7 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
         categoria,
       });
 
-      await pontuarPostMural(perfil.uid, postId);
+      await pontuarPostFeed(perfil.uid, postId);
       await verificarConquistas(perfil.uid, perfil.streakAtual || 0, 'post');
 
       onPublicado?.();

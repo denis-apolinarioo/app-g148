@@ -6,6 +6,7 @@ import { Heart, MessageCircle, Share2, Trash2 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import CommentSection from '@/components/CommentSection';
 import TextoComLinks from '@/components/TextoComLinks';
+import ImageViewerModal from '@/components/ImageViewerModal';
 import { useAuth } from '@/components/AuthProvider';
 import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
 import { toggleLike, deletePost } from '@/lib/firestore-helpers';
@@ -15,6 +16,7 @@ export default function PostCard({ post }) {
   const { perfil } = useAuth();
   const [mostrarComentarios, setMostrarComentarios] = useState(false);
   const [curtindo, setCurtindo] = useState(false);
+  const [fotoAmpliada, setFotoAmpliada] = useState(false);
 
   // CORREÇÃO DE BUG: nome/foto/username sempre atuais, nunca a "foto
   // antiga" congelada no momento em que o post foi criado.
@@ -104,7 +106,16 @@ export default function PostCard({ post }) {
         <img
           src={post.midiaURL}
           alt="Foto do post"
-          className="mt-3 max-h-[480px] w-full object-cover"
+          onClick={() => setFotoAmpliada(true)}
+          className="mt-3 max-h-[480px] w-full cursor-zoom-in object-cover"
+        />
+      )}
+
+      {fotoAmpliada && (
+        <ImageViewerModal
+          src={post.midiaURL}
+          alt="Foto do post"
+          onClose={() => setFotoAmpliada(false)}
         />
       )}
 

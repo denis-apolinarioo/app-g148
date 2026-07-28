@@ -23,7 +23,7 @@ export default function TermosPage() {
             Uso da conta
           </h2>
           <p>
-            Cada pessoa é responsável pelas informações que publica no Mural, nos pedidos de
+            Cada pessoa é responsável pelas informações que publica no Feed, nos pedidos de
             oração e em qualquer outra área do app. Conteúdo ofensivo, desrespeitoso ou fora do
             propósito da comunidade pode ser removido pela administração a qualquer momento.
           </p>
