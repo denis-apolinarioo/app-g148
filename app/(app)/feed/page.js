@@ -67,7 +67,7 @@ export default function FeedPage() {
 
         <div className="space-y-4 pb-6">
           {posts?.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard key={post.id} post={post} usuarioAtual={perfil} />
           ))}
         </div>
       </div>

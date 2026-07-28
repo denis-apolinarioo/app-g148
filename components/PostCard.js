@@ -249,9 +249,16 @@ export default function PostCard({ post, usuarioAtual }) {
         </button>
       )}
 
-      {/* Áudio */}
+      {/* Áudio — duplo toque curte também (mesmo padrão da foto/texto) */}
       {post.tipo === 'audio' && post.midiaURL && (
-        <audio controls src={post.midiaURL} className="mb-3 w-full" />
+        <div onClick={handleTapNoTexto} className="relative mb-3">
+          <audio controls src={post.midiaURL} className="w-full" />
+          {coracaoAnimado && (
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <Heart size={56} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
+            </span>
+          )}
+        </div>
       )}
 
       {/* Rodapé */}

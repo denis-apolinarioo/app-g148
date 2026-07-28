@@ -38,7 +38,7 @@ export default function MeuPerfilPage() {
         </button>
       </header>
 
-      <ProfileView usuario={perfil} />
+      <ProfileView usuario={perfil} usuarioAtual={perfil} />
     </div>
   );
 }

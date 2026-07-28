@@ -110,6 +110,14 @@ function AbaPontos() {
       <GrupoPontos titulo="Diárias" missoes={MISSOES_DIARIAS} mapa={mapaPontos} onSalvar={handleSalvar} salvandoId={salvandoId} salvoId={salvoId} />
       <GrupoPontos titulo="Semanais" missoes={MISSOES_SEMANAIS} mapa={mapaPontos} onSalvar={handleSalvar} salvandoId={salvandoId} salvoId={salvoId} />
       <GrupoPontos titulo="Mensais" missoes={MISSOES_MENSAIS} mapa={mapaPontos} onSalvar={handleSalvar} salvandoId={salvandoId} salvoId={salvoId} />
+      <GrupoPontos
+        titulo="Outras ações"
+        missoes={[{ id: 'postarNoFeed', titulo: 'Post no Mural' }]}
+        mapa={mapaPontos}
+        onSalvar={handleSalvar}
+        salvandoId={salvandoId}
+        salvoId={salvoId}
+      />
     </div>
   );
 }

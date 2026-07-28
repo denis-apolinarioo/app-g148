@@ -16,6 +16,7 @@ function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir 
     fotoURL: comentario.autorFoto,
   });
   const [curtindo, setCurtindo] = useState(false);
+  const [coracaoAnimado, setCoracaoAnimado] = useState(false);
 
   // Item 20 — Curtir comentários
   const jaCurtiu = comentario.curtidas?.includes(uidAtual);
@@ -23,6 +24,11 @@ function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir 
   async function handleCurtir() {
     if (!uidAtual || curtindo) return;
     setCurtindo(true);
+    // Anima só quando está curtindo (não quando está descurtindo)
+    if (!jaCurtiu) {
+      setCoracaoAnimado(true);
+      setTimeout(() => setCoracaoAnimado(false), 700);
+    }
     try {
       await toggleCommentLike(postId, comentario.id, uidAtual, jaCurtiu);
     } finally {
@@ -41,7 +47,7 @@ function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir 
         </Link>
       </div>
       <div className="min-w-0 flex-1">
-        <div className="rounded-2xl bg-coffee-50 px-3 py-2">
+        <div className="relative rounded-2xl bg-coffee-50 px-3 py-2">
           <Link
             href={`/u/${autor.username || comentario.autorId}`}
             className="text-xs font-semibold text-coffee-700 hover:underline"
@@ -51,6 +57,11 @@ function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir 
           <p className="break-words text-sm text-coffee-700">
             <TextoComLinks texto={comentario.texto} />
           </p>
+          {coracaoAnimado && (
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <Heart size={32} className="animate-curtidaPop text-red-500 drop-shadow" fill="currentColor" />
+            </span>
+          )}
         </div>
         <div className="mt-1 flex items-center gap-3 px-1">
           <span className="text-[11px] text-coffee-300">

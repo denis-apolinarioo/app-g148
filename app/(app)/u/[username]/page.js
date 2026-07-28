@@ -76,7 +76,7 @@ export default function PerfilPublicoPage({ params }) {
   return (
     <div className="mx-auto max-w-md">
       <TopBar titulo={`@${usuario.username}`} voltarPara="/feed" />
-      <ProfileView usuario={usuario} />
+      <ProfileView usuario={usuario} usuarioAtual={perfil} />
     </div>
   );
 }
