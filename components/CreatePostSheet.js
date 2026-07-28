@@ -24,7 +24,7 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   const [categoria, setCategoria] = useState(null);
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
-  const [srcCorte, setSrcCorte] = useState('');       // src pra tela de corte
+  const [arquivoCorte, setArquivoCorte] = useState(null); // arquivo bruto pra tela de corte
   const [blobAudio, setBlobAudio] = useState(null);
   const [publicando, setPublicando] = useState(false);
   const [erro, setErro] = useState('');
@@ -32,8 +32,7 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   const inputCameraRef = useRef(null);
 
   function abrirCorte(arquivo) {
-    const url = URL.createObjectURL(arquivo);
-    setSrcCorte(url);
+    setArquivoCorte(arquivo);
   }
 
   function handleFotoChange(e) {
@@ -43,7 +42,7 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   }
 
   function handleCortado(blob) {
-    setSrcCorte('');
+    setArquivoCorte(null);
     const file = new File([blob], 'foto.jpg', { type: 'image/jpeg' });
     setArquivoFoto(file);
     setPreviewFoto(URL.createObjectURL(blob));
@@ -94,14 +93,14 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   }
 
   // Tela de corte sobrepõe tudo
-  if (srcCorte) {
+  if (arquivoCorte) {
     return (
       <ImageCropper
-        src={srcCorte}
+        arquivo={arquivoCorte}
         razao={{ w: 4, h: 5 }}
         opcoes={PROPORCOES}
         onConfirmar={handleCortado}
-        onCancelar={() => setSrcCorte('')}
+        onCancelar={() => setArquivoCorte(null)}
       />
     );
   }
