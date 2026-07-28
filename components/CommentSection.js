@@ -17,9 +17,11 @@ function LinhaComentario({ comentario, podeExcluir, onExcluir }) {
   });
 
   return (
-    <li className="flex gap-2.5">
-      {/* FIX: items-start garante que o avatar fica no topo, alinhado com o nome */}
-      <div className="flex-shrink-0 mt-0.5">
+    <li className="flex items-start gap-2.5">
+      {/* CORREÇÃO: items-start no <li> evita que o wrapper do avatar estique
+          por conta do "stretch" padrão do flex; o mt-1.5 centraliza o avatar
+          com a linha do nome dentro do balão (px-3 py-2). */}
+      <div className="flex-shrink-0 mt-1.5">
         <Link href={`/u/${autor.username || comentario.autorId}`}>
           <Avatar src={autor.fotoURL} nome={autor.nome} tamanho={28} />
         </Link>

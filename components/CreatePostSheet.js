@@ -24,15 +24,18 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   const [categoria, setCategoria] = useState(null);
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
-  const [arquivoCorte, setArquivoCorte] = useState(null); // arquivo bruto pra tela de corte
+  const [srcCorte, setSrcCorte] = useState(''); // URL da imagem bruta pra tela de corte
   const [blobAudio, setBlobAudio] = useState(null);
   const [publicando, setPublicando] = useState(false);
   const [erro, setErro] = useState('');
   const inputFotoRef = useRef(null);
   const inputCameraRef = useRef(null);
 
+  // CORREÇÃO: o ImageCropper espera receber a prop "src" (uma URL), não o
+  // arquivo bruto. Por isso a tela de corte fechava/travava ao tirar foto ou
+  // escolher da galeria num post — a imagem nunca era carregada.
   function abrirCorte(arquivo) {
-    setArquivoCorte(arquivo);
+    setSrcCorte(URL.createObjectURL(arquivo));
   }
 
   function handleFotoChange(e) {
@@ -41,8 +44,13 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
     abrirCorte(arquivo);
   }
 
+  function fecharCorte() {
+    if (srcCorte) URL.revokeObjectURL(srcCorte);
+    setSrcCorte('');
+  }
+
   function handleCortado(blob) {
-    setArquivoCorte(null);
+    fecharCorte();
     const file = new File([blob], 'foto.jpg', { type: 'image/jpeg' });
     setArquivoFoto(file);
     setPreviewFoto(URL.createObjectURL(blob));
@@ -93,14 +101,14 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   }
 
   // Tela de corte sobrepõe tudo
-  if (arquivoCorte) {
+  if (srcCorte) {
     return (
       <ImageCropper
-        arquivo={arquivoCorte}
+        src={srcCorte}
         razao={{ w: 4, h: 5 }}
         opcoes={PROPORCOES}
         onConfirmar={handleCortado}
-        onCancelar={() => setArquivoCorte(null)}
+        onCancelar={fecharCorte}
       />
     );
   }

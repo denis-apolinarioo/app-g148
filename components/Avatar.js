@@ -6,8 +6,11 @@ import { getCachedImageURL } from '@/lib/imageCache';
 export default function Avatar({ src, nome = '', tamanho = 36, className = '' }) {
   const [urlLocal, setUrlLocal] = useState('');
 
-  // Converte "sm" e "md" para número, pra manter compatibilidade com código antigo
-  const px = tamanho === 'sm' ? 28 : tamanho === 'md' ? 36 : Number(tamanho) || 36;
+  // Converte tamanhos nomeados para número, pra manter compatibilidade com código antigo
+  // CORREÇÃO: "xl" não estava mapeado aqui, então caía no padrão de 36px —
+  // por isso a foto de perfil (que usa tamanho="xl") aparecia pequena.
+  const TAMANHOS_NOMEADOS = { sm: 28, md: 36, lg: 56, xl: 96 };
+  const px = TAMANHOS_NOMEADOS[tamanho] ?? (Number(tamanho) || 36);
 
   useEffect(() => {
     if (!src) { setUrlLocal(''); return; }
