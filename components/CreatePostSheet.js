@@ -1,33 +1,52 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { X, Image as ImageIcon, Mic as MicIcon, Type, Loader2 } from 'lucide-react';
+import { X, Image as ImageIcon, Mic as MicIcon, Type, Loader2, Camera } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { createPost } from '@/lib/firestore-helpers';
 import { pontuarPostFeed } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
 import { uploadFoto, uploadAudio } from '@/lib/storage';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
+import ImageCropper from '@/components/ImageCropper';
 
 const CATEGORIAS = [null, 'Relato', 'Oração'];
+const PROPORCOES = [
+  { label: '1:1', w: 1, h: 1 },
+  { label: '4:5', w: 4, h: 5 },
+  { label: '3:4', w: 3, h: 4 },
+];
 
 export default function CreatePostSheet({ onFechar, onPublicado }) {
   const { perfil } = useAuth();
-  const [aba, setAba] = useState('texto'); // texto | foto | audio
+  const [aba, setAba] = useState('texto');
   const [texto, setTexto] = useState('');
   const [categoria, setCategoria] = useState(null);
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
+  const [srcCorte, setSrcCorte] = useState('');       // src pra tela de corte
   const [blobAudio, setBlobAudio] = useState(null);
   const [publicando, setPublicando] = useState(false);
   const [erro, setErro] = useState('');
   const inputFotoRef = useRef(null);
+  const inputCameraRef = useRef(null);
+
+  function abrirCorte(arquivo) {
+    const url = URL.createObjectURL(arquivo);
+    setSrcCorte(url);
+  }
 
   function handleFotoChange(e) {
     const arquivo = e.target.files?.[0];
     if (!arquivo) return;
-    setArquivoFoto(arquivo);
-    setPreviewFoto(URL.createObjectURL(arquivo));
+    abrirCorte(arquivo);
+  }
+
+  function handleCortado(blob) {
+    setSrcCorte('');
+    const file = new File([blob], 'foto.jpg', { type: 'image/jpeg' });
+    setArquivoFoto(file);
+    setPreviewFoto(URL.createObjectURL(blob));
   }
 
   const podePublicar =
@@ -39,7 +58,6 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
     if (!podePublicar || publicando) return;
     setPublicando(true);
     setErro('');
-
     try {
       let tipo = 'texto';
       let midiaURL = '';
@@ -75,6 +93,19 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
     }
   }
 
+  // Tela de corte sobrepõe tudo
+  if (srcCorte) {
+    return (
+      <ImageCropper
+        src={srcCorte}
+        razao={{ w: 4, h: 5 }}
+        opcoes={PROPORCOES}
+        onConfirmar={handleCortado}
+        onCancelar={() => setSrcCorte('')}
+      />
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center">
       <div className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl">
@@ -103,27 +134,53 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
           {aba === 'foto' && (
             <div className="mt-3">
               {previewFoto ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={previewFoto}
-                  alt="Prévia"
-                  onClick={() => inputFotoRef.current?.click()}
-                  className="max-h-64 w-full cursor-pointer rounded-xl object-cover"
-                />
-              ) : (
                 <button
                   type="button"
-                  onClick={() => inputFotoRef.current?.click()}
-                  className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-coffee-200 py-8 text-coffee-400"
+                  onClick={() => abrirCorte(arquivoFoto)}
+                  className="relative block w-full overflow-hidden rounded-xl"
                 >
-                  <ImageIcon size={26} />
-                  <span className="text-sm">Escolher foto</span>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={previewFoto} alt="Prévia" className="max-h-64 w-full object-cover" />
+                  <span className="absolute bottom-2 right-2 rounded-full bg-black/50 px-2.5 py-1 text-[11px] text-white">
+                    Toque para recortar
+                  </span>
                 </button>
+              ) : (
+                <div className="flex gap-3">
+                  {/* Galeria */}
+                  <button
+                    type="button"
+                    onClick={() => inputFotoRef.current?.click()}
+                    className="flex flex-1 flex-col items-center gap-2 rounded-xl border-2 border-dashed border-coffee-200 py-7 text-coffee-400"
+                  >
+                    <ImageIcon size={24} />
+                    <span className="text-xs">Galeria</span>
+                  </button>
+                  {/* Câmera */}
+                  <button
+                    type="button"
+                    onClick={() => inputCameraRef.current?.click()}
+                    className="flex flex-1 flex-col items-center gap-2 rounded-xl border-2 border-dashed border-coffee-200 py-7 text-coffee-400"
+                  >
+                    <Camera size={24} />
+                    <span className="text-xs">Câmera</span>
+                  </button>
+                </div>
               )}
+
               <input
                 ref={inputFotoRef}
                 type="file"
                 accept="image/*"
+                onChange={handleFotoChange}
+                className="hidden"
+              />
+              {/* capture="environment" abre direto a câmera traseira */}
+              <input
+                ref={inputCameraRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
                 onChange={handleFotoChange}
                 className="hidden"
               />
@@ -175,12 +232,3 @@ function AbaBtn({ ativo, onClick, icone: Icone, label }) {
   return (
     <button
       onClick={onClick}
-      className={`flex items-center gap-1.5 border-b-2 px-1 pb-2.5 text-sm font-medium ${
-        ativo ? 'border-coffee-700 text-coffee-800' : 'border-transparent text-coffee-300'
-      }`}
-    >
-      <Icone size={15} />
-      {label}
-    </button>
-  );
-}
