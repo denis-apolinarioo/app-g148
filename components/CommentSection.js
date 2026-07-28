@@ -18,9 +18,12 @@ function LinhaComentario({ comentario, podeExcluir, onExcluir }) {
 
   return (
     <li className="flex gap-2.5">
-      <Link href={`/u/${autor.username || comentario.autorId}`}>
-        <Avatar src={autor.fotoURL} nome={autor.nome} tamanho={28} />
-      </Link>
+      {/* FIX: items-start garante que o avatar fica no topo, alinhado com o nome */}
+      <div className="flex-shrink-0 mt-0.5">
+        <Link href={`/u/${autor.username || comentario.autorId}`}>
+          <Avatar src={autor.fotoURL} nome={autor.nome} tamanho={28} />
+        </Link>
+      </div>
       <div className="min-w-0 flex-1">
         <div className="rounded-2xl bg-coffee-50 px-3 py-2">
           <Link
