@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Mic, Square, Trash2, Play, Pause } from 'lucide-react';
 
 export default function AudioRecorderButton({ onGravado, onLimpar }) {
@@ -16,7 +16,6 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const intervalRef = useRef(null);
-  const barrasRef = useRef(null);
   const audioRef = useRef(null);
   const streamRef = useRef(null);
   const analyserRef = useRef(null);
@@ -47,12 +46,22 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   async function iniciarGravacao() {
     setErro('');
     try {
+      // Configurações de captura estilo WhatsApp:
+      // - sampleRate 16000: ideal pra voz, metade do tamanho de 44100
+      // - echoCancellation + noiseSuppression + autoGainControl: limpa o áudio
+      //   antes mesmo de gravar, sem processamento extra depois
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 22050 },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 16000,
+          channelCount: 1, // mono — voz não precisa de estéreo
+        },
       });
       streamRef.current = stream;
 
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 128;
@@ -60,14 +69,25 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
       analyserRef.current = analyser;
       animFrameRef.current = requestAnimationFrame(animarBarras);
 
+      // Opus é o codec do WhatsApp — comprime voz muito bem com qualidade alta
+      // 16kbps é suficiente pra voz limpa (WhatsApp usa ~12-16kbps)
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
+        ? 'audio/ogg;codecs=opus'
         : 'audio/webm';
-      const recorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 32000 });
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        audioBitsPerSecond: 16000, // 16kbps — igual WhatsApp
+      });
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
 
-      recorder.ondataavailable = (e) => chunksRef.current.push(e.data);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
         const url = URL.createObjectURL(blob);
@@ -78,7 +98,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
         setBarras(Array(28).fill(3));
       };
 
-      recorder.start(100);
+      recorder.start(250); // coleta chunks a cada 250ms — mais estável
       setGravando(true);
       setSegundos(0);
       intervalRef.current = setInterval(() => setSegundos((s) => s + 1), 1000);
@@ -156,10 +176,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
         </button>
 
         <div className="flex flex-1 flex-col gap-1.5 min-w-0">
-          <div
-            className="flex items-end gap-[2px] h-7 cursor-pointer"
-            onClick={handleBarraClick}
-          >
+          <div className="flex items-end gap-[2px] h-7 cursor-pointer" onClick={handleBarraClick}>
             {Array(28).fill(0).map((_, i) => {
               const altura = 3 + Math.round(
                 Math.sin((i / 27) * Math.PI) * 18 +
@@ -170,10 +187,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
                 <div
                   key={i}
                   className="flex-1 rounded-full transition-all duration-75"
-                  style={{
-                    height: `${altura}px`,
-                    backgroundColor: passado ? '#3F2C1C' : '#D4C4B0',
-                  }}
+                  style={{ height: `${altura}px`, backgroundColor: passado ? '#3F2C1C' : '#D4C4B0' }}
                 />
               );
             })}
@@ -206,9 +220,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
         type="button"
         onClick={gravando ? pararGravacao : iniciarGravacao}
         className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 ${
-          gravando
-            ? 'border-red-200 bg-red-50'
-            : 'border-coffee-100 bg-cream-card'
+          gravando ? 'border-red-200 bg-red-50' : 'border-coffee-100 bg-cream-card'
         }`}
       >
         <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
