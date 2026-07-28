@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Heart, MessageCircle, Trash2 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import CommentSection from '@/components/CommentSection';
@@ -49,13 +50,18 @@ export default function PostCard({ post, usuarioAtual }) {
 
   return (
     <div className="rounded-2xl border border-coffee-100 bg-cream-card p-4">
-      {/* Cabeçalho */}
+      {/* Cabeçalho — FIX: nome e avatar agora levam ao perfil do autor */}
       <div className="mb-3 flex items-center gap-2.5">
-        <Avatar src={autor?.fotoURL} nome={autor?.nome || ''} tamanho={36} />
+        <Link href={`/u/${autor?.username || post.autorId}`} className="flex-shrink-0">
+          <Avatar src={autor?.fotoURL} nome={autor?.nome || ''} tamanho={36} />
+        </Link>
         <div className="flex-1 min-w-0">
-          <p className="truncate text-sm font-semibold text-coffee-800">
+          <Link
+            href={`/u/${autor?.username || post.autorId}`}
+            className="truncate text-sm font-semibold text-coffee-800 hover:underline block"
+          >
             {autor?.nome || '...'}
-          </p>
+          </Link>
           <p className="text-[11px] text-coffee-400">
             {post.createdAt?.toDate
               ? formatDateTimeBR(post.createdAt)
@@ -132,7 +138,7 @@ export default function PostCard({ post, usuarioAtual }) {
         <ImageViewerModal
           src={midiaURL}
           alt="Foto do post"
-          onFechar={() => setImagemAberta(false)}
+          onClose={() => setImagemAberta(false)}
         />
       )}
     </div>
