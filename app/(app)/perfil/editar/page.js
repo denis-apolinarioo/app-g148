@@ -1,85 +1,129 @@
 /* eslint-disable */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '../../../../components/AuthProvider';
-import { db, storage } from '../../../../lib/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { ArrowLeft, Camera, Loader2, Check } from 'lucide-react';
+import { useAuth } from '@/components/AuthProvider';
+import TopBar from '@/components/TopBar';
+import Avatar from '@/components/Avatar';
+import LoadingScreen from '@/components/LoadingScreen';
+import { updateUserProfile } from '@/lib/firestore-helpers';
+import { atualizarUsuarioCache } from '@/lib/usersCache';
+import { uploadFotoPerfil } from '@/lib/storage';
+import { TAGS_FUNCAO } from '@/lib/constants';
+import { Camera, Loader2 } from 'lucide-react';
 
-export default function EditarPerfil() {
-  const { user, userData, setUserData } = useAuth();
+export default function EditarPerfilPage() {
   const router = useRouter();
-  
-  const [nome, setNome] = useState('');
-  const [bio, setBio] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [sucesso, setSucesso] = useState(false);
-  const [novaFoto, setNovaFoto] = useState(null);
+  const { perfil } = useAuth();
+  const [nome, setNome] = useState(perfil?.nome || '');
+  const [bio, setBio] = useState(perfil?.bio || '');
+  const [proposito, setProposito] = useState(perfil?.proposito || '');
+  const [musicaFavorita, setMusicaFavorita] = useState(perfil?.musicaFavorita || '');
+  const [tagFuncao, setTagFuncao] = useState(perfil?.tagFuncao || 'Membro');
+  const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState('');
+  const inputFotoRef = useRef(null);
 
-  useEffect(() => {
-    if (userData) {
-      setNome(userData.nome || '');
-      setBio(userData.bio || '');
-      setPreviewFoto(userData.fotoPerfil || '');
-    }
-  }, [userData]);
+  if (!perfil) return <LoadingScreen />;
 
-  const handleSalvar = async (e) => {
-    e.preventDefault();
-    if (!user) return;
-    setLoading(true);
+  function handleFotoChange(e) {
+    const arquivo = e.target.files?.[0];
+    if (!arquivo) return;
+    setArquivoFoto(arquivo);
+    setPreviewFoto(URL.createObjectURL(arquivo));
+  }
 
+  async function handleSalvar() {
+    if (salvando) return;
+    setSalvando(true);
+    setErro('');
     try {
-      let urlFoto = userData.fotoPerfil;
-      if (novaFoto) {
-        const fotoRef = ref(storage, `perfis/${user.uid}`);
-        await uploadBytes(fotoRef, novaFoto);
-        urlFoto = await getDownloadURL(fotoRef);
+      const dados = {
+        nome: nome.trim(),
+        bio: bio.trim(),
+        proposito: proposito.trim(),
+        musicaFavorita: musicaFavorita.trim(),
+        tagFuncao,
+      };
+      
+      if (arquivoFoto) {
+        dados.fotoURL = await uploadFotoPerfil(perfil.uid, arquivoFoto);
       }
-
-      await updateDoc(doc(db, 'usuarios', user.uid), {
-        nome, bio, fotoPerfil: urlFoto, updatedAt: new Date().toISOString()
+      
+      await updateUserProfile(perfil.uid, dados);
+      
+      atualizarUsuarioCache(perfil.uid, {
+        nome: dados.nome,
+        fotoURL: dados.fotoURL || perfil.fotoURL,
+        username: perfil.username,
       });
-
-      if (setUserData) setUserData({ ...userData, nome, bio, fotoPerfil: urlFoto });
-      setSucesso(true);
-      setTimeout(() => router.push('/perfil'), 1500);
-    } catch (error) {
-      alert("Erro ao salvar.");
+      
+      router.push('/perfil');
+    } catch (err) {
+      setErro('Erro ao salvar. Verifique sua internet.');
     } finally {
-      setLoading(false);
+      setSalvando(false);
     }
-  };
+  }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#1a1a1a] text-white">
-      <div className="p-4 flex items-center gap-4 border-b border-white/10">
-        <button type="button" onClick={() => router.back()}><ArrowLeft size={24} /></button>
-        <h1 className="text-xl font-bold font-poppins">Editar Perfil</h1>
-      </div>
-      <form onSubmit={handleSalvar} className="p-6 flex flex-col gap-6">
-        <div className="flex flex-col items-center">
-          <div className="relative w-24 h-24 rounded-full border-2 border-[#8b5a2b] overflow-hidden">
-            <img src={previewFoto || ''} className="w-full h-full object-cover" alt="" />
-            <label className="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer">
-              <Camera size={24} />
-              <input type="file" className="hidden" accept="image/*" onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) { setNovaFoto(file); setPreviewFoto(URL.createObjectURL(file)); }
-              }} />
-            </label>
-          </div>
+    <div className="mx-auto max-w-md font-poppins">
+      <TopBar titulo="Editar perfil" voltarPara="/perfil" />
+      <div className="space-y-5 px-5 py-5">
+        <div className="flex justify-center">
+          <button type="button" onClick={() => inputFotoRef.current?.click()} className="relative">
+            <Avatar src={previewFoto || perfil.fotoURL} nome={nome} tamanho="xl" />
+            <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-cream bg-coffee-700 text-cream">
+              <Camera size={15} />
+            </span>
+          </button>
+          <input ref={inputFotoRef} type="file" accept="image/*" onChange={handleFotoChange} className="hidden" />
         </div>
-        <input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome" className="bg-[#333] p-4 rounded-xl text-white outline-none" required />
-        <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Bio" className="bg-[#333] p-4 rounded-xl text-white outline-none h-24 resize-none" />
-        <button type="submit" disabled={loading} className="bg-[#8b5a2b] py-4 rounded-xl font-bold flex justify-center">
-          {loading ? <Loader2 className="animate-spin" /> : sucesso ? <Check /> : 'Salvar'}
+
+        <Campo label="Nome">
+          <input value={nome} onChange={(e) => setNome(e.target.value)} className="input" />
+        </Campo>
+
+        <Campo label="Bio">
+          <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={2} className="input resize-none" placeholder="Fale sobre você" />
+        </Campo>
+
+        <Campo label="Propósito">
+          <textarea value={proposito} onChange={(e) => setProposito(e.target.value)} rows={2} className="input resize-none" />
+        </Campo>
+
+        <Campo label="Música favorita">
+          <input value={musicaFavorita} onChange={(e) => setMusicaFavorita(e.target.value)} className="input" />
+        </Campo>
+
+        <Campo label="Função na comunidade">
+          <select value={tagFuncao} onChange={(e) => setTagFuncao(e.target.value)} className="input">
+            {TAGS_FUNCAO.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </Campo>
+
+        {erro && <p className="text-sm text-red-700">{erro}</p>}
+
+        <button onClick={handleSalvar} disabled={salvando || !nome.trim()} className="flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-3.5 text-sm font-semibold text-cream disabled:opacity-40">
+          {salvando ? <Loader2 size={16} className="animate-spin" /> : 'Salvar alterações'}
         </button>
-      </form>
+      </div>
+      <style jsx global>{`
+        .input { width: 100%; border-radius: 0.75rem; border: 1px solid #e4d3be; background-color: #fffdf9; padding: 0.875rem 1rem; font-size: 0.875rem; color: #3f2c1c; }
+      `}</style>
     </div>
+  );
+}
+
+function Campo({ label, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium text-coffee-500">{label}</span>
+      {children}
+    </label>
   );
 }
