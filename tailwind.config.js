@@ -41,6 +41,17 @@ module.exports = {
         soft: '0 2px 16px rgba(44, 31, 20, 0.06)',
         card: '0 1px 3px rgba(44, 31, 20, 0.08), 0 1px 2px rgba(44, 31, 20, 0.05)',
       },
+      keyframes: {
+        curtidaPop: {
+          '0%': { transform: 'scale(0)', opacity: '0' },
+          '30%': { transform: 'scale(1.15)', opacity: '1' },
+          '55%': { transform: 'scale(0.95)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '0' },
+        },
+      },
+      animation: {
+        curtidaPop: 'curtidaPop 0.7s ease-out forwards',
+      },
     },
   },
   plugins: [],
