@@ -1,37 +1,47 @@
-function iniciais(nome) {
-  if (!nome) return '?';
-  const partes = nome.trim().split(/\s+/);
-  const primeira = partes[0]?.[0] || '';
-  const ultima = partes.length > 1 ? partes[partes.length - 1][0] : '';
-  return (primeira + ultima).toUpperCase();
-}
+'use client';
 
-const TAMANHOS = {
-  sm: 'h-8 w-8 text-xs',
-  md: 'h-11 w-11 text-sm',
-  lg: 'h-16 w-16 text-lg',
-  xl: 'h-24 w-24 text-2xl',
-};
+import { useState, useEffect } from 'react';
+import { getCachedImageURL } from '@/lib/imageCache';
 
-export default function Avatar({ src, nome, tamanho = 'md', className = '' }) {
-  const classe = TAMANHOS[tamanho] || TAMANHOS.md;
+export default function Avatar({ src, nome = '', tamanho = 36, className = '' }) {
+  const [urlLocal, setUrlLocal] = useState('');
 
-  if (src) {
+  useEffect(() => {
+    if (!src) { setUrlLocal(''); return; }
+    let cancelado = false;
+    getCachedImageURL(src).then((url) => {
+      if (!cancelado) setUrlLocal(url);
+    });
+    return () => { cancelado = true; };
+  }, [src]);
+
+  const iniciais = nome
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0].toUpperCase())
+    .join('');
+
+  if (urlLocal) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={src}
-        alt={nome || 'Foto de perfil'}
-        className={`${classe} flex-shrink-0 rounded-full object-cover ${className}`}
+        src={urlLocal}
+        alt={nome}
+        width={tamanho}
+        height={tamanho}
+        className={`rounded-full object-cover flex-shrink-0 ${className}`}
+        style={{ width: tamanho, height: tamanho }}
       />
     );
   }
 
   return (
     <div
-      className={`${classe} flex flex-shrink-0 items-center justify-center rounded-full bg-coffee-200 font-destaque font-semibold text-coffee-700 ${className}`}
+      className={`flex flex-shrink-0 items-center justify-center rounded-full bg-coffee-200 font-semibold text-coffee-700 ${className}`}
+      style={{ width: tamanho, height: tamanho, fontSize: tamanho * 0.36 }}
     >
-      {iniciais(nome)}
+      {iniciais || '?'}
     </div>
   );
 }
