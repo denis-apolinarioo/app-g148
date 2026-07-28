@@ -1,186 +1,105 @@
+/* eslint-disable */
 'use client';
 
-import { useState, useRef } from 'react';
-import { X, Image as ImageIcon, Mic as MicIcon, Type, Loader2 } from 'lucide-react';
-import { useAuth } from '@/components/AuthProvider';
-import { createPost } from '@/lib/firestore-helpers';
-import { pontuarPostFeed } from '@/lib/points';
-import { verificarConquistas } from '@/lib/achievements';
-import { uploadFoto, uploadAudio } from '@/lib/storage';
-import AudioRecorderButton from '@/components/AudioRecorderButton';
+import { useState } from 'react';
+import { db, storage } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useAuth } from '@/lib/authContext';
+import { compressImage } from '@/lib/imageCompress';
+import { X, Image as ImageIcon, Loader2, Send } from 'lucide-react';
 
-const CATEGORIAS = [null, 'Relato', 'Oração'];
+export default function CreatePostSheet({ isOpen, onClose }) {
+  const { user, userData } = useAuth();
+  const [text, setText] = useState('');
+  const [image, setImage] = useState(null);
+  const [preview, setPreview] = useState('');
+  const [loading, setLoading] = useState(false);
 
-export default function CreatePostSheet({ onFechar, onPublicado }) {
-  const { perfil } = useAuth();
-  const [aba, setAba] = useState('texto'); // texto | foto | audio
-  const [texto, setTexto] = useState('');
-  const [categoria, setCategoria] = useState(null);
-  const [arquivoFoto, setArquivoFoto] = useState(null);
-  const [previewFoto, setPreviewFoto] = useState('');
-  const [blobAudio, setBlobAudio] = useState(null);
-  const [publicando, setPublicando] = useState(false);
-  const [erro, setErro] = useState('');
-  const inputFotoRef = useRef(null);
+  if (!isOpen) return null;
 
-  function handleFotoChange(e) {
-    const arquivo = e.target.files?.[0];
-    if (!arquivo) return;
-    setArquivoFoto(arquivo);
-    setPreviewFoto(URL.createObjectURL(arquivo));
-  }
-
-  const podePublicar =
-    (aba === 'texto' && texto.trim()) ||
-    (aba === 'foto' && arquivoFoto) ||
-    (aba === 'audio' && blobAudio);
-
-  async function handlePublicar() {
-    if (!podePublicar || publicando) return;
-    setPublicando(true);
-    setErro('');
+  const handlePost = async () => {
+    if (!text && !image) return;
+    setLoading(true);
 
     try {
-      let tipo = 'texto';
-      let midiaURL = '';
-
-      if (aba === 'foto' && arquivoFoto) {
-        tipo = 'foto';
-        midiaURL = await uploadFoto(perfil.uid, arquivoFoto);
-      } else if (aba === 'audio' && blobAudio) {
-        tipo = 'audio';
-        midiaURL = await uploadAudio(perfil.uid, blobAudio);
+      let imageUrl = '';
+      if (image) {
+        const compressed = await compressImage(image);
+        const imageRef = ref(storage, `posts/${Date.now()}_${user.uid}`);
+        await uploadBytes(imageRef, compressed);
+        imageUrl = await getDownloadURL(imageRef);
       }
 
-      const postId = await createPost({
-        autor: perfil,
-        tipo,
-        texto: texto.trim(),
-        midiaURL,
-        categoria,
+      await addDoc(collection(db, 'posts'), {
+        userId: user.uid,
+        userName: userData?.nome || 'Usuário',
+        userPhoto: userData?.fotoPerfil || '',
+        text,
+        imageUrl,
+        createdAt: serverTimestamp(),
+        likes: 0
       });
 
-      await pontuarPostFeed(perfil.uid, postId);
-      await verificarConquistas(perfil.uid, perfil.streakAtual || 0, 'post');
+      // Ganha 10 pontos por postar!
+      if (user?.uid) {
+        await updateDoc(doc(db, 'usuarios', user.uid), {
+          pontos: increment(10)
+        });
+      }
 
-      onPublicado?.();
-      onFechar();
-    } catch (err) {
-      console.error('Erro ao publicar post:', err);
-      setErro(
-        'Não foi possível publicar agora. Verifique sua internet — se o problema for o Storage do Firebase (upload de mídia), confirme que o plano Blaze está ativo.'
-      );
+      setText('');
+      setImage(null);
+      setPreview('');
+      onClose();
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao postar. Verifique sua conexão.");
     } finally {
-      setPublicando(false);
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center">
-      <div className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl">
-        <div className="flex items-center justify-between border-b border-coffee-100 px-5 py-4">
-          <h2 className="font-destaque text-lg font-semibold text-coffee-800">Nova publicação</h2>
-          <button onClick={onFechar} className="text-coffee-400">
-            <X size={20} />
-          </button>
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-4">
+      <div className="bg-[#1a1a1a] w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-6 border-t border-white/10">
+        <div className="flex justify-between mb-4">
+          <h2 className="text-xl font-bold">Novo Post</h2>
+          <button onClick={onClose}><X /></button>
         </div>
+        
+        <textarea 
+          value={text} 
+          onChange={e => setText(e.target.value)}
+          placeholder="O que está acontecendo?"
+          className="w-full bg-transparent border-none outline-none text-lg resize-none h-32 text-white"
+        />
 
-        <div className="px-5 py-4">
-          <div className="mb-4 flex items-center gap-2 border-b border-coffee-100">
-            <AbaBtn ativo={aba === 'texto'} onClick={() => setAba('texto')} icone={Type} label="Texto" />
-            <AbaBtn ativo={aba === 'foto'} onClick={() => setAba('foto')} icone={ImageIcon} label="Foto" />
-            <AbaBtn ativo={aba === 'audio'} onClick={() => setAba('audio')} icone={MicIcon} label="Áudio" />
+        {preview && (
+          <div className="relative w-full h-48 mb-4 rounded-xl overflow-hidden">
+            <img src={preview} className="w-full h-full object-cover" alt="" />
+            <button onClick={() => {setImage(null); setPreview('');}} className="absolute top-2 right-2 bg-black/50 p-1 rounded-full"><X size={16}/></button>
           </div>
+        )}
 
-          <textarea
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            placeholder={aba === 'texto' ? 'No que você está pensando?' : 'Adicione uma legenda (opcional)'}
-            rows={4}
-            className="w-full resize-none rounded-xl border border-coffee-100 bg-cream-card p-3.5 text-sm text-coffee-800 placeholder:text-coffee-300"
-          />
-
-          {aba === 'foto' && (
-            <div className="mt-3">
-              {previewFoto ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={previewFoto}
-                  alt="Prévia"
-                  onClick={() => inputFotoRef.current?.click()}
-                  className="max-h-64 w-full cursor-pointer rounded-xl object-cover"
-                />
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => inputFotoRef.current?.click()}
-                  className="flex w-full flex-col items-center gap-2 rounded-xl border-2 border-dashed border-coffee-200 py-8 text-coffee-400"
-                >
-                  <ImageIcon size={26} />
-                  <span className="text-sm">Escolher foto</span>
-                </button>
-              )}
-              <input
-                ref={inputFotoRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFotoChange}
-                className="hidden"
-              />
-            </div>
-          )}
-
-          {aba === 'audio' && (
-            <div className="mt-3">
-              <AudioRecorderButton onGravado={setBlobAudio} onLimpar={() => setBlobAudio(null)} />
-            </div>
-          )}
-
-          <div className="mt-4">
-            <p className="mb-2 text-xs font-medium text-coffee-500">Categoria (opcional)</p>
-            <div className="flex flex-wrap gap-2">
-              {CATEGORIAS.map((c) => (
-                <button
-                  key={c || 'nenhuma'}
-                  onClick={() => setCategoria(c)}
-                  className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${
-                    categoria === c
-                      ? 'border-coffee-700 bg-coffee-700 text-cream'
-                      : 'border-coffee-200 text-coffee-500'
-                  }`}
-                >
-                  {c || 'Nenhuma'}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {erro && <p className="mt-3 text-sm text-red-700">{erro}</p>}
-
-          <button
-            onClick={handlePublicar}
-            disabled={!podePublicar || publicando}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-3.5 text-sm font-semibold text-cream disabled:opacity-40"
+        <div className="flex justify-between items-center border-t border-white/10 pt-4">
+          <label className="cursor-pointer p-2 bg-white/5 rounded-full">
+            <ImageIcon size={24} className="text-[#8b5a2b]" />
+            <input type="file" className="hidden" accept="image/*" onChange={e => {
+              const file = e.target.files[0];
+              if (file) { setImage(file); setPreview(URL.createObjectURL(file)); }
+            }} />
+          </label>
+          
+          <button 
+            onClick={handlePost}
+            disabled={loading || (!text && !image)}
+            className="bg-[#8b5a2b] px-6 py-2 rounded-full font-bold flex items-center gap-2 disabled:opacity-50"
           >
-            {publicando && <Loader2 size={16} className="animate-spin" />}
-            Publicar
+            {loading ? <Loader2 className="animate-spin" size={20} /> : <><Send size={18} /> Postar</>}
           </button>
         </div>
       </div>
     </div>
-  );
-}
-
-function AbaBtn({ ativo, onClick, icone: Icone, label }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 border-b-2 px-1 pb-2.5 text-sm font-medium ${
-        ativo ? 'border-coffee-700 text-coffee-800' : 'border-transparent text-coffee-300'
-      }`}
-    >
-      <Icone size={15} />
-      {label}
-    </button>
   );
 }
