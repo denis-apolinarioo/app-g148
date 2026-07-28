@@ -1,159 +1,140 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { Heart, MessageCircle, Share2, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Heart, MessageCircle, Trash2 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import CommentSection from '@/components/CommentSection';
 import TextoComLinks from '@/components/TextoComLinks';
 import ImageViewerModal from '@/components/ImageViewerModal';
-import { useAuth } from '@/components/AuthProvider';
-import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
 import { toggleLike, deletePost } from '@/lib/firestore-helpers';
-import { formatDateTimeBR } from '@/lib/dateUtils';
+import { getUsuarioCache } from '@/lib/usersCache';
+import { getCachedImageURL } from '@/lib/imageCache';
+import { formatarDataRelativa } from '@/lib/dateUtils';
 
-export default function PostCard({ post }) {
-  const { perfil } = useAuth();
+export default function PostCard({ post, usuarioAtual }) {
+  const [autor, setAutor] = useState(null);
+  const [midiaURL, setMidiaURL] = useState('');
   const [mostrarComentarios, setMostrarComentarios] = useState(false);
+  const [imagemAberta, setImagemAberta] = useState(false);
   const [curtindo, setCurtindo] = useState(false);
-  const [fotoAmpliada, setFotoAmpliada] = useState(false);
 
-  // CORREÇÃO DE BUG: nome/foto/username sempre atuais, nunca a "foto
-  // antiga" congelada no momento em que o post foi criado.
-  const autor = useUsuarioAtual(post.autorId, {
-    nome: post.autorNome,
-    fotoURL: post.autorFoto,
-    username: post.autorUsername,
-  });
+  const jaCurtiu = post.curtidas?.includes(usuarioAtual?.uid);
+  const ehDono = usuarioAtual?.uid === post.autorId;
+  const ehAdmin = usuarioAtual?.isAdmin;
 
-  const jaCurtiu = (post.curtidas || []).includes(perfil?.uid);
-  const totalCurtidas = (post.curtidas || []).length;
-  const podeExcluir = post.autorId === perfil?.uid || perfil?.isAdmin;
+  useEffect(() => {
+    getUsuarioCache(post.autorId).then(setAutor);
+  }, [post.autorId]);
+
+  useEffect(() => {
+    if (post.midiaURL) {
+      getCachedImageURL(post.midiaURL).then(setMidiaURL);
+    }
+  }, [post.midiaURL]);
 
   async function handleLike() {
-    if (curtindo) return;
+    if (!usuarioAtual || curtindo) return;
     setCurtindo(true);
     try {
-      await toggleLike(post.id, perfil.uid, jaCurtiu);
-    } catch (err) {
-      console.error('Erro ao curtir:', err);
+      await toggleLike(post.id, usuarioAtual.uid, jaCurtiu);
     } finally {
       setCurtindo(false);
     }
   }
 
-  async function handleCompartilhar() {
-    const url = `${window.location.origin}/feed?post=${post.id}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'G148', text: post.texto?.slice(0, 100), url });
-      } catch {
-        // pessoa cancelou o compartilhamento — não é erro
-      }
-    } else {
-      await navigator.clipboard.writeText(url);
-      alert('Link copiado!');
-    }
-  }
-
-  async function handleExcluir() {
-    if (!confirm('Excluir esse post? Essa ação não pode ser desfeita.')) return;
-    try {
-      await deletePost(post.id);
-    } catch (err) {
-      console.error('Erro ao excluir post:', err);
-    }
+  async function handleDelete() {
+    if (!confirm('Apagar este post?')) return;
+    await deletePost(post.id);
   }
 
   return (
-    <article className="rounded-xl2 border border-coffee-100 bg-cream-card shadow-card">
-      <div className="flex items-start gap-3 px-4 pt-4">
-        <Link href={`/u/${autor.username}`}>
-          <Avatar src={autor.fotoURL} nome={autor.nome} />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <Link href={`/u/${autor.username}`} className="font-semibold text-coffee-800">
-            {autor.nome}
-          </Link>
-          <p className="text-xs text-coffee-300">
-            {post.createdAt ? formatDateTimeBR(post.createdAt) : 'agora'}
+    <div className="rounded-2xl border border-coffee-100 bg-cream-card p-4">
+      {/* Cabeçalho */}
+      <div className="mb-3 flex items-center gap-2.5">
+        <Avatar src={autor?.fotoURL} nome={autor?.nome || ''} tamanho={36} />
+        <div className="flex-1 min-w-0">
+          <p className="truncate text-sm font-semibold text-coffee-800">
+            {autor?.nome || '...'}
+          </p>
+          <p className="text-[11px] text-coffee-400">
+            {post.createdAt?.toDate
+              ? formatarDataRelativa(post.createdAt.toDate())
+              : ''}
           </p>
         </div>
         {post.categoria && (
-          <span className="flex-shrink-0 rounded-full bg-gold/15 px-2.5 py-1 text-[11px] font-semibold text-gold">
+          <span className="rounded-full border border-coffee-200 px-2.5 py-0.5 text-[10px] font-medium text-coffee-500">
             {post.categoria}
           </span>
         )}
-        {podeExcluir && (
-          <button
-            onClick={handleExcluir}
-            className="flex-shrink-0 text-coffee-200 hover:text-red-700"
-            aria-label="Excluir post"
-          >
-            <Trash2 size={16} />
+        {(ehDono || ehAdmin) && (
+          <button onClick={handleDelete} className="text-coffee-200 hover:text-red-500">
+            <Trash2 size={15} />
           </button>
         )}
       </div>
 
+      {/* Texto */}
       {post.texto && (
-        <p className="whitespace-pre-wrap px-4 pt-3 text-[15px] leading-relaxed text-coffee-700">
-          <TextoComLinks texto={post.texto} />
-        </p>
-      )}
-
-      {post.tipo === 'foto' && post.midiaURL && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={post.midiaURL}
-          alt="Foto do post"
-          onClick={() => setFotoAmpliada(true)}
-          className="mt-3 max-h-[480px] w-full cursor-zoom-in object-cover"
+        <TextoComLinks
+          texto={post.texto}
+          className="mb-3 text-sm leading-relaxed text-coffee-700"
         />
       )}
 
-      {fotoAmpliada && (
-        <ImageViewerModal
-          src={post.midiaURL}
-          alt="Foto do post"
-          onClose={() => setFotoAmpliada(false)}
-        />
+      {/* Foto */}
+      {post.tipo === 'foto' && midiaURL && (
+        <button
+          onClick={() => setImagemAberta(true)}
+          className="mb-3 block w-full overflow-hidden rounded-xl"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={midiaURL}
+            alt="Foto do post"
+            className="w-full object-cover max-h-80"
+          />
+        </button>
       )}
 
+      {/* Áudio */}
       {post.tipo === 'audio' && post.midiaURL && (
-        <div className="px-4 pt-3">
-          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
-          <audio controls src={post.midiaURL} className="w-full" />
-        </div>
+        <audio controls src={post.midiaURL} className="mb-3 w-full" />
       )}
 
-      <div className="mt-1 flex items-center gap-1 px-2 py-1.5">
+      {/* Rodapé */}
+      <div className="flex items-center gap-4 pt-1">
         <button
           onClick={handleLike}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium text-coffee-500"
+          disabled={curtindo}
+          className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+            jaCurtiu ? 'text-red-500' : 'text-coffee-300 hover:text-red-400'
+          }`}
         >
-          <Heart
-            size={18}
-            className={jaCurtiu ? 'text-red-600' : 'text-coffee-300'}
-            fill={jaCurtiu ? 'currentColor' : 'none'}
-          />
-          {totalCurtidas > 0 && totalCurtidas}
+          <Heart size={17} fill={jaCurtiu ? 'currentColor' : 'none'} />
+          {post.curtidas?.length || 0}
         </button>
+
         <button
           onClick={() => setMostrarComentarios((v) => !v)}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium text-coffee-500"
+          className="flex items-center gap-1.5 text-sm font-medium text-coffee-300 hover:text-coffee-600"
         >
-          <MessageCircle size={18} className="text-coffee-300" />
-          {post.comentariosCount > 0 && post.comentariosCount}
-        </button>
-        <button
-          onClick={handleCompartilhar}
-          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-medium text-coffee-500"
-        >
-          <Share2 size={17} className="text-coffee-300" />
+          <MessageCircle size={17} />
+          {post.comentariosCount || 0}
         </button>
       </div>
 
-      {mostrarComentarios && <CommentSection postId={post.id} />}
-    </article>
+      {mostrarComentarios && (
+        <CommentSection postId={post.id} usuarioAtual={usuarioAtual} />
+      )}
+
+      {imagemAberta && (
+        <ImageViewerModal
+          src={midiaURL}
+          alt="Foto do post"
+          onFechar={() => setImagemAberta(false)}
+        />
+      )}
+    </div>
   );
 }
