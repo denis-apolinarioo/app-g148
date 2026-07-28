@@ -3,8 +3,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/lib/authContext';
-import { db, storage } from '@/lib/firebase';
+import { useAuth } from '../../../../components/AuthProvider';
+import { db, storage } from '../../../../lib/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { ArrowLeft, Camera, Loader2, Check } from 'lucide-react';
@@ -49,22 +49,22 @@ export default function EditarPerfil() {
       setSucesso(true);
       setTimeout(() => router.push('/perfil'), 1500);
     } catch (error) {
-      alert("Erro ao salvar. Verifique sua internet.");
+      alert("Erro ao salvar.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#1a1a1a] text-white font-poppins">
+    <div className="flex flex-col min-h-screen bg-[#1a1a1a] text-white">
       <div className="p-4 flex items-center gap-4 border-b border-white/10">
-        <button onClick={() => router.back()}><ArrowLeft size={24} /></button>
-        <h1 className="text-xl font-bold">Editar Perfil</h1>
+        <button type="button" onClick={() => router.back()}><ArrowLeft size={24} /></button>
+        <h1 className="text-xl font-bold font-poppins">Editar Perfil</h1>
       </div>
       <form onSubmit={handleSalvar} className="p-6 flex flex-col gap-6">
         <div className="flex flex-col items-center">
           <div className="relative w-24 h-24 rounded-full border-2 border-[#8b5a2b] overflow-hidden">
-            <img src={previewFoto || '/default-avatar.png'} className="w-full h-full object-cover" alt="" />
+            <img src={previewFoto || ''} className="w-full h-full object-cover" alt="" />
             <label className="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer">
               <Camera size={24} />
               <input type="file" className="hidden" accept="image/*" onChange={(e) => {
@@ -74,10 +74,10 @@ export default function EditarPerfil() {
             </label>
           </div>
         </div>
-        <input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome" className="bg-[#333] p-4 rounded-xl outline-none" required />
-        <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Bio" className="bg-[#333] p-4 rounded-xl h-24 outline-none" />
+        <input value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome" className="bg-[#333] p-4 rounded-xl text-white outline-none" required />
+        <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Bio" className="bg-[#333] p-4 rounded-xl text-white outline-none h-24 resize-none" />
         <button type="submit" disabled={loading} className="bg-[#8b5a2b] py-4 rounded-xl font-bold flex justify-center">
-          {loading ? <Loader2 className="animate-spin" /> : sucesso ? <Check /> : 'Salvar Alterações'}
+          {loading ? <Loader2 className="animate-spin" /> : sucesso ? <Check /> : 'Salvar'}
         </button>
       </form>
     </div>
