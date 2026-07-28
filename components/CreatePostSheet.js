@@ -231,4 +231,16 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
 function AbaBtn({ ativo, onClick, icone: Icone, label }) {
   return (
     <button
+      type="button"
       onClick={onClick}
+      className={`flex items-center gap-1.5 border-b-2 px-1 pb-2 text-sm font-medium ${
+        ativo
+          ? 'border-coffee-700 text-coffee-800'
+          : 'border-transparent text-coffee-400'
+      }`}
+    >
+      <Icone size={16} />
+      {label}
+    </button>
+  );
+}
