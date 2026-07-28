@@ -8,6 +8,7 @@ import AchievementBadge from '@/components/AchievementBadge';
 import PostCard from '@/components/PostCard';
 import PrayerCard from '@/components/PrayerCard';
 import EmptyState from '@/components/EmptyState';
+import ImageViewerModal from '@/components/ImageViewerModal';
 import { subscribeToUserPosts, subscribeToUserPrayers } from '@/lib/firestore-helpers';
 import { getConquistasDoUsuario } from '@/lib/achievements';
 
@@ -16,6 +17,7 @@ export default function ProfileView({ usuario }) {
   const [pedidosAtivos, setPedidosAtivos] = useState([]);
   const [conquistas, setConquistas] = useState([]);
   const [aba, setAba] = useState('posts');
+  const [fotoAberta, setFotoAberta] = useState(false);
 
   useEffect(() => {
     if (!usuario?.uid) return undefined;
@@ -39,7 +41,10 @@ export default function ProfileView({ usuario }) {
   return (
     <div className="px-4 pb-8 pt-5">
       <div className="flex flex-col items-center text-center">
-        <Avatar src={usuario.fotoURL} nome={usuario.nome} tamanho="xl" />
+        {/* FIX: foto de perfil clicável abre em tela cheia */}
+        <button onClick={() => usuario.fotoURL && setFotoAberta(true)} className="rounded-full">
+          <Avatar src={usuario.fotoURL} nome={usuario.nome} tamanho="xl" />
+        </button>
         <h1 className="mt-3 font-destaque text-xl font-semibold text-coffee-800">{usuario.nome}</h1>
         <p className="text-sm text-coffee-400">@{usuario.username}</p>
 
@@ -80,25 +85,22 @@ export default function ProfileView({ usuario }) {
         )}
       </div>
 
-      {conquistas.length > 0 && (
-        <div className="mt-7">
-          <h2 className="mb-3 font-destaque text-base font-semibold text-coffee-800">Conquistas</h2>
-          <div className="grid grid-cols-4 gap-3">
-            {conquistas.map((c) => (
-              <AchievementBadge key={c.id} conquista={c} />
-            ))}
-          </div>
-        </div>
-      )}
-
+      {/* FIX: conquistas viram terceira aba, não ficam soltas acima */}
       <div className="mt-7">
         <div className="mb-3 flex gap-4 border-b border-coffee-100">
           <AbaBtn ativo={aba === 'posts'} onClick={() => setAba('posts')} label="Posts" />
           <AbaBtn
             ativo={aba === 'oracoes'}
             onClick={() => setAba('oracoes')}
-            label={`Orações ${pedidosAtivos.length ? `(${pedidosAtivos.length})` : ''}`}
+            label={`Orações${pedidosAtivos.length ? ` (${pedidosAtivos.length})` : ''}`}
           />
+          {conquistas.length > 0 && (
+            <AbaBtn
+              ativo={aba === 'conquistas'}
+              onClick={() => setAba('conquistas')}
+              label={`Conquistas (${conquistas.length})`}
+            />
+          )}
         </div>
 
         {aba === 'posts' && (
@@ -119,7 +121,24 @@ export default function ProfileView({ usuario }) {
             ))}
           </div>
         )}
+
+        {aba === 'conquistas' && (
+          <div className="grid grid-cols-4 gap-3 pt-1">
+            {conquistas.map((c) => (
+              <AchievementBadge key={c.id} conquista={c} />
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Modal foto de perfil em tela cheia */}
+      {fotoAberta && usuario.fotoURL && (
+        <ImageViewerModal
+          src={usuario.fotoURL}
+          alt={usuario.nome}
+          onClose={() => setFotoAberta(false)}
+        />
+      )}
     </div>
   );
 }
