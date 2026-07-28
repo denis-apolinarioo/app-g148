@@ -3,15 +3,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { X, Check, ZoomIn, ZoomOut } from 'lucide-react';
 
-/**
- * Tela de corte de imagem com arrastar e zoom.
- * Props:
- *   src        — URL ou blob URL da imagem original
- *   razao      — objeto { w, h } ex: {w:1,h:1} para 1:1, {w:4,h:5} para 4:5
- *   onConfirmar(blob) — chamado com o Blob da imagem cortada
- *   onCancelar — fecha sem fazer nada
- *   opcoes     — array de { label, w, h } — se passado, mostra seletor de proporção
- */
 export default function ImageCropper({ src, razao: razaoInicial, onConfirmar, onCancelar, opcoes }) {
   const [razao, setRazao] = useState(razaoInicial || { w: 1, h: 1 });
   const [escala, setEscala] = useState(1);
@@ -23,17 +14,14 @@ export default function ImageCropper({ src, razao: razaoInicial, onConfirmar, on
   const imgRef = useRef(null);
   const [processando, setProcessando] = useState(false);
 
-  // Tamanho da janela de corte na tela
   const JANELA_W = Math.min(typeof window !== 'undefined' ? window.innerWidth - 48 : 320, 360);
   const JANELA_H = Math.round((JANELA_W * razao.h) / razao.w);
 
-  // Centraliza sempre que razão muda
   useEffect(() => {
     setPos({ x: 0, y: 0 });
     setEscala(1);
   }, [razao]);
 
-  // ── Toque ──────────────────────────────────────────────────────────────────
   function aoIniciarToque(e) {
     if (e.touches.length === 2) {
       distanciaInicial.current = dist2(e.touches);
@@ -63,7 +51,6 @@ export default function ImageCropper({ src, razao: razaoInicial, onConfirmar, on
     setArrastando(false);
   }
 
-  // ── Mouse (desktop) ────────────────────────────────────────────────────────
   function aoIniciarMouse(e) {
     ultimoPonto.current = { x: e.clientX, y: e.clientY };
     setArrastando(true);
@@ -84,21 +71,22 @@ export default function ImageCropper({ src, razao: razaoInicial, onConfirmar, on
     setPos((p) => ({ x: p.x + dx, y: p.y + dy }));
   }
 
-  // ── Zoom pelos botões ──────────────────────────────────────────────────────
   function ajustarZoom(delta) {
     setEscala((s) => Math.max(1, Math.min(5, s + delta)));
   }
 
-  // ── Cortar e gerar blob ────────────────────────────────────────────────────
   const confirmar = useCallback(async () => {
     if (processando) return;
     setProcessando(true);
     try {
       const img = imgRef.current;
-      if (!img) return;
+      if (!img) {
+        setProcessando(false);
+        return;
+      }
 
       const canvas = document.createElement('canvas');
-      const OUTPUT = 1080; // sempre exporta em 1080px no lado menor
+      const OUTPUT = 1080;
       const outW = razao.w >= razao.h ? Math.round(OUTPUT * razao.w / razao.h) : OUTPUT;
       const outH = razao.w >= razao.h ? OUTPUT : Math.round(OUTPUT * razao.h / razao.w);
       canvas.width = outW;
@@ -106,16 +94,13 @@ export default function ImageCropper({ src, razao: razaoInicial, onConfirmar, on
 
       const ctx = canvas.getContext('2d');
 
-      // Calcula o quanto da imagem real cabe na janela de corte
       const escalaImg = Math.max(JANELA_W / img.naturalWidth, JANELA_H / img.naturalHeight);
       const imgExibidaW = img.naturalWidth * escalaImg * escala;
       const imgExibidaH = img.naturalHeight * escalaImg * escala;
 
-      // Offset da imagem em relação ao centro da janela
       const origemX = (imgExibidaW - JANELA_W) / 2 - pos.x;
       const origemY = (imgExibidaH - JANELA_H) / 2 - pos.y;
 
-      // Converte para coordenadas na imagem original
       const srcX = origemX / (escalaImg * escala);
       const srcY = origemY / (escalaImg * escala);
       const srcW = JANELA_W / (escalaImg * escala);
@@ -126,3 +111,114 @@ export default function ImageCropper({ src, razao: razaoInicial, onConfirmar, on
       canvas.toBlob(
         (blob) => {
           if (blob) onConfirmar(blob);
+          setProcessando(false);
+        },
+        'image/jpeg',
+        0.88
+      );
+    } catch (err) {
+      console.error('Erro ao cortar imagem:', err);
+      setProcessando(false);
+    }
+  }, [processando, razao, JANELA_W, JANELA_H, escala, pos, onConfirmar]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-black pb-8 pt-4">
+      {/* Topo */}
+      <div className="flex w-full items-center justify-between px-5">
+        <button
+          onClick={onCancelar}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white"
+        >
+          <X size={20} />
+        </button>
+        <span className="text-sm font-semibold text-white">Ajustar foto</span>
+        <button
+          onClick={confirmar}
+          disabled={processando}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-white disabled:opacity-40"
+        >
+          <Check size={20} />
+        </button>
+      </div>
+
+      {/* Seletor de proporção */}
+      {opcoes && (
+        <div className="flex gap-2">
+          {opcoes.map((op) => (
+            <button
+              key={op.label}
+              onClick={() => setRazao({ w: op.w, h: op.h })}
+              className={`rounded-full px-3.5 py-1 text-xs font-semibold ${
+                razao.w === op.w && razao.h === op.h
+                  ? 'bg-white text-black'
+                  : 'bg-white/20 text-white'
+              }`}
+            >
+              {op.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Área de corte */}
+      <div
+        style={{ width: JANELA_W, height: JANELA_H }}
+        className="relative overflow-hidden rounded-xl outline outline-2 outline-white/60 cursor-grab active:cursor-grabbing"
+        onMouseDown={aoIniciarMouse}
+        onMouseMove={aoMoverMouse}
+        onMouseUp={aoSoltarMouse}
+        onMouseLeave={aoSoltarMouse}
+        onTouchStart={aoIniciarToque}
+        onTouchMove={aoMoverToque}
+        onTouchEnd={aoSoltarToque}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          ref={imgRef}
+          src={src}
+          alt="Cortar"
+          draggable={false}
+          crossOrigin="anonymous"
+          style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            transform: `translate(calc(-50% + ${pos.x}px), calc(-50% + ${pos.y}px)) scale(${escala})`,
+            transformOrigin: 'center',
+            transition: arrastando ? 'none' : 'transform 0.1s',
+            maxWidth: 'none',
+            width: `${100 * escala}%`,
+            objectFit: 'cover',
+            userSelect: 'none',
+            touchAction: 'none',
+          }}
+        />
+      </div>
+
+      {/* Controles de zoom */}
+      <div className="flex items-center gap-5">
+        <button
+          onClick={() => ajustarZoom(-0.2)}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"
+        >
+          <ZoomOut size={18} />
+        </button>
+        <span className="w-12 text-center text-sm text-white/70">{Math.round(escala * 100)}%</span>
+        <button
+          onClick={() => ajustarZoom(0.2)}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white"
+        >
+          <ZoomIn size={18} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function dist2(toques) {
+  return Math.hypot(
+    toques[1].clientX - toques[0].clientX,
+    toques[1].clientY - toques[0].clientY
+  );
+}
