@@ -12,6 +12,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   const [tocando, setTocando] = useState(false);
   const [erro, setErro] = useState('');
   const [barras, setBarras] = useState(Array(28).fill(3));
+  const [tempoAtual, setTempoAtual] = useState(0);
 
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
@@ -20,6 +21,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   const streamRef = useRef(null);
   const analyserRef = useRef(null);
   const animFrameRef = useRef(null);
+  const duracaoRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -46,31 +48,29 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   async function iniciarGravacao() {
     setErro('');
     try {
-      // Configurações de captura estilo WhatsApp:
-      // - sampleRate 16000: ideal pra voz, metade do tamanho de 44100
-      // - echoCancellation + noiseSuppression + autoGainControl: limpa o áudio
-      //   antes mesmo de gravar, sem processamento extra depois
+      // 48kHz é o padrão do Opus — melhor qualidade de voz possível no browser
+      // autoGainControl normaliza volume, echoCancellation e noiseSuppression
+      // limpam o áudio na captura, antes de gravar
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true,
-          sampleRate: 16000,
           channelCount: 1, // mono — voz não precisa de estéreo
         },
       });
       streamRef.current = stream;
 
-      const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 128;
+      analyser.fftSize = 256;
       source.connect(analyser);
       analyserRef.current = analyser;
       animFrameRef.current = requestAnimationFrame(animarBarras);
 
-      // Opus é o codec do WhatsApp — comprime voz muito bem com qualidade alta
-      // 16kbps é suficiente pra voz limpa (WhatsApp usa ~12-16kbps)
+      // Opus 64kbps: qualidade de voz excelente, arquivo pequeno
+      // (1 minuto de áudio ≈ ~480KB — comparado a MP3 que seria ~1MB)
       const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
         ? 'audio/webm;codecs=opus'
         : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
@@ -79,7 +79,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
 
       const recorder = new MediaRecorder(stream, {
         mimeType,
-        audioBitsPerSecond: 16000, // 16kbps — igual WhatsApp
+        audioBitsPerSecond: 64000, // 64kbps — qualidade de voz premium
       });
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
@@ -98,7 +98,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
         setBarras(Array(28).fill(3));
       };
 
-      recorder.start(250); // coleta chunks a cada 250ms — mais estável
+      recorder.start(200);
       setGravando(true);
       setSegundos(0);
       intervalRef.current = setInterval(() => setSegundos((s) => s + 1), 1000);
@@ -114,11 +114,17 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   }
 
   function limpar() {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+    }
     setAudioURL('');
     setSegundos(0);
     setProgresso(0);
     setDuracao(0);
+    setTempoAtual(0);
     setTocando(false);
+    duracaoRef.current = 0;
     onLimpar?.();
   }
 
@@ -134,35 +140,52 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   }
 
   function handleTimeUpdate() {
-    if (!audioRef.current || !duracao) return;
-    setProgresso(audioRef.current.currentTime / duracao);
+    if (!audioRef.current) return;
+    const atual = audioRef.current.currentTime;
+    const dur = duracaoRef.current;
+    setTempoAtual(atual);
+    if (dur > 0) setProgresso(atual / dur);
   }
 
   function handleLoadedMetadata() {
     if (!audioRef.current) return;
-    setDuracao(audioRef.current.duration || segundos);
+    // Bug fix: alguns browsers reportam Infinity na duração com webm/opus
+    // Solução: aguarda o áudio carregar e usa o currentTime para forçar a leitura
+    const dur = audioRef.current.duration;
+    if (dur && isFinite(dur)) {
+      duracaoRef.current = dur;
+      setDuracao(dur);
+    } else {
+      // Fallback: usa os segundos gravados
+      duracaoRef.current = segundos;
+      setDuracao(segundos);
+    }
+    // Garante que a barrinha começa do zero
+    audioRef.current.currentTime = 0;
+    setProgresso(0);
+    setTempoAtual(0);
   }
 
   function handleEnded() {
     setTocando(false);
     setProgresso(0);
+    setTempoAtual(0);
     if (audioRef.current) audioRef.current.currentTime = 0;
   }
 
   function handleBarraClick(e) {
-    if (!audioRef.current || !duracao) return;
+    if (!audioRef.current || !duracaoRef.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const pct = (e.clientX - rect.left) / rect.width;
-    audioRef.current.currentTime = pct * duracao;
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audioRef.current.currentTime = pct * duracaoRef.current;
     setProgresso(pct);
+    setTempoAtual(pct * duracaoRef.current);
   }
 
   function fmt(s) {
     const total = Math.round(s || 0);
     return `${Math.floor(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;
   }
-
-  const tempoAtual = audioRef.current ? audioRef.current.currentTime : 0;
 
   if (audioURL) {
     return (
@@ -172,22 +195,30 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
           onClick={alternarPlay}
           className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-coffee-700 text-cream shadow-sm"
         >
-          {tocando ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
+          {tocando
+            ? <Pause size={15} fill="currentColor" />
+            : <Play size={15} fill="currentColor" className="ml-0.5" />}
         </button>
 
         <div className="flex flex-1 flex-col gap-1.5 min-w-0">
-          <div className="flex items-end gap-[2px] h-7 cursor-pointer" onClick={handleBarraClick}>
+          <div
+            className="flex items-end gap-[2px] h-7 cursor-pointer"
+            onClick={handleBarraClick}
+          >
             {Array(28).fill(0).map((_, i) => {
               const altura = 3 + Math.round(
                 Math.sin((i / 27) * Math.PI) * 18 +
                 Math.sin((i / 7) * Math.PI) * 6
               );
-              const passado = i / 28 <= progresso;
+              const passado = progresso > 0 && i / 28 <= progresso;
               return (
                 <div
                   key={i}
-                  className="flex-1 rounded-full transition-all duration-75"
-                  style={{ height: `${altura}px`, backgroundColor: passado ? '#3F2C1C' : '#D4C4B0' }}
+                  className="flex-1 rounded-full transition-colors duration-75"
+                  style={{
+                    height: `${altura}px`,
+                    backgroundColor: passado ? '#3F2C1C' : '#D4C4B0',
+                  }}
                 />
               );
             })}
@@ -208,6 +239,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onEnded={handleEnded}
+          preload="metadata"
           className="hidden"
         />
       </div>
