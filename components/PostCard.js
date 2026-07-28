@@ -9,7 +9,7 @@ import ImageViewerModal from '@/components/ImageViewerModal';
 import { toggleLike, deletePost } from '@/lib/firestore-helpers';
 import { getUsuarioCache } from '@/lib/usersCache';
 import { getCachedImageURL } from '@/lib/imageCache';
-import { formatarDataRelativa } from '@/lib/dateUtils';
+import { formatDateTimeBR } from '@/lib/dateUtils';
 
 export default function PostCard({ post, usuarioAtual }) {
   const [autor, setAutor] = useState(null);
@@ -58,7 +58,7 @@ export default function PostCard({ post, usuarioAtual }) {
           </p>
           <p className="text-[11px] text-coffee-400">
             {post.createdAt?.toDate
-              ? formatarDataRelativa(post.createdAt.toDate())
+              ? formatDateTimeBR(post.createdAt)
               : ''}
           </p>
         </div>
