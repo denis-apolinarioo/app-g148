@@ -112,7 +112,7 @@ function AbaPontos() {
       <GrupoPontos titulo="Mensais" missoes={MISSOES_MENSAIS} mapa={mapaPontos} onSalvar={handleSalvar} salvandoId={salvandoId} salvoId={salvoId} />
       <GrupoPontos
         titulo="Outras ações"
-        missoes={[{ id: 'postarNoFeed', titulo: 'Post no Mural' }]}
+        missoes={[{ id: 'postarNoFeed', titulo: 'Post no Feed' }]}
         mapa={mapaPontos}
         onSalvar={handleSalvar}
         salvandoId={salvandoId}

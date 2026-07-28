@@ -249,10 +249,22 @@ export default function PostCard({ post, usuarioAtual }) {
         </button>
       )}
 
-      {/* Áudio — duplo toque curte também (mesmo padrão da foto/texto) */}
+      {/* Áudio — os controles nativos (play, barra) ocupam todo o espaço
+          clicável deles, então o duplo toque não pode ficar "em cima" do
+          áudio (senão nunca sobra clique pra reconhecer o gesto, e ainda
+          atrapalha o play/pause). Por isso criamos um cartão ao redor do
+          player, com uma faixa de toque própria (acima) livre pra curtir. */}
       {post.tipo === 'audio' && post.midiaURL && (
-        <div onClick={handleTapNoTexto} className="relative mb-3">
-          <audio controls src={post.midiaURL} className="w-full" />
+        <div
+          onClick={handleTapNoTexto}
+          className="relative mb-3 rounded-xl border border-coffee-100 bg-cream px-3 pb-3 pt-4"
+        >
+          <p className="pointer-events-none mb-2 text-center text-[11px] text-coffee-300">
+            toque duas vezes para curtir
+          </p>
+          <div onClick={(e) => e.stopPropagation()}>
+            <audio controls src={post.midiaURL} className="w-full" />
+          </div>
           {coracaoAnimado && (
             <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <Heart size={56} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />

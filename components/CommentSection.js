@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import { subscribeToComments, addComment, deleteComment, toggleCommentLike } from '@/lib/firestore-helpers';
 import { useAuth } from '@/components/AuthProvider';
@@ -10,6 +10,8 @@ import TextoComLinks from '@/components/TextoComLinks';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { Send, Trash2, Heart } from 'lucide-react';
 
+const JANELA_DUPLO_TOQUE = 300; // ms — mesmo valor usado no PostCard, pra manter o gesto consistente
+
 function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir }) {
   const autor = useUsuarioAtual(comentario.autorId, {
     nome: comentario.autorNome,
@@ -17,6 +19,7 @@ function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir 
   });
   const [curtindo, setCurtindo] = useState(false);
   const [coracaoAnimado, setCoracaoAnimado] = useState(false);
+  const ultimoTapRef = useRef(0);
 
   // Item 20 — Curtir comentários
   const jaCurtiu = comentario.curtidas?.includes(uidAtual);
@@ -36,6 +39,20 @@ function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir 
     }
   }
 
+  // MELHORIA: duplo toque no balão do comentário também curte (nunca
+  // descurte), igual ao gesto já usado no texto/foto do post.
+  function handleTapNoBalao() {
+    const agora = Date.now();
+    if (agora - ultimoTapRef.current < JANELA_DUPLO_TOQUE) {
+      if (!jaCurtiu) handleCurtir();
+      else {
+        setCoracaoAnimado(true);
+        setTimeout(() => setCoracaoAnimado(false), 700);
+      }
+    }
+    ultimoTapRef.current = agora;
+  }
+
   return (
     <li className="flex items-start gap-2.5">
       {/* CORREÇÃO: items-start no <li> evita que o wrapper do avatar estique
@@ -47,7 +64,7 @@ function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir 
         </Link>
       </div>
       <div className="min-w-0 flex-1">
-        <div className="relative rounded-2xl bg-coffee-50 px-3 py-2">
+        <div onClick={handleTapNoBalao} className="relative rounded-2xl bg-coffee-50 px-3 py-2">
           <Link
             href={`/u/${autor.username || comentario.autorId}`}
             className="text-xs font-semibold text-coffee-700 hover:underline"
