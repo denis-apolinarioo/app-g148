@@ -158,7 +158,7 @@ export default function OnboardingPage() {
 
           <Campo label="Nome de usuário">
             <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-coffee-300">
+              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm text-coffee-300">
                 @
               </span>
               <input
@@ -166,7 +166,8 @@ export default function OnboardingPage() {
                 onChange={(e) => handleUsernameChange(e.target.value)}
                 placeholder="seunome"
                 required
-                className="input pl-8 pr-9"
+                className="input"
+                style={{ paddingLeft: '2rem', paddingRight: '2.25rem' }}
               />
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2">
                 {statusUsername === 'checando' && (

@@ -32,6 +32,7 @@ module.exports = {
       fontFamily: {
         display: ['var(--font-display)', 'Georgia', 'serif'],
         body: ['var(--font-body)', 'system-ui', 'sans-serif'],
+        destaque: ['var(--font-destaque)', 'system-ui', 'sans-serif'],
       },
       borderRadius: {
         xl2: '1.25rem',

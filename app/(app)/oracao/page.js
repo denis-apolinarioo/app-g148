@@ -52,7 +52,7 @@ export default function OracaoPage() {
           <EmptyState
             icone={HandHeart}
             titulo="Nenhum pedido por aqui"
-            descricao="Compartilhe um pedido de oração com a comunidade."
+            descricao="Compartilhe um pedido ou agradecimento com a comunidade."
           />
         )}
 

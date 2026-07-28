@@ -5,6 +5,7 @@
 :root {
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-destaque: 'Poppins', system-ui, -apple-system, sans-serif;
 }
 
 * {

@@ -11,7 +11,7 @@ import {
 import { auth, googleProvider } from '@/lib/firebase';
 import { useAuth } from '@/components/AuthProvider';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Mail, Lock, Loader2 } from 'lucide-react';
+import { Mail, Lock, Loader2, Eye, EyeOff, MailCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [modo, setModo] = useState('entrar'); // 'entrar' | 'criar'
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [avisoVerificacao, setAvisoVerificacao] = useState(false);
@@ -62,6 +64,14 @@ export default function LoginPage() {
     e.preventDefault();
     setErro('');
     setAvisoVerificacao(false);
+
+    // Melhoria: confirmar senha no cadastro, pra evitar erro de digitação
+    // silencioso que só a pessoa descobre no próximo login.
+    if (modo === 'criar' && senha !== confirmarSenha) {
+      setErro('As senhas não coincidem. Confira e tente de novo.');
+      return;
+    }
+
     setEnviando(true);
     try {
       if (modo === 'criar') {
@@ -86,29 +96,36 @@ export default function LoginPage() {
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-coffee-700 font-display text-2xl font-semibold text-cream">
             G148
           </div>
-          <h1 className="font-display text-2xl font-medium text-coffee-800">Geração 148</h1>
+          <h1 className="font-destaque text-2xl font-semibold text-coffee-800">Geração 148</h1>
           <p className="mt-1 text-sm text-coffee-400">
             &ldquo;Quer vivamos, quer morramos, pertencemos ao Senhor.&rdquo; — Romanos 14:8
           </p>
         </div>
 
         {avisoVerificacao ? (
-          <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-5 text-center shadow-card">
-            <p className="font-display text-base font-medium text-coffee-800">
-              Confira seu e-mail
+          // MELHORIA: aviso de verificação de e-mail bem mais visível —
+          // antes era um card discreto, fácil de ignorar sem perceber que
+          // era uma etapa obrigatória.
+          <div className="rounded-xl2 border-2 border-gold/40 bg-cream-card p-6 text-center shadow-card">
+            <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-gold/15">
+              <MailCheck size={26} className="text-gold" />
+            </div>
+            <p className="font-display text-lg font-medium text-coffee-800">
+              Confirme seu e-mail pra continuar
             </p>
-            <p className="mt-2 text-sm text-coffee-500">
-              Enviamos um link de confirmação para <strong>{email}</strong>. Depois de confirmar,
-              volte aqui e entre normalmente.
+            <p className="mt-2 text-sm leading-relaxed text-coffee-500">
+              Enviamos um link de confirmação para <strong>{email}</strong>. Você{' '}
+              <strong>precisa clicar nesse link</strong> antes de conseguir entrar no app.
+              Confira também a caixa de spam.
             </p>
             <button
               onClick={() => {
                 setAvisoVerificacao(false);
                 setModo('entrar');
               }}
-              className="mt-4 text-sm font-medium text-coffee-600 underline"
+              className="mt-5 w-full rounded-xl bg-coffee-700 py-3 text-sm font-semibold text-cream"
             >
-              Voltar para o login
+              Já confirmei, ir para o login
             </button>
           </div>
         ) : (
@@ -125,18 +142,44 @@ export default function LoginPage() {
                   className="w-full rounded-xl border border-coffee-100 bg-cream-card py-3.5 pl-11 pr-4 text-sm text-coffee-800 placeholder:text-coffee-300 focus:border-coffee-400"
                 />
               </div>
+
               <div className="relative">
                 <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-coffee-300" />
                 <input
-                  type="password"
+                  type={mostrarSenha ? 'text' : 'password'}
                   required
                   minLength={6}
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   placeholder="Sua senha"
-                  className="w-full rounded-xl border border-coffee-100 bg-cream-card py-3.5 pl-11 pr-4 text-sm text-coffee-800 placeholder:text-coffee-300 focus:border-coffee-400"
+                  className="w-full rounded-xl border border-coffee-100 bg-cream-card py-3.5 pl-11 pr-11 text-sm text-coffee-800 placeholder:text-coffee-300 focus:border-coffee-400"
                 />
+                <button
+                  type="button"
+                  onClick={() => setMostrarSenha((v) => !v)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-coffee-300"
+                  aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                  tabIndex={-1}
+                >
+                  {mostrarSenha ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
+
+              {/* MELHORIA: campo de confirmar senha, só aparece no cadastro */}
+              {modo === 'criar' && (
+                <div className="relative">
+                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-coffee-300" />
+                  <input
+                    type={mostrarSenha ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={confirmarSenha}
+                    onChange={(e) => setConfirmarSenha(e.target.value)}
+                    placeholder="Confirme sua senha"
+                    className="w-full rounded-xl border border-coffee-100 bg-cream-card py-3.5 pl-11 pr-4 text-sm text-coffee-800 placeholder:text-coffee-300 focus:border-coffee-400"
+                  />
+                </div>
+              )}
 
               {erro && <p className="text-center text-sm text-red-700">{erro}</p>}
 

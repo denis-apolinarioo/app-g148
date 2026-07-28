@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { Heart, MessageCircle, Share2, Trash2 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import CommentSection from '@/components/CommentSection';
+import TextoComLinks from '@/components/TextoComLinks';
 import { useAuth } from '@/components/AuthProvider';
+import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
 import { toggleLike, deletePost } from '@/lib/firestore-helpers';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 
@@ -13,6 +15,14 @@ export default function PostCard({ post }) {
   const { perfil } = useAuth();
   const [mostrarComentarios, setMostrarComentarios] = useState(false);
   const [curtindo, setCurtindo] = useState(false);
+
+  // CORREÇÃO DE BUG: nome/foto/username sempre atuais, nunca a "foto
+  // antiga" congelada no momento em que o post foi criado.
+  const autor = useUsuarioAtual(post.autorId, {
+    nome: post.autorNome,
+    fotoURL: post.autorFoto,
+    username: post.autorUsername,
+  });
 
   const jaCurtiu = (post.curtidas || []).includes(perfil?.uid);
   const totalCurtidas = (post.curtidas || []).length;
@@ -56,12 +66,12 @@ export default function PostCard({ post }) {
   return (
     <article className="rounded-xl2 border border-coffee-100 bg-cream-card shadow-card">
       <div className="flex items-start gap-3 px-4 pt-4">
-        <Link href={`/u/${post.autorUsername}`}>
-          <Avatar src={post.autorFoto} nome={post.autorNome} />
+        <Link href={`/u/${autor.username}`}>
+          <Avatar src={autor.fotoURL} nome={autor.nome} />
         </Link>
         <div className="min-w-0 flex-1">
-          <Link href={`/u/${post.autorUsername}`} className="font-semibold text-coffee-800">
-            {post.autorNome}
+          <Link href={`/u/${autor.username}`} className="font-semibold text-coffee-800">
+            {autor.nome}
           </Link>
           <p className="text-xs text-coffee-300">
             {post.createdAt ? formatDateTimeBR(post.createdAt) : 'agora'}
@@ -85,7 +95,7 @@ export default function PostCard({ post }) {
 
       {post.texto && (
         <p className="whitespace-pre-wrap px-4 pt-3 text-[15px] leading-relaxed text-coffee-700">
-          {post.texto}
+          <TextoComLinks texto={post.texto} />
         </p>
       )}
 

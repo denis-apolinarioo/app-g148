@@ -4,7 +4,9 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { HandHeart, Check, Clock } from 'lucide-react';
 import Avatar from '@/components/Avatar';
+import TextoComLinks from '@/components/TextoComLinks';
 import { useAuth } from '@/components/AuthProvider';
+import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
 import { registerPrayerInteraction, markPrayerAsDone } from '@/lib/firestore-helpers';
 import { pontuarOracao } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
@@ -15,6 +17,13 @@ export default function PrayerCard({ pedido }) {
   const [orando, setOrando] = useState(false);
   const [jaOrouAgora, setJaOrouAgora] = useState(false);
   const [marcandoFeito, setMarcandoFeito] = useState(false);
+
+  // CORREÇÃO DE BUG: nome/foto sempre atuais em vez do dado congelado.
+  const autor = useUsuarioAtual(pedido.autorId, {
+    nome: pedido.autorNome,
+    fotoURL: pedido.autorFoto,
+    username: pedido.autorUsername,
+  });
 
   const vencido = isPastDeadline(pedido.prazo);
   const ehAutor = pedido.autorId === perfil?.uid;
@@ -54,15 +63,15 @@ export default function PrayerCard({ pedido }) {
   return (
     <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-4 shadow-card">
       <div className="flex items-start gap-3">
-        <Link href={`/u/${pedido.autorUsername}`}>
-          <Avatar src={pedido.autorFoto} nome={pedido.autorNome} tamanho="sm" />
+        <Link href={`/u/${autor.username}`}>
+          <Avatar src={autor.fotoURL} nome={autor.nome} tamanho="sm" />
         </Link>
         <div className="min-w-0 flex-1">
-          <Link href={`/u/${pedido.autorUsername}`} className="text-sm font-semibold text-coffee-800">
-            {pedido.autorNome}
+          <Link href={`/u/${autor.username}`} className="text-sm font-semibold text-coffee-800">
+            {autor.nome}
           </Link>
           <p className="mt-0.5 whitespace-pre-wrap text-sm leading-relaxed text-coffee-600">
-            {pedido.descricao}
+            <TextoComLinks texto={pedido.descricao} />
           </p>
         </div>
       </div>

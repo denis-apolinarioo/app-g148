@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import TopBar from '@/components/TopBar';
 import Avatar from '@/components/Avatar';
 import LoadingScreen from '@/components/LoadingScreen';
 import { updateUserProfile } from '@/lib/firestore-helpers';
+import { atualizarUsuarioCache } from '@/lib/usersCache';
 import { uploadFotoPerfil } from '@/lib/storage';
 import { TAGS_FUNCAO } from '@/lib/constants';
 import { Camera, Loader2 } from 'lucide-react';
@@ -50,6 +52,11 @@ export default function EditarPerfilPage() {
         dados.fotoURL = await uploadFotoPerfil(perfil.uid, arquivoFoto);
       }
       await updateUserProfile(perfil.uid, dados);
+      atualizarUsuarioCache(perfil.uid, {
+        nome: dados.nome,
+        fotoURL: dados.fotoURL || perfil.fotoURL,
+        username: perfil.username,
+      });
       router.push('/perfil');
     } catch (err) {
       console.error('Erro ao salvar perfil:', err);
@@ -132,6 +139,13 @@ export default function EditarPerfilPage() {
           {salvando && <Loader2 size={16} className="animate-spin" />}
           Salvar alterações
         </button>
+
+        <Link
+          href="/termos"
+          className="block pt-1 text-center text-xs text-coffee-300 underline underline-offset-2"
+        >
+          Termos de Uso e Política de Privacidade
+        </Link>
       </div>
 
       <style jsx global>{`

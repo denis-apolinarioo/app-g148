@@ -40,7 +40,7 @@ export default function ProfileView({ usuario }) {
     <div className="px-4 pb-8 pt-5">
       <div className="flex flex-col items-center text-center">
         <Avatar src={usuario.fotoURL} nome={usuario.nome} tamanho="xl" />
-        <h1 className="mt-3 font-display text-xl font-medium text-coffee-800">{usuario.nome}</h1>
+        <h1 className="mt-3 font-destaque text-xl font-semibold text-coffee-800">{usuario.nome}</h1>
         <p className="text-sm text-coffee-400">@{usuario.username}</p>
 
         {usuario.tagFuncao && usuario.tagFuncao !== 'Membro' && (

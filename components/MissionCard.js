@@ -2,9 +2,13 @@
 
 import * as Icons from 'lucide-react';
 import { Check } from 'lucide-react';
+import BowArrowIcon from '@/components/BowArrowIcon';
 
 export default function MissionCard({ missao, concluida, onClick, bloqueada }) {
-  const Icone = Icons[iconePascalCase(missao.icone)] || Icons.Star;
+  // Ícone padrão trocado de estrela genérica para arco-e-flecha (temática de
+  // "missão"/"alvo"), usado sempre que a missão não tem um ícone específico
+  // mapeado na biblioteca lucide-react.
+  const IconeLucide = Icons[iconePascalCase(missao.icone)];
 
   return (
     <button
@@ -23,8 +27,10 @@ export default function MissionCard({ missao, concluida, onClick, bloqueada }) {
       >
         {concluida ? (
           <Check size={20} className="text-green-700" />
+        ) : IconeLucide ? (
+          <IconeLucide size={19} className="text-coffee-600" strokeWidth={1.8} />
         ) : (
-          <Icone size={19} className="text-coffee-600" strokeWidth={1.8} />
+          <BowArrowIcon size={19} className="text-coffee-600" strokeWidth={1.8} />
         )}
       </span>
       <span className="min-w-0 flex-1">

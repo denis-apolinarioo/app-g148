@@ -3,9 +3,47 @@
 import { useEffect, useState } from 'react';
 import { subscribeToComments, addComment, deleteComment } from '@/lib/firestore-helpers';
 import { useAuth } from '@/components/AuthProvider';
+import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
 import Avatar from '@/components/Avatar';
+import TextoComLinks from '@/components/TextoComLinks';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { Send, Trash2 } from 'lucide-react';
+
+function LinhaComentario({ comentario, podeExcluir, onExcluir }) {
+  // CORREÇÃO DE BUG: nome/foto sempre atuais em vez do dado congelado.
+  const autor = useUsuarioAtual(comentario.autorId, {
+    nome: comentario.autorNome,
+    fotoURL: comentario.autorFoto,
+  });
+
+  return (
+    <li className="flex gap-2.5">
+      <Avatar src={autor.fotoURL} nome={autor.nome} tamanho="sm" />
+      <div className="min-w-0 flex-1">
+        <div className="rounded-2xl bg-coffee-50 px-3 py-2">
+          <p className="text-xs font-semibold text-coffee-700">{autor.nome}</p>
+          <p className="break-words text-sm text-coffee-700">
+            <TextoComLinks texto={comentario.texto} />
+          </p>
+        </div>
+        <div className="mt-1 flex items-center gap-2 px-1">
+          <span className="text-[11px] text-coffee-300">
+            {comentario.createdAt ? formatDateTimeBR(comentario.createdAt) : 'agora'}
+          </span>
+          {podeExcluir && (
+            <button
+              onClick={onExcluir}
+              className="text-coffee-300 hover:text-red-700"
+              aria-label="Excluir comentário"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
 
 export default function CommentSection({ postId }) {
   const { perfil } = useAuth();
@@ -51,29 +89,12 @@ export default function CommentSection({ postId }) {
       {comentarios.length > 0 && (
         <ul className="mb-3 space-y-3">
           {comentarios.map((c) => (
-            <li key={c.id} className="flex gap-2.5">
-              <Avatar src={c.autorFoto} nome={c.autorNome} tamanho="sm" />
-              <div className="min-w-0 flex-1">
-                <div className="rounded-2xl bg-coffee-50 px-3 py-2">
-                  <p className="text-xs font-semibold text-coffee-700">{c.autorNome}</p>
-                  <p className="break-words text-sm text-coffee-700">{c.texto}</p>
-                </div>
-                <div className="mt-1 flex items-center gap-2 px-1">
-                  <span className="text-[11px] text-coffee-300">
-                    {c.createdAt ? formatDateTimeBR(c.createdAt) : 'agora'}
-                  </span>
-                  {(c.autorId === perfil.uid || perfil.isAdmin) && (
-                    <button
-                      onClick={() => handleExcluir(c.id)}
-                      className="text-coffee-300 hover:text-red-700"
-                      aria-label="Excluir comentário"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </li>
+            <LinhaComentario
+              key={c.id}
+              comentario={c}
+              podeExcluir={c.autorId === perfil.uid || perfil.isAdmin}
+              onExcluir={() => handleExcluir(c.id)}
+            />
           ))}
         </ul>
       )}

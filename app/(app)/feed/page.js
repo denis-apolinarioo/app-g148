@@ -26,7 +26,7 @@ export default function FeedPage() {
     <div className="mx-auto max-w-md">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-coffee-100 bg-cream/95 px-5 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)]">
         <div>
-          <p className="font-display text-lg font-medium text-coffee-800">Geração 148</p>
+          <p className="font-destaque text-lg font-semibold text-coffee-800">Geração 148</p>
         </div>
         <div className="flex items-center gap-3">
           <StreakBadge dias={perfil?.streakAtual || 0} />
