@@ -1,0 +1,183 @@
+rules_version = '2';
+
+// ============================================================================
+// REGRAS DE SEGURANÇA DO FIRESTORE — App G148
+// ----------------------------------------------------------------------------
+// Como aplicar: Firebase Console → Firestore Database → aba "Regras" →
+// colar o conteúdo deste arquivo inteiro → "Publicar".
+//
+// LIMITAÇÃO CONHECIDA E ACEITA DE PROPÓSITO: como o app não usa Cloud
+// Functions (o que exigiria linha de comando pra publicar, incompatível
+// com o fluxo 100% "arrastar e soltar" combinado), a pontuação (campo
+// `pontos` em users/{uid}) é escrita diretamente pelo aplicativo do
+// próprio usuário. Isso significa que uma pessoa tecnicamente habilidosa,
+// usando ferramentas de desenvolvedor do navegador, poderia tentar alterar
+// a própria pontuação. Para uma comunidade pequena e de confiança (25-50
+// pessoas conhecidas), esse é um risco aceitável — o item de segurança
+// mais forte (Cloud Functions validando cada ponto no servidor) fica
+// como evolução natural de v2, quando fizer sentido introduzir uma etapa
+// de deploy via terminal.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function apenasEstesCamposMudaram(campos) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos);
+    }
+
+    // ------------------------------------------------------------------------
+    // USUÁRIOS
+    // ------------------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        // A própria pessoa pode editar seu perfil, MENOS o campo isAdmin
+        // (impede que alguém se autopromova a administrador).
+        (userId == request.auth.uid &&
+          request.resource.data.isAdmin == resource.data.isAdmin) ||
+        // Um admin pode ajustar só os pontos de outra pessoa (usado ao
+        // aprovar um desafio individual).
+        (isAdmin() && apenasEstesCamposMudaram(['pontos']))
+      );
+      allow delete: if false;
+    }
+
+    // Reserva de nomes de usuário — impede dois perfis com o mesmo @usuario.
+    match /usernames/{username} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // MURAL
+    // ------------------------------------------------------------------------
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.autorId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        resource.data.autorId == request.auth.uid ||
+        isAdmin() ||
+        apenasEstesCamposMudaram(['curtidas']) ||
+        apenasEstesCamposMudaram(['comentariosCount'])
+      );
+      allow delete: if isSignedIn() && (resource.data.autorId == request.auth.uid || isAdmin());
+
+      match /comentarios/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && request.resource.data.autorId == request.auth.uid;
+        allow update: if false;
+        allow delete: if isSignedIn() && (resource.data.autorId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // ORAÇÃO
+    // ------------------------------------------------------------------------
+    match /prayers/{prayerId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.autorId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        (resource.data.autorId == request.auth.uid && apenasEstesCamposMudaram(['status'])) ||
+        apenasEstesCamposMudaram(['totalOracoes']) ||
+        isAdmin()
+      );
+      allow delete: if isSignedIn() && (resource.data.autorId == request.auth.uid || isAdmin());
+
+      // Um registro por pessoa por dia (o ID do documento é "{uid}_{data}"),
+      // o que a regra abaixo confirma — impedindo orar 2x no mesmo pedido
+      // no mesmo dia mesmo que alguém tente burlar a tela.
+      match /interacoes/{interacaoId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() &&
+          request.resource.data.uid == request.auth.uid &&
+          interacaoId == request.auth.uid + '_' + request.resource.data.data;
+        allow update, delete: if false;
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // MISSÕES — o ID do documento já é "{uid}_{missaoId}_{periodo}", o que
+    // torna duplicidade fisicamente impossível (não dá pra criar 2x o
+    // mesmo documento). A regra abaixo reforça isso e garante que uma
+    // pessoa só grava submissão em nome dela mesma.
+    // ------------------------------------------------------------------------
+    match /missionSubmissions/{submissionId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid &&
+        submissionId.matches(request.auth.uid + '_.*');
+      allow update, delete: if false;
+    }
+
+    // Histórico auditável de cada ponto ganho — nunca editável depois de criado.
+    match /pointsLog/{logId} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || isAdmin());
+      allow update, delete: if false;
+    }
+
+    // Conquistas desbloqueadas — mesma lógica de ID determinístico.
+    match /achievementsUnlocked/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid &&
+        docId == request.auth.uid + '_' + request.resource.data.achievementId;
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // DESAFIOS INDIVIDUAIS (criados pelo admin)
+    // ------------------------------------------------------------------------
+    match /challenges/{challengeId} {
+      allow read: if isSignedIn() && (resource.data.destinatarioId == request.auth.uid || isAdmin());
+      allow create: if isAdmin();
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (resource.data.destinatarioId == request.auth.uid && apenasEstesCamposMudaram(['status']))
+      );
+      allow delete: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // CORREIO — só admin envia; só remetente e destinatário leem.
+    // ------------------------------------------------------------------------
+    match /mailbox/{messageId} {
+      allow read: if isSignedIn() &&
+        (resource.data.destinatarioId == request.auth.uid || resource.data.remetenteId == request.auth.uid);
+      allow create: if isAdmin() && request.resource.data.remetenteId == request.auth.uid;
+      allow update: if isSignedIn() &&
+        resource.data.destinatarioId == request.auth.uid &&
+        apenasEstesCamposMudaram(['lida']);
+      allow delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // VERSÍCULO DO DIA (cache) — leitura/escrita liberada pra qualquer
+    // pessoa logada, já que não é dado sensível (é só o texto do dia).
+    // ------------------------------------------------------------------------
+    match /dailyVerseCache/{date} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ------------------------------------------------------------------------
+    // CONFIGURAÇÕES (pontos das missões) — só admin altera.
+    // ------------------------------------------------------------------------
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}
