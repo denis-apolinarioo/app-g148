@@ -1,4 +1,3 @@
-/* eslint-disable */
 'use client';
 
 import { useState, useRef } from 'react';
@@ -49,30 +48,28 @@ export default function EditarPerfilPage() {
         musicaFavorita: musicaFavorita.trim(),
         tagFuncao,
       };
-      
       if (arquivoFoto) {
         dados.fotoURL = await uploadFotoPerfil(perfil.uid, arquivoFoto);
       }
-      
       await updateUserProfile(perfil.uid, dados);
-      
       atualizarUsuarioCache(perfil.uid, {
         nome: dados.nome,
         fotoURL: dados.fotoURL || perfil.fotoURL,
         username: perfil.username,
       });
-      
       router.push('/perfil');
     } catch (err) {
-      setErro('Erro ao salvar. Verifique sua internet.');
+      console.error('Erro ao salvar perfil:', err);
+      setErro('Não foi possível salvar. Verifique sua internet e tente de novo.');
     } finally {
       setSalvando(false);
     }
   }
 
   return (
-    <div className="mx-auto max-w-md font-poppins">
+    <div className="mx-auto max-w-md">
       <TopBar titulo="Editar perfil" voltarPara="/perfil" />
+
       <div className="space-y-5 px-5 py-5">
         <div className="flex justify-center">
           <button type="button" onClick={() => inputFotoRef.current?.click()} className="relative">
@@ -81,7 +78,13 @@ export default function EditarPerfilPage() {
               <Camera size={15} />
             </span>
           </button>
-          <input ref={inputFotoRef} type="file" accept="image/*" onChange={handleFotoChange} className="hidden" />
+          <input
+            ref={inputFotoRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFotoChange}
+            className="hidden"
+          />
         </div>
 
         <Campo label="Nome">
@@ -89,31 +92,75 @@ export default function EditarPerfilPage() {
         </Campo>
 
         <Campo label="Bio">
-          <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={2} className="input resize-none" placeholder="Fale sobre você" />
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            rows={2}
+            className="input resize-none"
+            placeholder="Fale um pouco sobre você"
+          />
         </Campo>
 
         <Campo label="Propósito">
-          <textarea value={proposito} onChange={(e) => setProposito(e.target.value)} rows={2} className="input resize-none" />
+          <textarea
+            value={proposito}
+            onChange={(e) => setProposito(e.target.value)}
+            rows={2}
+            className="input resize-none"
+          />
         </Campo>
 
         <Campo label="Música favorita">
-          <input value={musicaFavorita} onChange={(e) => setMusicaFavorita(e.target.value)} className="input" />
+          <input
+            value={musicaFavorita}
+            onChange={(e) => setMusicaFavorita(e.target.value)}
+            className="input"
+            placeholder="Nome da música e artista"
+          />
         </Campo>
 
         <Campo label="Função na comunidade">
           <select value={tagFuncao} onChange={(e) => setTagFuncao(e.target.value)} className="input">
-            {TAGS_FUNCAO.map((t) => <option key={t} value={t}>{t}</option>)}
+            {TAGS_FUNCAO.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
           </select>
         </Campo>
 
         {erro && <p className="text-sm text-red-700">{erro}</p>}
 
-        <button onClick={handleSalvar} disabled={salvando || !nome.trim()} className="flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-3.5 text-sm font-semibold text-cream disabled:opacity-40">
-          {salvando ? <Loader2 size={16} className="animate-spin" /> : 'Salvar alterações'}
+        <button
+          onClick={handleSalvar}
+          disabled={salvando || !nome.trim()}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-3.5 text-sm font-semibold text-cream disabled:opacity-40"
+        >
+          {salvando && <Loader2 size={16} className="animate-spin" />}
+          Salvar alterações
         </button>
+
+        <Link
+          href="/termos"
+          className="block pt-1 text-center text-xs text-coffee-300 underline underline-offset-2"
+        >
+          Termos de Uso e Política de Privacidade
+        </Link>
       </div>
+
       <style jsx global>{`
-        .input { width: 100%; border-radius: 0.75rem; border: 1px solid #e4d3be; background-color: #fffdf9; padding: 0.875rem 1rem; font-size: 0.875rem; color: #3f2c1c; }
+        .input {
+          width: 100%;
+          border-radius: 0.75rem;
+          border: 1px solid #e4d3be;
+          background-color: #fffdf9;
+          padding: 0.875rem 1rem;
+          font-size: 0.875rem;
+          color: #3f2c1c;
+        }
+        .input:focus {
+          border-color: #8a6644;
+        }
       `}</style>
     </div>
   );
