@@ -35,10 +35,8 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
     if (!analyserRef.current) return;
     const data = new Uint8Array(analyserRef.current.frequencyBinCount);
     analyserRef.current.getByteFrequencyData(data);
-    const total = 28;
-    const step = Math.floor(data.length / total);
-    const novas = Array.from({ length: total }, (_, i) => {
-      const val = data[i * step] || 0;
+    const novas = Array.from({ length: 28 }, (_, i) => {
+      const val = data[Math.floor((i / 28) * analyserRef.current.frequencyBinCount)] || 0;
       return Math.max(3, Math.round((val / 255) * 28));
     });
     setBarras(novas);
@@ -48,15 +46,17 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   async function iniciarGravacao() {
     setErro('');
     try {
-      // 48kHz é o padrão do Opus — melhor qualidade de voz possível no browser
-      // autoGainControl normaliza volume, echoCancellation e noiseSuppression
-      // limpam o áudio na captura, antes de gravar
+      // CHAVE DA QUALIDADE: desligar TODOS os filtros do browser.
+      // echoCancellation, noiseSuppression e autoGainControl destroem
+      // música e deixam voz com som de ligação ruim quando ativados.
+      // Áudio limpo = sem processamento nenhum do browser.
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-          channelCount: 1, // mono — voz não precisa de estéreo
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
+          // channelCount 2 = estéreo — captura música com profundidade real
+          channelCount: 2,
         },
       });
       streamRef.current = stream;
@@ -69,27 +69,41 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
       analyserRef.current = analyser;
       animFrameRef.current = requestAnimationFrame(animarBarras);
 
-      // Opus 64kbps: qualidade de voz excelente, arquivo pequeno
-      // (1 minuto de áudio ≈ ~480KB — comparado a MP3 que seria ~1MB)
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')
-        ? 'audio/ogg;codecs=opus'
-        : 'audio/webm';
+      // Ordem de preferência de formato:
+      // 1) webm/opus estéreo 256kbps — melhor qualidade, menor tamanho
+      // 2) ogg/opus — fallback Firefox
+      // 3) webm sem codec especificado — fallback Safari antigo
+      const formatos = [
+        'audio/webm;codecs=opus',
+        'audio/ogg;codecs=opus',
+        'audio/webm',
+      ];
+      const mimeType = formatos.find((f) => MediaRecorder.isTypeSupported(f)) || '';
 
-      const recorder = new MediaRecorder(stream, {
-        mimeType,
-        audioBitsPerSecond: 64000, // 64kbps — qualidade de voz premium
-      });
+      const opcoes = {
+        // 256kbps: qualidade de estúdio para voz e música
+        // 1 minuto ≈ 1.9MB — ótimo custo-benefício
+        audioBitsPerSecond: 256000,
+      };
+      if (mimeType) opcoes.mimeType = mimeType;
+
+      // audioBitrateMode 'constant' = qualidade uniforme do início ao fim
+      if ('audioBitrateMode' in MediaRecorder.prototype ||
+          MediaRecorder.isTypeSupported(mimeType)) {
+        try { opcoes.audioBitrateMode = 'constant'; } catch {}
+      }
+
+      const recorder = new MediaRecorder(stream, opcoes);
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
 
       recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
+        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
       };
 
       recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
+        const tipo = mimeType || 'audio/webm';
+        const blob = new Blob(chunksRef.current, { type: tipo });
         const url = URL.createObjectURL(blob);
         setAudioURL(url);
         onGravado(blob);
@@ -142,25 +156,16 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   function handleTimeUpdate() {
     if (!audioRef.current) return;
     const atual = audioRef.current.currentTime;
-    const dur = duracaoRef.current;
     setTempoAtual(atual);
-    if (dur > 0) setProgresso(atual / dur);
+    if (duracaoRef.current > 0) setProgresso(atual / duracaoRef.current);
   }
 
   function handleLoadedMetadata() {
     if (!audioRef.current) return;
-    // Bug fix: alguns browsers reportam Infinity na duração com webm/opus
-    // Solução: aguarda o áudio carregar e usa o currentTime para forçar a leitura
     const dur = audioRef.current.duration;
-    if (dur && isFinite(dur)) {
-      duracaoRef.current = dur;
-      setDuracao(dur);
-    } else {
-      // Fallback: usa os segundos gravados
-      duracaoRef.current = segundos;
-      setDuracao(segundos);
-    }
-    // Garante que a barrinha começa do zero
+    const durFinal = dur && isFinite(dur) ? dur : segundos;
+    duracaoRef.current = durFinal;
+    setDuracao(durFinal);
     audioRef.current.currentTime = 0;
     setProgresso(0);
     setTempoAtual(0);
@@ -183,8 +188,8 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   }
 
   function fmt(s) {
-    const total = Math.round(s || 0);
-    return `${Math.floor(total / 60).toString().padStart(2, '0')}:${(total % 60).toString().padStart(2, '0')}`;
+    const t = Math.round(s || 0);
+    return `${Math.floor(t / 60).toString().padStart(2, '0')}:${(t % 60).toString().padStart(2, '0')}`;
   }
 
   if (audioURL) {
