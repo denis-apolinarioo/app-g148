@@ -7,6 +7,7 @@ import { useAuth } from '@/components/AuthProvider';
 import TopBar from '@/components/TopBar';
 import Avatar from '@/components/Avatar';
 import LoadingScreen from '@/components/LoadingScreen';
+import ImageCropper from '@/components/ImageCropper';
 import { updateUserProfile } from '@/lib/firestore-helpers';
 import { atualizarUsuarioCache } from '@/lib/usersCache';
 import { uploadFotoPerfil } from '@/lib/storage';
@@ -23,6 +24,7 @@ export default function EditarPerfilPage() {
   const [tagFuncao, setTagFuncao] = useState(perfil?.tagFuncao || 'Membro');
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
+  const [srcCorte, setSrcCorte] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const inputFotoRef = useRef(null);
@@ -32,8 +34,14 @@ export default function EditarPerfilPage() {
   function handleFotoChange(e) {
     const arquivo = e.target.files?.[0];
     if (!arquivo) return;
-    setArquivoFoto(arquivo);
-    setPreviewFoto(URL.createObjectURL(arquivo));
+    setSrcCorte(URL.createObjectURL(arquivo));
+  }
+
+  function handleCortado(blob) {
+    setSrcCorte('');
+    const file = new File([blob], 'perfil.jpg', { type: 'image/jpeg' });
+    setArquivoFoto(file);
+    setPreviewFoto(URL.createObjectURL(blob));
   }
 
   async function handleSalvar() {
@@ -66,6 +74,18 @@ export default function EditarPerfilPage() {
     }
   }
 
+  // Tela de corte 1:1 sobrepõe tudo
+  if (srcCorte) {
+    return (
+      <ImageCropper
+        src={srcCorte}
+        razao={{ w: 1, h: 1 }}
+        onConfirmar={handleCortado}
+        onCancelar={() => setSrcCorte('')}
+      />
+    );
+  }
+
   return (
     <div className="mx-auto max-w-md">
       <TopBar titulo="Editar perfil" voltarPara="/perfil" />
@@ -73,7 +93,8 @@ export default function EditarPerfilPage() {
       <div className="space-y-5 px-5 py-5">
         <div className="flex justify-center">
           <button type="button" onClick={() => inputFotoRef.current?.click()} className="relative">
-            <Avatar src={previewFoto || perfil.fotoURL} nome={nome} tamanho="xl" />
+            {/* Foto maior na tela de edição */}
+            <Avatar src={previewFoto || perfil.fotoURL} nome={nome} tamanho={88} />
             <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-cream bg-coffee-700 text-cream">
               <Camera size={15} />
             </span>
