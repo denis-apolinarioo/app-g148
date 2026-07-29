@@ -6,6 +6,7 @@ import MailboxLink from '@/components/MailboxLink';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { subscribeToFeed } from '@/lib/firestore-helpers';
+import { getFeedPreCarregado } from '@/lib/preload';
 import VersiculoDiario from '@/components/VersiculoDiario';
 import PostCard from '@/components/PostCard';
 import CreatePostSheet from '@/components/CreatePostSheet';
@@ -15,7 +16,7 @@ import { MessageSquare } from 'lucide-react';
 
 export default function FeedPage() {
   const { perfil } = useAuth();
-  const [posts, setPosts] = useState(null);
+  const [posts, setPosts] = useState(() => getFeedPreCarregado());
   const [criando, setCriando] = useState(false);
 
   useEffect(() => {
