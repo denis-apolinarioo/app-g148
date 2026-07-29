@@ -112,6 +112,16 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------------
+    // MISSÕES (catálogo) — o Admin cria/edita/apaga pelo painel. Leitura
+    // liberada pra qualquer pessoa logada, porque a tela de Missões dos
+    // usuários precisa ler daqui pra montar a lista.
+    // ------------------------------------------------------------------------
+    match /missoes/{missaoId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
     // MISSÕES — o ID do documento já é "{uid}_{missaoId}_{periodo}", o que
     // torna duplicidade fisicamente impossível (não dá pra criar 2x o
     // mesmo documento). A regra abaixo reforça isso e garante que uma
