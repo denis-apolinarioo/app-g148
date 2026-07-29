@@ -6,28 +6,37 @@ import TopBar from '@/components/TopBar';
 import MissionCard from '@/components/MissionCard';
 import MissionSubmitModal from '@/components/MissionSubmitModal';
 import StreakBadge from '@/components/StreakBadge';
-import { MISSOES_DIARIAS, MISSOES_SEMANAIS, MISSOES_MENSAIS } from '@/lib/constants';
+import { getMissoesPorPeriodicidade } from '@/lib/missionsRepo';
 import { getStatusMissoesDiariasHoje } from '@/lib/points';
-import { getPontosEfetivos } from '@/lib/missionOverrides';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { currentWeekId, currentMonthId } from '@/lib/dateUtils';
 
-function aplicarPontos(lista, mapaPontos) {
-  return lista.map((m) => ({ ...m, pontos: mapaPontos[m.id] ?? m.pontos }));
-}
-
 export default function MissoesPage() {
   const { perfil } = useAuth();
+  const [carregandoMissoes, setCarregandoMissoes] = useState(true);
+  const [missoesDiarias, setMissoesDiarias] = useState([]);
+  const [missoesSemanais, setMissoesSemanais] = useState([]);
+  const [missoesMensais, setMissoesMensais] = useState([]);
   const [statusDiarias, setStatusDiarias] = useState({});
   const [statusSemanais, setStatusSemanais] = useState({});
   const [statusMensais, setStatusMensais] = useState({});
   const [missaoAtiva, setMissaoAtiva] = useState(null);
   const [periodicidadeAtiva, setPeriodicidadeAtiva] = useState(null);
-  const [mapaPontos, setMapaPontos] = useState({});
 
+  // Busca as missões (agora vêm do Firestore, coleção "missoes" — o Admin
+  // pode criar/editar/apagar pelo próprio painel, sem precisar de deploy)
   useEffect(() => {
-    getPontosEfetivos().then(setMapaPontos);
+    Promise.all([
+      getMissoesPorPeriodicidade('diaria'),
+      getMissoesPorPeriodicidade('semanal'),
+      getMissoesPorPeriodicidade('mensal'),
+    ]).then(([diarias, semanais, mensais]) => {
+      setMissoesDiarias(diarias);
+      setMissoesSemanais(semanais);
+      setMissoesMensais(mensais);
+      setCarregandoMissoes(false);
+    });
   }, []);
 
   const carregarStatus = useCallback(async () => {
@@ -39,7 +48,7 @@ export default function MissoesPage() {
     const semana = currentWeekId();
     const semanais = {};
     await Promise.all(
-      MISSOES_SEMANAIS.map(async (m) => {
+      missoesSemanais.map(async (m) => {
         const snap = await getDoc(doc(db, 'missionSubmissions', `${perfil.uid}_${m.id}_${semana}`));
         semanais[m.id] = snap.exists();
       })
@@ -49,24 +58,24 @@ export default function MissoesPage() {
     const mes = currentMonthId();
     const mensais = {};
     await Promise.all(
-      MISSOES_MENSAIS.map(async (m) => {
+      missoesMensais.map(async (m) => {
         const snap = await getDoc(doc(db, 'missionSubmissions', `${perfil.uid}_${m.id}_${mes}`));
         mensais[m.id] = snap.exists();
       })
     );
     setStatusMensais(mensais);
-  }, [perfil]);
+  }, [perfil, missoesSemanais, missoesMensais]);
 
   useEffect(() => {
-    carregarStatus();
-  }, [carregarStatus]);
+    if (!carregandoMissoes) carregarStatus();
+  }, [carregandoMissoes, carregarStatus]);
 
   function abrirMissao(missao, periodicidade) {
     setMissaoAtiva(missao);
     setPeriodicidadeAtiva(periodicidade);
   }
 
-  const totalHoje = MISSOES_DIARIAS.filter((m) => statusDiarias[m.id]).length;
+  const totalHoje = missoesDiarias.filter((m) => statusDiarias[m.id]).length;
 
   return (
     <div className="mx-auto max-w-md">
@@ -77,44 +86,50 @@ export default function MissoesPage() {
           <div>
             <p className="text-xs font-medium text-coffee-400">Hoje</p>
             <p className="font-destaque text-lg font-semibold text-coffee-800">
-              {totalHoje} de {MISSOES_DIARIAS.length} cumpridas
+              {totalHoje} de {missoesDiarias.length} cumpridas
             </p>
           </div>
           <StreakBadge dias={perfil?.streakAtual || 0} tamanho="lg" />
         </div>
 
-        <Secao titulo="Missões Diárias" subtitulo="Renovam à meia-noite">
-          {aplicarPontos(MISSOES_DIARIAS, mapaPontos).map((missao) => (
-            <MissionCard
-              key={missao.id}
-              missao={missao}
-              concluida={!!statusDiarias[missao.id]}
-              onClick={(m) => abrirMissao(m, 'diaria')}
-            />
-          ))}
-        </Secao>
+        {carregandoMissoes ? (
+          <div className="h-40 animate-pulse rounded-xl2 bg-coffee-100/60" />
+        ) : (
+          <>
+            <Secao titulo="Missões Diárias" subtitulo="Renovam à meia-noite">
+              {missoesDiarias.map((missao) => (
+                <MissionCard
+                  key={missao.id}
+                  missao={missao}
+                  concluida={!!statusDiarias[missao.id]}
+                  onClick={(m) => abrirMissao(m, 'diaria')}
+                />
+              ))}
+            </Secao>
 
-        <Secao titulo="Missões Semanais" subtitulo="Renovam toda semana">
-          {aplicarPontos(MISSOES_SEMANAIS, mapaPontos).map((missao) => (
-            <MissionCard
-              key={missao.id}
-              missao={missao}
-              concluida={!!statusSemanais[missao.id]}
-              onClick={(m) => abrirMissao(m, 'semanal')}
-            />
-          ))}
-        </Secao>
+            <Secao titulo="Missões Semanais" subtitulo="Renovam toda semana">
+              {missoesSemanais.map((missao) => (
+                <MissionCard
+                  key={missao.id}
+                  missao={missao}
+                  concluida={!!statusSemanais[missao.id]}
+                  onClick={(m) => abrirMissao(m, 'semanal')}
+                />
+              ))}
+            </Secao>
 
-        <Secao titulo="Missões do Mês" subtitulo="Desafios de mais fôlego">
-          {aplicarPontos(MISSOES_MENSAIS, mapaPontos).map((missao) => (
-            <MissionCard
-              key={missao.id}
-              missao={missao}
-              concluida={!!statusMensais[missao.id]}
-              onClick={(m) => abrirMissao(m, 'mensal')}
-            />
-          ))}
-        </Secao>
+            <Secao titulo="Missões do Mês" subtitulo="Desafios de mais fôlego">
+              {missoesMensais.map((missao) => (
+                <MissionCard
+                  key={missao.id}
+                  missao={missao}
+                  concluida={!!statusMensais[missao.id]}
+                  onClick={(m) => abrirMissao(m, 'mensal')}
+                />
+              ))}
+            </Secao>
+          </>
+        )}
       </div>
 
       {missaoAtiva && (
