@@ -109,7 +109,7 @@ function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir 
   );
 }
 
-export default function CommentSection({ postId }) {
+export default function CommentSection({ postId, postAutorId }) {
   const { perfil } = useAuth();
   const [comentarios, setComentarios] = useState([]);
   const [texto, setTexto] = useState('');
@@ -129,8 +129,9 @@ export default function CommentSection({ postId }) {
     try {
       await addComment(
         postId,
-        { uid: perfil.uid, nome: perfil.nome, fotoURL: perfil.fotoURL },
-        valor
+        { uid: perfil.uid, nome: perfil.nome, fotoURL: perfil.fotoURL, username: perfil.username },
+        valor,
+        postAutorId
       );
     } catch (err) {
       console.error('Erro ao comentar:', err);

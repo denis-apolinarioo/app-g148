@@ -60,7 +60,10 @@ export default function PostCard({ post, usuarioAtual }) {
     if (!usuarioAtual || curtindo) return;
     setCurtindo(true);
     try {
-      await toggleLike(post.id, usuarioAtual.uid, jaCurtiu);
+      await toggleLike(post.id, usuarioAtual.uid, jaCurtiu, {
+        postAutorId: post.autorId,
+        remetente: usuarioAtual,
+      });
     } finally {
       setCurtindo(false);
     }
@@ -301,7 +304,7 @@ export default function PostCard({ post, usuarioAtual }) {
       </div>
 
       {mostrarComentarios && (
-        <CommentSection postId={post.id} usuarioAtual={usuarioAtual} />
+        <CommentSection postId={post.id} postAutorId={post.autorId} usuarioAtual={usuarioAtual} />
       )}
 
       {imagemAberta && (

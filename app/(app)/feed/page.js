@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Mailbox } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import MailboxLink from '@/components/MailboxLink';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 import { subscribeToFeed } from '@/lib/firestore-helpers';
@@ -30,9 +31,7 @@ export default function FeedPage() {
         </div>
         <div className="flex items-center gap-3">
           <StreakBadge dias={perfil?.streakAtual || 0} />
-          <Link href="/correio" className="text-coffee-500">
-            <Mailbox size={22} />
-          </Link>
+          <MailboxLink size={22} />
         </div>
       </header>
 

@@ -6,7 +6,8 @@ import { auth } from '@/lib/firebase';
 import { useAuth } from '@/components/AuthProvider';
 import ProfileView from '@/components/ProfileView';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Settings, Mailbox, ShieldCheck, LogOut } from 'lucide-react';
+import { Settings, ShieldCheck, LogOut } from 'lucide-react';
+import MailboxLink from '@/components/MailboxLink';
 
 export default function MeuPerfilPage() {
   const { perfil } = useAuth();
@@ -22,9 +23,7 @@ export default function MeuPerfilPage() {
   return (
     <div className="mx-auto max-w-md">
       <header className="sticky top-0 z-30 flex items-center justify-end gap-4 border-b border-coffee-100 bg-cream/95 px-5 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)]">
-        <Link href="/correio" className="text-coffee-500">
-          <Mailbox size={21} />
-        </Link>
+        <MailboxLink size={21} />
         {perfil.isAdmin && (
           <Link href="/admin" className="text-coffee-500">
             <ShieldCheck size={21} />

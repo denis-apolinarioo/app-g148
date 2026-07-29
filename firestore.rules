@@ -155,15 +155,22 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------------
-    // CORREIO — só admin envia; só remetente e destinatário leem.
+    // CORREIO — admin envia mensagens (tipo 'mensagem'); qualquer pessoa
+    // pode gerar uma notificação automática de curtida/comentário PARA
+    // OUTRA pessoa (nunca para si mesma). Só remetente e destinatário leem.
     // ------------------------------------------------------------------------
     match /mailbox/{messageId} {
       allow read: if isSignedIn() &&
         (resource.data.destinatarioId == request.auth.uid || resource.data.remetenteId == request.auth.uid);
-      allow create: if isAdmin() && request.resource.data.remetenteId == request.auth.uid;
-      allow update: if isSignedIn() &&
-        resource.data.destinatarioId == request.auth.uid &&
-        apenasEstesCamposMudaram(['lida']);
+      allow create: if isSignedIn() && request.resource.data.remetenteId == request.auth.uid && (
+        (isAdmin() && request.resource.data.tipo == 'mensagem') ||
+        (request.resource.data.tipo in ['curtida', 'comentario'] &&
+          request.resource.data.destinatarioId != request.auth.uid)
+      );
+      allow update: if isSignedIn() && (
+        (resource.data.destinatarioId == request.auth.uid && apenasEstesCamposMudaram(['lida'])) ||
+        (isAdmin() && apenasEstesCamposMudaram(['fixada']))
+      );
       allow delete: if false;
     }
 
