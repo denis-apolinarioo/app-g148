@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import SplashScreen from '@/components/SplashScreen';
+import { preloadFeedInicial } from '@/lib/preload';
 
 const DURACAO_ANIMACAO_SAIDA_MS = 500; // deve bater com a duration-500 do SplashScreen
-const TEMPO_MINIMO_VISIVEL_MS = 1400; // splash fica visível pelo menos esse tempo, mesmo se o login carregar rápido
+const TEMPO_MINIMO_VISIVEL_MS = 1700; // splash fica visível pelo menos esse tempo
 
 export default function RootPage() {
   const { usuarioAuth, perfil, carregando } = useAuth();
@@ -27,12 +28,19 @@ export default function RootPage() {
     if (!usuarioAuth) destino = '/login';
     else if (!perfil) destino = '/onboarding';
 
+    // Dispara o carregamento em segundo plano ENQUANTO a splash ainda está
+    // visível — assim, quando ela sair, o feed já tem os posts, fotos e
+    // autores prontos em cache, em vez de aparecer vazio/esqueleto depois
+    // que a splash fecha.
+    if (destino === '/feed') {
+      preloadFeedInicial();
+    }
+
     const decorrido = Date.now() - (montadoEmRef.current || Date.now());
     const esperaAntesDeSair = Math.max(0, TEMPO_MINIMO_VISIVEL_MS - decorrido);
 
     // Só começa a animação de saída depois do tempo mínimo visível — evita
-    // a splash "piscar" quando o login carrega muito rápido (ex.: sessão já
-    // em cache do navegador), que era o que estava acontecendo.
+    // a splash "piscar" quando o login carrega muito rápido.
     const timerEspera = setTimeout(() => {
       setSaindo(true);
     }, esperaAntesDeSair);
