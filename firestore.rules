@@ -1,4 +1,4 @@
-rules_version = '4';
+rules_version = '2';
 
 // ============================================================================
 // REGRAS DE SEGURANÇA DO FIRESTORE — App G148
