@@ -35,6 +35,29 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos);
     }
 
+    // Permite alterar o array `curtidas` (em posts ou comentários) somente
+    // pra adicionar ou remover o PRÓPRIO uid — nunca sobrescrever o array
+    // inteiro nem mexer na curtida de outra pessoa.
+    function apenasProprioCurtiuMudou() {
+      let antes = resource.data.curtidas != null ? resource.data.curtidas : [];
+      let depois = request.resource.data.curtidas != null ? request.resource.data.curtidas : [];
+      let adicionados = depois.removeAll(antes);
+      let removidos = antes.removeAll(depois);
+      return apenasEstesCamposMudaram(['curtidas'])
+        && (adicionados.size() + removidos.size()) == 1
+        && (adicionados.size() == 0 || adicionados.hasOnly([request.auth.uid]))
+        && (removidos.size() == 0 || removidos.hasOnly([request.auth.uid]));
+    }
+
+    // Permite alterar `comentariosCount` só em +1 ou -1 por vez. Sem Cloud
+    // Functions não dá pra validar se o número reflete a contagem real de
+    // comentários, mas isso impede pular o valor pra qualquer número.
+    function comentariosCountMudouEmUm() {
+      return apenasEstesCamposMudaram(['comentariosCount']) &&
+        (request.resource.data.comentariosCount == resource.data.comentariosCount + 1 ||
+         request.resource.data.comentariosCount == resource.data.comentariosCount - 1);
+    }
+
     // ------------------------------------------------------------------------
     // USUÁRIOS
     // ------------------------------------------------------------------------
@@ -69,8 +92,8 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         resource.data.autorId == request.auth.uid ||
         isAdmin() ||
-        apenasEstesCamposMudaram(['curtidas']) ||
-        apenasEstesCamposMudaram(['comentariosCount'])
+        apenasProprioCurtiuMudou() ||
+        comentariosCountMudouEmUm()
       );
       allow delete: if isSignedIn() && (resource.data.autorId == request.auth.uid || isAdmin());
 
@@ -79,9 +102,10 @@ service cloud.firestore {
         allow create: if isSignedIn() && request.resource.data.autorId == request.auth.uid;
         // CORREÇÃO: antes bloqueava qualquer alteração, o que impedia
         // inclusive a curtida em comentário. Agora, qualquer pessoa logada
-        // pode alterar só o campo `curtidas` (mesma lógica já usada nos
-        // posts) — editar o texto do comentário continua proibido.
-        allow update: if isSignedIn() && apenasEstesCamposMudaram(['curtidas']);
+        // pode adicionar ou remover só o PRÓPRIO uid do array `curtidas`
+        // (mesma lógica já usada nos posts) — editar o texto do comentário
+        // ou mexer na curtida de outra pessoa continua proibido.
+        allow update: if isSignedIn() && apenasProprioCurtiuMudou();
         allow delete: if isSignedIn() && (resource.data.autorId == request.auth.uid || isAdmin());
       }
     }
@@ -136,6 +160,13 @@ service cloud.firestore {
     }
 
     // Histórico auditável de cada ponto ganho — nunca editável depois de criado.
+    //
+    // LIMITAÇÃO CONHECIDA E ACEITA: o create abaixo permite que o próprio
+    // usuário insira uma entrada de log em seu nome. Isso NÃO altera o saldo
+    // real de pontos (que só muda via runTransaction em users/{uid}) — só
+    // poderia poluir o histórico auditável com uma entrada fabricada. Mesmo
+    // risco aceito pra comunidade pequena de confiança já assumido pra
+    // `pontos` (ver comentário no topo do arquivo).
     match /pointsLog/{logId} {
       allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || isAdmin());
@@ -143,6 +174,13 @@ service cloud.firestore {
     }
 
     // Conquistas desbloqueadas — mesma lógica de ID determinístico.
+    //
+    // LIMITAÇÃO CONHECIDA E ACEITA: o create abaixo garante que o documento
+    // é do próprio uid e que o ID é determinístico, mas NÃO valida se a
+    // conquista foi realmente cumprida — um usuário tecnicamente habilidoso
+    // poderia se autoconceder uma conquista via ferramentas de desenvolvedor
+    // do navegador. Mesmo risco aceito pra comunidade pequena de confiança
+    // já assumido pra `pontos` (ver comentário no topo do arquivo).
     match /achievementsUnlocked/{docId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() &&

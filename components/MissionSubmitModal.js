@@ -1,5 +1,3 @@
-// caminho: components/MissionSubmitModal.js
-
 'use client';
 
 import { useState, useRef } from 'react';
@@ -98,6 +96,12 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
           onConcluida?.();
           onFechar();
         }, 1500);
+      } else if (err.message === 'MISSAO_LIMITE_ATINGIDO') {
+        setErro('Você já atingiu o limite de vezes que pode cumprir essa missão.');
+        setTimeout(() => {
+          onConcluida?.();
+          onFechar();
+        }, 1500);
       } else {
         console.error('Erro ao enviar missão:', err);
         setErro('Não foi possível enviar agora. Verifique sua internet e tente de novo.');
@@ -166,7 +170,7 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
             <div>
               <p className="text-sm text-coffee-600">{missao.descricao}</p>
               {missao.linkDrive ? (
-                
+                <a
                   href={missao.linkDrive}
                   target="_blank"
                   rel="noreferrer"

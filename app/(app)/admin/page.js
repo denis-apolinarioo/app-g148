@@ -399,8 +399,29 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
   );
   const [permiteFoto, setPermiteFoto] = useState(missaoInicial?.permiteFoto ?? false);
   const [campos, setCampos] = useState(missaoInicial?.campos || []);
+  const [limiteRepeticoes, setLimiteRepeticoes] = useState(missaoInicial?.limiteRepeticoes ?? '');
+  const [destinatarios, setDestinatarios] = useState(missaoInicial?.destinatarios || null);
+  const [usuarios, setUsuarios] = useState([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
+
+  useEffect(() => {
+    getAllUsers().then(setUsuarios);
+  }, []);
+
+  const selecionados = destinatarios || [];
+  const todosSelecionados = usuarios.length > 0 && selecionados.length === usuarios.length;
+
+  function alternarTodos() {
+    setDestinatarios(todosSelecionados ? [] : usuarios.map((u) => u.id));
+  }
+
+  function alternarUm(uid) {
+    setDestinatarios((sel) => {
+      const atual = sel || [];
+      return atual.includes(uid) ? atual.filter((id) => id !== uid) : [...atual, uid];
+    });
+  }
 
   function adicionarCampo() {
     setCampos((c) => [...c, { chave: '', label: '', tipo: 'texto-curto' }]);
@@ -441,6 +462,9 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
         .filter((c) => c.chave.trim() && c.label.trim())
         .map((c) => ({ chave: c.chave.trim(), label: c.label.trim(), tipo: c.tipo }));
     }
+
+    dados.limiteRepeticoes = limiteRepeticoes === '' ? null : Number(limiteRepeticoes);
+    dados.destinatarios = destinatarios && destinatarios.length > 0 ? destinatarios : null;
 
     try {
       if (editando) {
@@ -652,6 +676,70 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
             <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} />
             Ativa (aparece pra quem usa o app)
           </label>
+
+          <Campo label="Limite de repetições (opcional)">
+            <input
+              type="number"
+              min={1}
+              value={limiteRepeticoes}
+              onChange={(e) => setLimiteRepeticoes(e.target.value)}
+              placeholder="Sem limite"
+              className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+            />
+            <p className="mt-1 text-[11px] text-coffee-300">
+              Quantas vezes, no total, cada pessoa pode cumprir essa missão. Deixe vazio pra sem limite.
+            </p>
+          </Campo>
+
+          <div>
+            <span className="mb-1.5 block text-xs font-medium text-coffee-500">
+              Destinatários (opcional)
+            </span>
+            <p className="mb-2 text-[11px] text-coffee-300">
+              Nenhum marcado = todos veem a missão. Marcando alguém, só quem for marcado a verá.
+            </p>
+            <div className="rounded-xl border border-coffee-100 bg-cream-card">
+              <button
+                type="button"
+                onClick={alternarTodos}
+                className="flex w-full items-center gap-2.5 border-b border-coffee-100 px-3.5 py-2.5"
+              >
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded border ${
+                    todosSelecionados ? 'border-coffee-700 bg-coffee-700 text-cream' : 'border-coffee-300'
+                  }`}
+                >
+                  {todosSelecionados && <Check size={13} />}
+                </span>
+                <span className="text-sm font-semibold text-coffee-700">
+                  Selecionar todos ({usuarios.length})
+                </span>
+              </button>
+              <div className="max-h-52 overflow-y-auto">
+                {usuarios.map((u) => {
+                  const marcado = selecionados.includes(u.id);
+                  return (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => alternarUm(u.id)}
+                      className="flex w-full items-center gap-2.5 border-b border-coffee-50 px-3.5 py-2 last:border-b-0"
+                    >
+                      <span
+                        className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border ${
+                          marcado ? 'border-coffee-700 bg-coffee-700 text-cream' : 'border-coffee-300'
+                        }`}
+                      >
+                        {marcado && <Check size={13} />}
+                      </span>
+                      <Avatar src={u.fotoURL} nome={u.nome} tamanho="sm" />
+                      <span className="truncate text-sm text-coffee-700">{u.nome}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
 
           {erro && <p className="text-center text-sm text-red-700">{erro}</p>}
 

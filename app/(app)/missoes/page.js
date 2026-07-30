@@ -26,17 +26,29 @@ export default function MissoesPage() {
 
   // Busca as missões (agora vêm do Firestore, coleção "missoes" — o Admin
   // pode criar/editar/apagar pelo próprio painel, sem precisar de deploy)
+  // O layout já garante que `perfil` está carregado antes desta página
+  // renderizar (ver app/(app)/layout.js), então dá pra ler o uid aqui sem
+  // precisar re-executar a busca das missões toda vez que `perfil` mudar
+  // (ex.: quando os pontos são atualizados depois de submeter uma missão).
   useEffect(() => {
     Promise.all([
       getMissoesPorPeriodicidade('diaria'),
       getMissoesPorPeriodicidade('semanal'),
       getMissoesPorPeriodicidade('mensal'),
     ]).then(([diarias, semanais, mensais]) => {
-      setMissoesDiarias(diarias);
-      setMissoesSemanais(semanais);
-      setMissoesMensais(mensais);
+      // Uma missão só é restrita quando `destinatarios` é um array não-vazio;
+      // nesse caso, só aparece pra quem estiver na lista.
+      const visivelPara = (missao) =>
+        !Array.isArray(missao.destinatarios) ||
+        missao.destinatarios.length === 0 ||
+        missao.destinatarios.includes(perfil.uid);
+
+      setMissoesDiarias(diarias.filter(visivelPara));
+      setMissoesSemanais(semanais.filter(visivelPara));
+      setMissoesMensais(mensais.filter(visivelPara));
       setCarregandoMissoes(false);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const carregarStatus = useCallback(async () => {
