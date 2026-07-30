@@ -79,13 +79,17 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && userId == request.auth.uid;
       allow update: if isSignedIn() && (
-        // A própria pessoa pode editar seu perfil, MENOS o campo isAdmin
-        // (impede que alguém se autopromova a administrador).
+        // A própria pessoa pode editar seu perfil, MENOS os campos isAdmin
+        // (impede autopromoção a administrador) e travado (item 13 do
+        // Bloco 6 — impede se autodestravar caso um admin tenha travado
+        // o acesso dela).
         (userId == request.auth.uid &&
-          request.resource.data.isAdmin == resource.data.isAdmin) ||
-        // Um admin pode ajustar só os pontos de outra pessoa (usado ao
-        // aprovar um desafio individual).
-        (isAdmin() && apenasEstesCamposMudaram(['pontos']))
+          request.resource.data.isAdmin == resource.data.isAdmin &&
+          request.resource.data.get('travado', false) == resource.data.get('travado', false)) ||
+        // Um admin pode ajustar os pontos de outra pessoa (usado ao
+        // aprovar um desafio individual) e travar/destravar o acesso dela
+        // (item 13 do Bloco 6).
+        (isAdmin() && apenasEstesCamposMudaram(['pontos', 'travado']))
       );
       allow delete: if false;
     }

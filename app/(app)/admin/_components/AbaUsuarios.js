@@ -1,15 +1,39 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Lock, Unlock, Loader2 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
-import { getAllUsers } from '@/lib/firestore-helpers';
+import { useAuth } from '@/components/AuthProvider';
+import { getAllUsers, toggleTravarUsuario } from '@/lib/firestore-helpers';
 
 export default function AbaUsuarios() {
+  const { perfil } = useAuth();
   const [usuarios, setUsuarios] = useState(null);
+  const [travandoId, setTravandoId] = useState(null);
 
   useEffect(() => {
     getAllUsers().then(setUsuarios);
   }, []);
+
+  async function handleAlternarTravamento(usuario) {
+    const travar = !usuario.travado;
+    const pergunta = travar
+      ? `Travar o acesso de ${usuario.nome}? Ela não vai conseguir mais usar o app até você destravar de novo — mesmo que já esteja logada.`
+      : `Destravar o acesso de ${usuario.nome}? Ela vai poder usar o app normalmente de novo.`;
+    if (!confirm(pergunta)) return;
+
+    setTravandoId(usuario.id);
+    try {
+      await toggleTravarUsuario(usuario.id, travar, perfil);
+      setUsuarios((lista) =>
+        lista.map((u) => (u.id === usuario.id ? { ...u, travado: travar } : u))
+      );
+    } catch (err) {
+      console.error('Erro ao travar/destravar usuário:', err);
+    } finally {
+      setTravandoId(null);
+    }
+  }
 
   if (!usuarios) return <div className="h-40 animate-pulse rounded-xl2 bg-coffee-100/60" />;
 
@@ -32,6 +56,36 @@ export default function AbaUsuarios() {
               admin
             </span>
           )}
+          {u.travado && (
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+              travado
+            </span>
+          )}
+          {/* Item 13 do Bloco 6 — travar/destravar acesso, com confirmação */}
+          <button
+            onClick={() => handleAlternarTravamento(u)}
+            disabled={travandoId === u.id || u.id === perfil?.uid}
+            title={
+              u.id === perfil?.uid
+                ? 'Não é possível travar a própria conta'
+                : u.travado
+                  ? 'Destravar acesso'
+                  : 'Travar acesso'
+            }
+            className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border disabled:opacity-40 ${
+              u.travado
+                ? 'border-red-200 bg-red-50 text-red-600'
+                : 'border-coffee-100 text-coffee-400'
+            }`}
+          >
+            {travandoId === u.id ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : u.travado ? (
+              <Unlock size={14} />
+            ) : (
+              <Lock size={14} />
+            )}
+          </button>
         </div>
       ))}
       <p className="pt-3 text-xs text-coffee-300">
