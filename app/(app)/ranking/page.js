@@ -14,6 +14,15 @@ export default function RankingPage() {
   const [usuarios, setUsuarios] = useState(null);
 
   useEffect(() => {
+    // NOTA DE ESCALA (registrado no relatório técnico, não é bug — só
+    // registro pra quem for mexer aqui depois): essa consulta escuta a
+    // coleção `users` inteira, ordenada por pontos, sem `limit()` — ou seja,
+    // toda a comunidade fica em tempo real na tela de Ranking. Isso é
+    // intencional pro cenário atual (25-50 pessoas): a ideia é mostrar o
+    // ranking completo, não só um top N. Só viraria problema de
+    // performance/custo (leituras do Firestore) se a comunidade crescer bem
+    // além disso. Se algum dia isso importar, a solução é adicionar um
+    // `limit()` com paginação — não mudar a lógica de ranking em si.
     const q = query(collection(db, 'users'), orderBy('pontos', 'desc'));
     const unsub = onSnapshot(q, (snap) => {
       setUsuarios(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
