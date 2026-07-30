@@ -19,7 +19,11 @@ const DURACAO_LONG_PRESS = 500; // ms — tempo segurando pra abrir "quem curtiu
 
 export default function PostCard({ post, usuarioAtual }) {
   const [autor, setAutor] = useState(null);
-  const [midiaURL, setMidiaURL] = useState('');
+  // Começa já com a URL original (não a cacheada) — assim a foto aparece
+  // na hora via rede/navegador, em vez de ficar em branco "esperando" o
+  // cache local resolver. Quando getCachedImageURL terminar, troca pela
+  // versão local (blob:), sem nenhum espaço vazio no meio.
+  const [midiaURL, setMidiaURL] = useState(post.midiaURL || '');
   const [mostrarComentarios, setMostrarComentarios] = useState(false);
   const [imagemAberta, setImagemAberta] = useState(false);
   const [curtindo, setCurtindo] = useState(false);
@@ -43,9 +47,17 @@ export default function PostCard({ post, usuarioAtual }) {
   }, [post.autorId]);
 
   useEffect(() => {
-    if (post.midiaURL) {
-      getCachedImageURL(post.midiaURL).then(setMidiaURL);
-    }
+    if (!post.midiaURL) return undefined;
+    let cancelado = false;
+    // A tela já mostra post.midiaURL (via useState acima) enquanto isso
+    // roda em segundo plano — aqui só troca pela versão em cache quando
+    // ela ficar pronta, sem nunca deixar a foto sumir da tela.
+    getCachedImageURL(post.midiaURL).then((url) => {
+      if (!cancelado) setMidiaURL(url);
+    });
+    return () => {
+      cancelado = true;
+    };
   }, [post.midiaURL]);
 
   // Limpa timers pendentes se o card sair da tela no meio de um toque

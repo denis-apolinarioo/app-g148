@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { getUserProfile, subscribeToUserProfile } from '@/lib/firestore-helpers';
+import { solicitarArmazenamentoPersistente } from '@/lib/imageCache';
 
 const AuthContext = createContext({
   usuarioAuth: null,
@@ -15,6 +16,10 @@ export function AuthProvider({ children }) {
   const [usuarioAuth, setUsuarioAuth] = useState(null);
   const [perfil, setPerfil] = useState(null);
   const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    solicitarArmazenamentoPersistente();
+  }, []);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
