@@ -1,3 +1,5 @@
+// caminho: components/MissionSubmitModal.js
+
 'use client';
 
 import { useState, useRef } from 'react';
@@ -7,22 +9,45 @@ import { submeterMissaoDiaria, submeterMissaoSemanal, concluirMissaoMensal } fro
 import { verificarConquistas } from '@/lib/achievements';
 import { uploadFoto } from '@/lib/storage';
 import { CONQUISTAS } from '@/lib/constants';
+import ImageCropper from '@/components/ImageCropper';
+
+const PROPORCOES = [
+  { label: '1:1', w: 1, h: 1 },
+  { label: '4:5', w: 4, h: 5 },
+  { label: '3:4', w: 3, h: 4 },
+];
 
 export default function MissionSubmitModal({ missao, periodicidade, onFechar, onConcluida }) {
   const { perfil } = useAuth();
   const [resposta, setResposta] = useState({});
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
+  const [srcCorte, setSrcCorte] = useState(''); // URL da imagem bruta pra tela de corte
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [conquistaNova, setConquistaNova] = useState(null);
   const inputFotoRef = useRef(null);
 
+  function abrirCorte(arquivo) {
+    setSrcCorte(URL.createObjectURL(arquivo));
+  }
+
   function handleFotoChange(e) {
     const arquivo = e.target.files?.[0];
     if (!arquivo) return;
-    setArquivoFoto(arquivo);
-    setPreviewFoto(URL.createObjectURL(arquivo));
+    abrirCorte(arquivo);
+  }
+
+  function fecharCorte() {
+    if (srcCorte) URL.revokeObjectURL(srcCorte);
+    setSrcCorte('');
+  }
+
+  function handleCortado(blob) {
+    fecharCorte();
+    const file = new File([blob], 'foto.jpg', { type: 'image/jpeg' });
+    setArquivoFoto(file);
+    setPreviewFoto(URL.createObjectURL(blob));
   }
 
   const camposPreenchidos =
@@ -108,6 +133,18 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
     );
   }
 
+  if (srcCorte) {
+    return (
+      <ImageCropper
+        src={srcCorte}
+        razao={{ w: 1, h: 1 }}
+        opcoes={PROPORCOES}
+        onConfirmar={handleCortado}
+        onCancelar={fecharCorte}
+      />
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center">
       <div className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl">
@@ -129,7 +166,7 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
             <div>
               <p className="text-sm text-coffee-600">{missao.descricao}</p>
               {missao.linkDrive ? (
-                <a
+                
                   href={missao.linkDrive}
                   target="_blank"
                   rel="noreferrer"
