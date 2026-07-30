@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import LoadingScreen from '@/components/LoadingScreen';
 import BottomNav from '@/components/BottomNav';
+import ConexaoBanner from '@/components/ConexaoBanner';
 
 export default function AppLayout({ children }) {
   const { usuarioAuth, perfil, carregando } = useAuth();
@@ -25,6 +26,7 @@ export default function AppLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-cream pb-20">
+      <ConexaoBanner />
       {children}
       <BottomNav />
     </div>

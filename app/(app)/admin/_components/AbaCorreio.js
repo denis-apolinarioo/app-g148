@@ -5,7 +5,7 @@ import { Check, Loader2, Search, X } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/components/AuthProvider';
 import { getAllUsers, sendMailMessage, sendMailToMultiple } from '@/lib/firestore-helpers';
-import { uploadFotoCorreio } from '@/lib/storage';
+import { uploadFotoCorreioComThumb } from '@/lib/storage';
 import { combinaComBusca } from '@/lib/searchUtils';
 
 export default function AbaCorreio() {
@@ -58,10 +58,13 @@ export default function AbaCorreio() {
     setEnviando(true);
     try {
       let fotoURL = '';
+      let fotoThumbURL = '';
       if (arquivoFoto) {
-        fotoURL = await uploadFotoCorreio(perfil.uid, arquivoFoto);
+        const resultado = await uploadFotoCorreioComThumb(perfil.uid, arquivoFoto);
+        fotoURL = resultado.url;
+        fotoThumbURL = resultado.thumbURL;
       }
-      const opts = { fotoURL, fixada };
+      const opts = { fotoURL, fotoThumbURL, fixada };
       if (selecionados.length === 1) {
         await sendMailMessage(perfil.uid, selecionados[0], texto.trim(), opts);
       } else {

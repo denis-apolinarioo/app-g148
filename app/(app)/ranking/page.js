@@ -8,6 +8,7 @@ import TopBar from '@/components/TopBar';
 import RankingRow from '@/components/RankingRow';
 import EmptyState from '@/components/EmptyState';
 import { Trophy } from 'lucide-react';
+import { reportarConexaoOk, reportarErroConexao } from '@/lib/connectivity';
 
 export default function RankingPage() {
   const { perfil } = useAuth();
@@ -24,9 +25,17 @@ export default function RankingPage() {
     // além disso. Se algum dia isso importar, a solução é adicionar um
     // `limit()` com paginação — não mudar a lógica de ranking em si.
     const q = query(collection(db, 'users'), orderBy('pontos', 'desc'));
-    const unsub = onSnapshot(q, (snap) => {
-      setUsuarios(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        reportarConexaoOk();
+        setUsuarios(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      },
+      (err) => {
+        console.error('[RankingPage] Erro na escuta em tempo real:', err);
+        reportarErroConexao();
+      }
+    );
     return () => unsub();
   }, []);
 

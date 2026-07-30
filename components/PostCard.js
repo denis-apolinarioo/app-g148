@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Heart, MessageCircle, Trash2, Pencil, Check, X as XIcon } from 'lucide-react';
+import { Heart, MessageCircle, Trash2, Pencil, Check, X as XIcon, Flag } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import CommentSection from '@/components/CommentSection';
 import TextoComLinks from '@/components/TextoComLinks';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import LikesListModal from '@/components/LikesListModal';
-import { toggleLike, deletePost, updatePost } from '@/lib/firestore-helpers';
+import { toggleLike, deletePost, updatePost, createReport } from '@/lib/firestore-helpers';
 import { removerPontosPost } from '@/lib/points';
 import { getUsuarioCache } from '@/lib/usersCache';
 import { getCachedImageURL } from '@/lib/imageCache';
@@ -32,6 +32,8 @@ export default function PostCard({ post, usuarioAtual }) {
   const [editando, setEditando] = useState(false);
   const [textoEdit, setTextoEdit] = useState(post.texto || '');
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+  const [denunciando, setDenunciando] = useState(false);
+  const [denunciado, setDenunciado] = useState(false);
 
   const ultimoTapRef = useRef(0);
   const timeoutTapRef = useRef(null);
@@ -169,6 +171,29 @@ export default function PostCard({ post, usuarioAtual }) {
       console.error('Erro ao editar post:', err);
     } finally {
       setSalvandoEdicao(false);
+    }
+  }
+
+  // Item 17 — Reportar post (visível pra qualquer pessoa logada, exceto o dono)
+  async function handleReportar() {
+    if (denunciando || denunciado || !usuarioAtual) return;
+    const motivo = window.prompt('Por que você está denunciando este post? (opcional)');
+    if (motivo === null) return; // cancelou
+    setDenunciando(true);
+    try {
+      await createReport({
+        tipo: 'post',
+        postId: post.id,
+        conteudoAutorId: post.autorId,
+        conteudoTexto: post.texto || '',
+        motivo,
+        reportador: usuarioAtual,
+      });
+      setDenunciado(true);
+    } catch (err) {
+      console.error('Erro ao denunciar post:', err);
+    } finally {
+      setDenunciando(false);
     }
   }
 
@@ -313,6 +338,20 @@ export default function PostCard({ post, usuarioAtual }) {
           <MessageCircle size={17} />
           {post.comentariosCount || 0}
         </button>
+
+        {!ehDono && usuarioAtual && (
+          <button
+            onClick={handleReportar}
+            disabled={denunciando || denunciado}
+            aria-label="Denunciar post"
+            className={`ml-auto flex items-center gap-1 text-xs font-medium disabled:opacity-60 ${
+              denunciado ? 'text-coffee-400' : 'text-coffee-200 hover:text-red-500'
+            }`}
+          >
+            <Flag size={14} fill={denunciado ? 'currentColor' : 'none'} />
+            {denunciado ? 'Denunciado' : ''}
+          </button>
+        )}
       </div>
 
       {mostrarComentarios && (

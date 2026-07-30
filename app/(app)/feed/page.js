@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Loader2 } from 'lucide-react';
 import MailboxLink from '@/components/MailboxLink';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
@@ -14,15 +14,38 @@ import EmptyState from '@/components/EmptyState';
 import StreakBadge from '@/components/StreakBadge';
 import { MessageSquare } from 'lucide-react';
 
+const QUANTIDADE_BASE = 15;
+const QUANTIDADE_INCREMENTO = 15;
+
 export default function FeedPage() {
   const { perfil } = useAuth();
   const [posts, setPosts] = useState(() => getFeedPreCarregado());
   const [criando, setCriando] = useState(false);
+  const [limite, setLimite] = useState(QUANTIDADE_BASE);
+  const [carregandoMais, setCarregandoMais] = useState(false);
 
   useEffect(() => {
-    const unsub = subscribeToFeed(setPosts, 15);
+    const unsub = subscribeToFeed((novosPosts) => {
+      setPosts(novosPosts);
+      setCarregandoMais(false);
+    }, limite);
     return () => unsub();
-  }, []);
+  }, [limite]);
+
+  // Se voltou menos posts do que o pedido, é porque já chegou no fim do
+  // mural — não tem mais nada pra carregar.
+  const semMaisPosts = posts !== null && posts.length < limite;
+
+  function carregarMais() {
+    setCarregandoMais(true);
+    setLimite((l) => l + QUANTIDADE_INCREMENTO);
+  }
+
+  // Item 18 — oculta, só pra quem bloqueou, os posts de quem foi bloqueado
+  // (o bloqueio é local ao perfil de quem bloqueia, filtrado aqui no cliente)
+  const postsVisiveis = perfil?.bloqueados?.length
+    ? posts?.filter((p) => !perfil.bloqueados.includes(p.autorId))
+    : posts;
 
   return (
     <div className="mx-auto max-w-md">
@@ -69,9 +92,20 @@ export default function FeedPage() {
         )}
 
         <div className="space-y-4 pb-6">
-          {posts?.map((post) => (
+          {postsVisiveis?.map((post) => (
             <PostCard key={post.id} post={post} usuarioAtual={perfil} />
           ))}
+
+          {posts?.length > 0 && !semMaisPosts && (
+            <button
+              onClick={carregarMais}
+              disabled={carregandoMais}
+              className="flex w-full items-center justify-center gap-2 rounded-xl2 border border-coffee-100 bg-cream-card py-3 text-sm font-semibold text-coffee-600 disabled:opacity-60"
+            >
+              {carregandoMais && <Loader2 size={15} className="animate-spin" />}
+              Carregar mais
+            </button>
+          )}
         </div>
       </div>
 

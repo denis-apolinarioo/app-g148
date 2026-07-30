@@ -12,10 +12,14 @@ import { subscribeToMailbox, markMailAsRead } from '@/lib/firestore-helpers';
 import { getCachedImageURL } from '@/lib/imageCache';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 
+const QUANTIDADE_BASE_VISIVEL = 20;
+const QUANTIDADE_INCREMENTO_VISIVEL = 20;
+
 export default function CorreioPage() {
   const { perfil } = useAuth();
   const [mensagens, setMensagens] = useState(null);
   const [fotoAberta, setFotoAberta] = useState('');
+  const [qtdVisivel, setQtdVisivel] = useState(QUANTIDADE_BASE_VISIVEL);
 
   useEffect(() => {
     if (!perfil) return undefined;
@@ -34,7 +38,14 @@ export default function CorreioPage() {
   }
 
   const fixadas = mensagens?.filter((m) => m.fixada) || [];
-  const normais = mensagens?.filter((m) => !m.fixada) || [];
+  const todasNormais = mensagens?.filter((m) => !m.fixada) || [];
+  // Item 21º — só exibição paginada. A escuta em tempo real já traz todo o
+  // histórico da pessoa (subscribeToMailbox não usa orderBy, pra não
+  // depender de índice composto), e como isso cresce por pessoa — bem mais
+  // devagar que o Feed geral — não precisa limitar a consulta em si, só
+  // controlar quanto aparece na tela de uma vez.
+  const normais = todasNormais.slice(0, qtdVisivel);
+  const temMaisNormais = todasNormais.length > qtdVisivel;
 
   return (
     <div className="mx-auto max-w-md">
@@ -70,6 +81,16 @@ export default function CorreioPage() {
           {normais.map((msg) => (
             <LinhaMensagem key={msg.id} msg={msg} onAbrir={abrirMensagem} onVerFoto={setFotoAberta} />
           ))}
+
+          {temMaisNormais && (
+            <button
+              type="button"
+              onClick={() => setQtdVisivel((q) => q + QUANTIDADE_INCREMENTO_VISIVEL)}
+              className="w-full rounded-xl2 border border-coffee-100 bg-cream-card py-3 text-sm font-semibold text-coffee-600"
+            >
+              Carregar mais
+            </button>
+          )}
         </div>
       </div>
 

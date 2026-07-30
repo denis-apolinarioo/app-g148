@@ -12,8 +12,9 @@ import AbaMissoes from './_components/AbaMissoes';
 import AbaUsuarios from './_components/AbaUsuarios';
 import AbaDesafios from './_components/AbaDesafios';
 import AbaCorreio from './_components/AbaCorreio';
+import AbaDenuncias from './_components/AbaDenuncias';
 
-const ABAS = ['Ações', 'Missões', 'Usuários', 'Desafios', 'Correio'];
+const ABAS = ['Ações', 'Missões', 'Usuários', 'Desafios', 'Correio', 'Denúncias'];
 
 export default function AdminPage() {
   const { perfil } = useAuth();
@@ -60,6 +61,7 @@ export default function AdminPage() {
         {aba === 'Usuários' && <AbaUsuarios />}
         {aba === 'Desafios' && <AbaDesafios />}
         {aba === 'Correio' && <AbaCorreio />}
+        {aba === 'Denúncias' && <AbaDenuncias />}
       </div>
     </div>
   );

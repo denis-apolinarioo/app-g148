@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Music, Sparkles } from 'lucide-react';
+import { Music, Sparkles, UserX, UserCheck } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import StreakBadge from '@/components/StreakBadge';
 import AchievementBadge from '@/components/AchievementBadge';
@@ -9,7 +9,7 @@ import PostCard from '@/components/PostCard';
 import PrayerCard from '@/components/PrayerCard';
 import EmptyState from '@/components/EmptyState';
 import ImageViewerModal from '@/components/ImageViewerModal';
-import { subscribeToUserPosts, subscribeToUserPrayers } from '@/lib/firestore-helpers';
+import { subscribeToUserPosts, subscribeToUserPrayers, toggleBlockUser } from '@/lib/firestore-helpers';
 import { getConquistasDoUsuario } from '@/lib/achievements';
 
 export default function ProfileView({ usuario, usuarioAtual }) {
@@ -18,6 +18,22 @@ export default function ProfileView({ usuario, usuarioAtual }) {
   const [conquistas, setConquistas] = useState([]);
   const [aba, setAba] = useState('posts');
   const [fotoAberta, setFotoAberta] = useState(false);
+  const [bloqueando, setBloqueando] = useState(false);
+
+  const ehOutraPessoa = usuarioAtual?.uid && usuarioAtual.uid !== usuario.uid;
+  const jaBloqueado = usuarioAtual?.bloqueados?.includes(usuario.uid);
+
+  async function handleAlternarBloqueio() {
+    if (bloqueando) return;
+    setBloqueando(true);
+    try {
+      await toggleBlockUser(usuarioAtual.uid, usuario.uid, jaBloqueado);
+    } catch (err) {
+      console.error('Erro ao bloquear/desbloquear usuário:', err);
+    } finally {
+      setBloqueando(false);
+    }
+  }
 
   useEffect(() => {
     if (!usuario?.uid) return undefined;
@@ -52,6 +68,17 @@ export default function ProfileView({ usuario, usuarioAtual }) {
           <span className="mt-2 rounded-full bg-coffee-100 px-3 py-1 text-xs font-medium text-coffee-600">
             {usuario.tagFuncao}
           </span>
+        )}
+
+        {ehOutraPessoa && (
+          <button
+            onClick={handleAlternarBloqueio}
+            disabled={bloqueando}
+            className="mt-3 flex items-center gap-1.5 rounded-full border border-coffee-200 px-3 py-1.5 text-xs font-medium text-coffee-500 disabled:opacity-50"
+          >
+            {jaBloqueado ? <UserCheck size={13} /> : <UserX size={13} />}
+            {jaBloqueado ? 'Desbloquear' : 'Bloquear'}
+          </button>
         )}
 
         {usuario.bio && <p className="mt-3 max-w-xs text-sm text-coffee-600">{usuario.bio}</p>}

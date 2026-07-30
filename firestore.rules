@@ -238,5 +238,28 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+
+    // ------------------------------------------------------------------------
+    // LOG DE AÇÕES DO ADMIN (item 4 do Bloco A) — histórico auditável de
+    // alterações feitas pelo painel administrativo. Só admin grava e lê;
+    // nunca editável/apagável depois de criado.
+    // ------------------------------------------------------------------------
+    match /adminActionsLog/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.adminId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // DENÚNCIAS (item 17) — qualquer pessoa logada pode denunciar (em nome
+    // dela mesma); só o Admin lê a fila e só pode alterar o campo `status`
+    // (marcar como resolvida/reabrir). Nada é editável ou apagável além disso.
+    // ------------------------------------------------------------------------
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.reportadoPorId == request.auth.uid;
+      allow update: if isAdmin() && apenasEstesCamposMudaram(['status']);
+      allow delete: if false;
+    }
   }
 }

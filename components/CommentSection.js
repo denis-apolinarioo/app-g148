@@ -2,23 +2,25 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { subscribeToComments, addComment, deleteComment, toggleCommentLike } from '@/lib/firestore-helpers';
+import { subscribeToComments, addComment, deleteComment, toggleCommentLike, createReport } from '@/lib/firestore-helpers';
 import { useAuth } from '@/components/AuthProvider';
 import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
 import Avatar from '@/components/Avatar';
 import TextoComLinks from '@/components/TextoComLinks';
 import { formatDateTimeBR } from '@/lib/dateUtils';
-import { Send, Trash2, Heart } from 'lucide-react';
+import { Send, Trash2, Heart, Flag } from 'lucide-react';
 
 const JANELA_DUPLO_TOQUE = 300; // ms — mesmo valor usado no PostCard, pra manter o gesto consistente
 
-function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir }) {
+function LinhaComentario({ postId, comentario, uidAtual, reportador, podeExcluir, onExcluir }) {
   const autor = useUsuarioAtual(comentario.autorId, {
     nome: comentario.autorNome,
     fotoURL: comentario.autorFoto,
   });
   const [curtindo, setCurtindo] = useState(false);
   const [coracaoAnimado, setCoracaoAnimado] = useState(false);
+  const [denunciando, setDenunciando] = useState(false);
+  const [denunciado, setDenunciado] = useState(false);
   const ultimoTapRef = useRef(0);
 
   // Item 20 — Curtir comentários
@@ -51,6 +53,30 @@ function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir 
       }
     }
     ultimoTapRef.current = agora;
+  }
+
+  // Item 17 — Reportar comentário (visível pra qualquer pessoa logada, exceto o autor)
+  async function handleReportar() {
+    if (denunciando || denunciado || !uidAtual) return;
+    const motivo = window.prompt('Por que você está denunciando este comentário? (opcional)');
+    if (motivo === null) return; // cancelou
+    setDenunciando(true);
+    try {
+      await createReport({
+        tipo: 'comentario',
+        postId,
+        commentId: comentario.id,
+        conteudoAutorId: comentario.autorId,
+        conteudoTexto: comentario.texto || '',
+        motivo,
+        reportador,
+      });
+      setDenunciado(true);
+    } catch (err) {
+      console.error('Erro ao denunciar comentário:', err);
+    } finally {
+      setDenunciando(false);
+    }
   }
 
   return (
@@ -101,6 +127,19 @@ function LinhaComentario({ postId, comentario, uidAtual, podeExcluir, onExcluir 
               aria-label="Excluir comentário"
             >
               <Trash2 size={12} />
+            </button>
+          )}
+          {!podeExcluir && uidAtual && (
+            <button
+              onClick={handleReportar}
+              disabled={denunciando || denunciado}
+              aria-label="Denunciar comentário"
+              className={`ml-auto flex items-center gap-1 text-[11px] font-medium disabled:opacity-60 ${
+                denunciado ? 'text-coffee-400' : 'text-coffee-300 hover:text-red-500'
+              }`}
+            >
+              <Flag size={11} fill={denunciado ? 'currentColor' : 'none'} />
+              {denunciado ? 'Denunciado' : ''}
             </button>
           )}
         </div>
@@ -159,6 +198,7 @@ export default function CommentSection({ postId, postAutorId }) {
               postId={postId}
               comentario={c}
               uidAtual={perfil?.uid}
+              reportador={perfil}
               podeExcluir={c.autorId === perfil?.uid || perfil?.isAdmin}
               onExcluir={() => handleExcluir(c.id)}
             />

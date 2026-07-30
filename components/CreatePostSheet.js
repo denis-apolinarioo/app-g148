@@ -6,7 +6,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { createPost } from '@/lib/firestore-helpers';
 import { pontuarPostFeed } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
-import { uploadFoto, uploadAudio } from '@/lib/storage';
+import { uploadFotoComThumb, uploadAudio } from '@/lib/storage';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
 import ImageCropper from '@/components/ImageCropper';
 
@@ -68,10 +68,13 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
     try {
       let tipo = 'texto';
       let midiaURL = '';
+      let midiaThumbURL = '';
 
       if (aba === 'foto' && arquivoFoto) {
         tipo = 'foto';
-        midiaURL = await uploadFoto(perfil.uid, arquivoFoto);
+        const resultado = await uploadFotoComThumb(perfil.uid, arquivoFoto);
+        midiaURL = resultado.url;
+        midiaThumbURL = resultado.thumbURL;
       } else if (aba === 'audio' && blobAudio) {
         tipo = 'audio';
         midiaURL = await uploadAudio(perfil.uid, blobAudio);
@@ -82,6 +85,7 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
         tipo,
         texto: texto.trim(),
         midiaURL,
+        midiaThumbURL,
         categoria,
       });
 
