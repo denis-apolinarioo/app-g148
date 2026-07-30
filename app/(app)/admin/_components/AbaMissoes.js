@@ -43,6 +43,19 @@ const TIPO_CAMPO_OPCOES = [
 // renders; com id próprio por campo isso não depende mais da posição).
 let proximoIdCampo = 1;
 
+// A missão não tem mais um `tipo` fixo (isso foi removido na migração pro
+// formato de campos livres — ver migrarCamposDasMissoes). Esse resumo troca
+// aquele campo antigo, que ficava em branco pra missão já migrada/nova, por
+// uma descrição baseada no que a missão realmente tem hoje.
+function descreverMissao(missao) {
+  const partes = [];
+  const qtdCampos = (missao.campos || []).length;
+  if (qtdCampos > 0) partes.push(`${qtdCampos} campo${qtdCampos > 1 ? 's' : ''}`);
+  if (missao.permiteFoto) partes.push('foto');
+  if (missao.permiteAudio) partes.push('áudio');
+  return partes.length > 0 ? partes.join(' · ') : 'Sem campos de resposta';
+}
+
 export default function AbaMissoes() {
   const [missoes, setMissoes] = useState(null);
   const [migrando, setMigrando] = useState(false);
@@ -221,7 +234,7 @@ export default function AbaMissoes() {
                     )}
                   </p>
                   <p className="text-xs text-coffee-400">
-                    {missao.tipo} · +{missao.pontos} pontos
+                    {descreverMissao(missao)} · +{missao.pontos} pontos
                   </p>
                 </div>
                 <button
