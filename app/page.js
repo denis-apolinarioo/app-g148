@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
 import SplashScreen from '@/components/SplashScreen';
-import { preloadFeedInicial } from '@/lib/preload';
+import { preloadFeedInicial, preloadAvataresComunidade } from '@/lib/preload';
 
 const DURACAO_ANIMACAO_SAIDA_MS = 500; // deve bater com a duration-500 do SplashScreen
 const TEMPO_MINIMO_VISIVEL_MS = 1700; // splash fica visível pelo menos esse tempo (evita "piscar" quando carrega rápido demais)
@@ -27,12 +27,15 @@ export default function RootPage() {
     if (!usuarioAuth) destino = '/login';
     else if (!perfil) destino = '/onboarding';
 
-    // Promessa que só resolve quando o feed (posts + fotos + autores) já
-    // está pronto em cache. Se o destino não for o feed, não tem o que
-    // esperar. preloadFeedInicial() nunca rejeita (ela mesma trata os
-    // próprios erros e não lança pra fora) — então essa promessa sempre
-    // resolve, cedo ou tarde.
-    const promessaCarregamento = destino === '/feed' ? preloadFeedInicial() : Promise.resolve();
+    // Promessa que só resolve quando o feed (posts + fotos + autores) E os
+    // avatares da comunidade (usados no Ranking e no Perfil) já estão
+    // prontos em cache. Se o destino não for o feed, não tem o que esperar.
+    // Nenhuma das duas funções rejeita (cada uma trata os próprios erros) —
+    // então essa promessa sempre resolve, cedo ou tarde.
+    const promessaCarregamento =
+      destino === '/feed'
+        ? Promise.all([preloadFeedInicial(), preloadAvataresComunidade()])
+        : Promise.resolve();
 
     const espera = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
