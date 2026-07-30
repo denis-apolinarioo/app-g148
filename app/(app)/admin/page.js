@@ -418,12 +418,12 @@ const TIPO_CAMPO_OPCOES = [
   { valor: 'texto-curto', label: 'Texto curto' },
   { valor: 'texto-longo', label: 'Texto longo' },
   { valor: 'link', label: 'Link' },
+  { valor: 'check', label: 'Confirmação (check)' },
 ];
 
 function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo }) {
   const editando = !!missaoInicial;
   const [titulo, setTitulo] = useState(missaoInicial?.titulo || '');
-  const [tipo, setTipo] = useState(missaoInicial?.tipo || 'check');
   const [periodicidade, setPeriodicidade] = useState(
     missaoInicial?.periodicidade || periodicidadePadrao || 'diaria'
   );
@@ -431,15 +431,13 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
   const [pontos, setPontos] = useState(missaoInicial?.pontos ?? 10);
   const [postaNoFeed, setPostaNoFeed] = useState(missaoInicial?.postaNoFeed ?? false);
   const [ativa, setAtiva] = useState(missaoInicial?.ativa ?? true);
-  const [perguntaConfirmacao, setPerguntaConfirmacao] = useState(
-    missaoInicial?.perguntaConfirmacao || ''
-  );
-  const [descricao, setDescricao] = useState(missaoInicial?.descricao || '');
+  const [instrucoes, setInstrucoes] = useState(missaoInicial?.instrucoes || '');
   const [linkDrive, setLinkDrive] = useState(missaoInicial?.linkDrive || '');
   const [exigeAprovacaoAdmin, setExigeAprovacaoAdmin] = useState(
     missaoInicial?.exigeAprovacaoAdmin ?? false
   );
   const [permiteFoto, setPermiteFoto] = useState(missaoInicial?.permiteFoto ?? false);
+  const [permiteAudio, setPermiteAudio] = useState(missaoInicial?.permiteAudio ?? false);
   const [campos, setCampos] = useState(missaoInicial?.campos || []);
   const [limiteRepeticoes, setLimiteRepeticoes] = useState(missaoInicial?.limiteRepeticoes ?? '');
   const [destinatarios, setDestinatarios] = useState(missaoInicial?.destinatarios || null);
@@ -477,33 +475,36 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
 
   async function handleSalvar() {
     if (!titulo.trim() || salvando) return;
+
+    // Toda missão precisa de pelo menos uma forma de resposta configurada —
+    // um campo (check/texto/link), foto ou áudio. Sem isso, a tela de
+    // responder ficaria vazia.
+    if (campos.length === 0 && !permiteFoto && !permiteAudio) {
+      setErro('Adicione pelo menos um campo, ou permita foto/áudio, pra essa missão ter como ser respondida.');
+      return;
+    }
+
     setSalvando(true);
     setErro('');
 
-    // Só grava os campos que fazem sentido pro tipo escolhido — evita deixar
-    // "lixo" de outro tipo salvo no documento se o admin trocar o tipo.
+    // A missão agora é uma composição livre de blocos (campos + foto/áudio),
+    // não mais um `tipo` fixo — o mesmo formato de `dados` vale pra qualquer missão.
     const dados = {
       titulo: titulo.trim(),
-      tipo,
       periodicidade,
       icone: icone.trim(),
       pontos: Number(pontos) || 0,
       postaNoFeed,
       ativa,
-    };
-
-    if (tipo === 'check') {
-      dados.perguntaConfirmacao = perguntaConfirmacao.trim();
-    } else if (tipo === 'leitura') {
-      dados.descricao = descricao.trim();
-      dados.linkDrive = linkDrive.trim();
-      dados.exigeAprovacaoAdmin = exigeAprovacaoAdmin;
-    } else if (tipo === 'texto' || tipo === 'reflexao') {
-      dados.permiteFoto = permiteFoto;
-      dados.campos = campos
+      campos: campos
         .filter((c) => c.chave.trim() && c.label.trim())
-        .map((c) => ({ chave: c.chave.trim(), label: c.label.trim(), tipo: c.tipo }));
-    }
+        .map((c) => ({ chave: c.chave.trim(), label: c.label.trim(), tipo: c.tipo })),
+      permiteFoto,
+      permiteAudio,
+      instrucoes: instrucoes.trim(),
+      linkDrive: linkDrive.trim(),
+      exigeAprovacaoAdmin,
+    };
 
     dados.limiteRepeticoes = limiteRepeticoes === '' ? null : Number(limiteRepeticoes);
     dados.destinatarios = destinatarios && destinatarios.length > 0 ? destinatarios : null;
@@ -550,33 +551,19 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
             />
           </Campo>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Campo label="Tipo">
-              <select
-                value={tipo}
-                onChange={(e) => setTipo(e.target.value)}
-                className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
-              >
-                <option value="check">Check (confirmação simples)</option>
-                <option value="texto">Texto (campo curto)</option>
-                <option value="reflexao">Reflexão (pergunta + foto)</option>
-                <option value="leitura">Leitura (livro/material)</option>
-              </select>
-            </Campo>
-            <Campo label="Periodicidade">
-              <select
-                value={periodicidade}
-                onChange={(e) => setPeriodicidade(e.target.value)}
-                className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
-              >
-                {PERIODICIDADES.map((p) => (
-                  <option key={p.valor} value={p.valor}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
-            </Campo>
-          </div>
+          <Campo label="Periodicidade">
+            <select
+              value={periodicidade}
+              onChange={(e) => setPeriodicidade(e.target.value)}
+              className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+            >
+              {PERIODICIDADES.map((p) => (
+                <option key={p.valor} value={p.valor}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </Campo>
 
           <div className="grid grid-cols-2 gap-3">
             <Campo label="Ícone (lucide-react, ex: sunrise)">
@@ -598,112 +585,105 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
             </Campo>
           </div>
 
-          {tipo === 'check' && (
-            <Campo label="Pergunta de confirmação">
-              <textarea
-                rows={2}
-                value={perguntaConfirmacao}
-                onChange={(e) => setPerguntaConfirmacao(e.target.value)}
-                className="w-full resize-none rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
-              />
-            </Campo>
-          )}
+          <Campo label="Instruções (opcional)">
+            <textarea
+              rows={2}
+              value={instrucoes}
+              onChange={(e) => setInstrucoes(e.target.value)}
+              placeholder="Texto explicando a missão, mostrado antes dos campos de resposta."
+              className="w-full resize-none rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+            />
+          </Campo>
 
-          {tipo === 'leitura' && (
-            <>
-              <Campo label="Descrição">
-                <textarea
-                  rows={2}
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                  className="w-full resize-none rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
-                />
-              </Campo>
-              <Campo label="Link do material (Drive, etc.)">
-                <input
-                  value={linkDrive}
-                  onChange={(e) => setLinkDrive(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
-                />
-              </Campo>
-              <label className="flex items-center gap-2 text-xs text-coffee-500">
-                <input
-                  type="checkbox"
-                  checked={exigeAprovacaoAdmin}
-                  onChange={(e) => setExigeAprovacaoAdmin(e.target.checked)}
-                />
-                Exige aprovação do Admin
-              </label>
-            </>
-          )}
+          <Campo label="Link de material de apoio (opcional)">
+            <input
+              value={linkDrive}
+              onChange={(e) => setLinkDrive(e.target.value)}
+              placeholder="https://..."
+              className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+            />
+          </Campo>
 
-          {(tipo === 'texto' || tipo === 'reflexao') && (
-            <>
-              <label className="flex items-center gap-2 text-xs text-coffee-500">
-                <input
-                  type="checkbox"
-                  checked={permiteFoto}
-                  onChange={(e) => setPermiteFoto(e.target.checked)}
-                />
-                Permite anexar foto
-              </label>
+          <label className="flex items-center gap-2 text-xs text-coffee-500">
+            <input
+              type="checkbox"
+              checked={permiteFoto}
+              onChange={(e) => setPermiteFoto(e.target.checked)}
+            />
+            Permite foto
+          </label>
 
-              <div>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <span className="text-xs font-medium text-coffee-500">Perguntas</span>
-                  <button
-                    onClick={adicionarCampo}
-                    className="flex items-center gap-1 text-xs font-semibold text-coffee-600"
-                  >
-                    <Plus size={12} /> Adicionar
-                  </button>
+          <label className="flex items-center gap-2 text-xs text-coffee-500">
+            <input
+              type="checkbox"
+              checked={permiteAudio}
+              onChange={(e) => setPermiteAudio(e.target.checked)}
+            />
+            Permite áudio
+          </label>
+
+          <label className="flex items-center gap-2 text-xs text-coffee-500">
+            <input
+              type="checkbox"
+              checked={exigeAprovacaoAdmin}
+              onChange={(e) => setExigeAprovacaoAdmin(e.target.checked)}
+            />
+            Exige aprovação do admin antes de valer os pontos
+          </label>
+
+          <div>
+            <div className="mb-1.5 flex items-center justify-between">
+              <span className="text-xs font-medium text-coffee-500">Campos de resposta</span>
+              <button
+                onClick={adicionarCampo}
+                className="flex items-center gap-1 text-xs font-semibold text-coffee-600"
+              >
+                <Plus size={12} /> Adicionar
+              </button>
+            </div>
+            <div className="space-y-2">
+              {campos.map((campo, index) => (
+                <div key={index} className="rounded-lg border border-coffee-100 bg-cream-card p-2.5">
+                  <div className="mb-1.5 flex items-center justify-between">
+                    <span className="text-[10px] font-medium text-coffee-400">
+                      Campo {index + 1}
+                    </span>
+                    <button onClick={() => removerCampo(index)} className="text-red-500">
+                      <X size={12} />
+                    </button>
+                  </div>
+                  <input
+                    value={campo.label}
+                    onChange={(e) => atualizarCampo(index, { label: e.target.value })}
+                    placeholder="Texto da pergunta"
+                    className="mb-1.5 w-full rounded border border-coffee-100 bg-cream px-2 py-1.5 text-xs text-coffee-800"
+                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      value={campo.chave}
+                      onChange={(e) => atualizarCampo(index, { chave: e.target.value })}
+                      placeholder="chave_interna"
+                      className="flex-1 rounded border border-coffee-100 bg-cream px-2 py-1.5 text-xs text-coffee-800"
+                    />
+                    <select
+                      value={campo.tipo}
+                      onChange={(e) => atualizarCampo(index, { tipo: e.target.value })}
+                      className="rounded border border-coffee-100 bg-cream px-2 py-1.5 text-xs text-coffee-800"
+                    >
+                      {TIPO_CAMPO_OPCOES.map((op) => (
+                        <option key={op.valor} value={op.valor}>
+                          {op.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  {campos.map((campo, index) => (
-                    <div key={index} className="rounded-lg border border-coffee-100 bg-cream-card p-2.5">
-                      <div className="mb-1.5 flex items-center justify-between">
-                        <span className="text-[10px] font-medium text-coffee-400">
-                          Pergunta {index + 1}
-                        </span>
-                        <button onClick={() => removerCampo(index)} className="text-red-500">
-                          <X size={12} />
-                        </button>
-                      </div>
-                      <input
-                        value={campo.label}
-                        onChange={(e) => atualizarCampo(index, { label: e.target.value })}
-                        placeholder="Texto da pergunta"
-                        className="mb-1.5 w-full rounded border border-coffee-100 bg-cream px-2 py-1.5 text-xs text-coffee-800"
-                      />
-                      <div className="flex gap-1.5">
-                        <input
-                          value={campo.chave}
-                          onChange={(e) => atualizarCampo(index, { chave: e.target.value })}
-                          placeholder="chave_interna"
-                          className="flex-1 rounded border border-coffee-100 bg-cream px-2 py-1.5 text-xs text-coffee-800"
-                        />
-                        <select
-                          value={campo.tipo}
-                          onChange={(e) => atualizarCampo(index, { tipo: e.target.value })}
-                          className="rounded border border-coffee-100 bg-cream px-2 py-1.5 text-xs text-coffee-800"
-                        >
-                          {TIPO_CAMPO_OPCOES.map((op) => (
-                            <option key={op.valor} value={op.valor}>
-                              {op.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  ))}
-                  {campos.length === 0 && (
-                    <p className="text-xs text-coffee-300">Nenhuma pergunta adicionada ainda.</p>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
+              ))}
+              {campos.length === 0 && (
+                <p className="text-xs text-coffee-300">Nenhum campo adicionado ainda.</p>
+              )}
+            </div>
+          </div>
 
           <label className="flex items-center gap-2 text-xs text-coffee-500">
             <input
