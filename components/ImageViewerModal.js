@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
+import { getCachedImageURL } from '@/lib/imageCache';
 
 const ESCALA_MIN = 1;
 const ESCALA_MAX = 4;
@@ -18,6 +19,27 @@ export default function ImageViewerModal({ src, alt = 'Foto', onClose }) {
   const [escala, setEscala] = useState(1);
   const [posicao, setPosicao] = useState({ x: 0, y: 0 });
   const gesto = useRef({ distanciaInicial: 0, escalaInicial: 1, ultimoToque: null });
+
+  // Alguns chamadores (ex.: PostCard) já passam uma URL local (blob:) que
+  // veio do cache de imagens. Outros (ex.: foto de perfil em tela cheia,
+  // foto do Correio) ainda passam a URL original do Firebase Storage —
+  // essas passam pelo cache aqui, pra também ficarem salvas em disco e não
+  // baixar de novo toda vez que a pessoa abrir a foto.
+  const [srcCacheado, setSrcCacheado] = useState('');
+  useEffect(() => {
+    if (!src || src.startsWith('blob:') || src.startsWith('data:')) {
+      setSrcCacheado('');
+      return undefined;
+    }
+    let cancelado = false;
+    getCachedImageURL(src).then((url) => {
+      if (!cancelado) setSrcCacheado(url);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [src]);
+  const srcFinal = srcCacheado || src;
 
   // Trava o scroll da página por trás enquanto o visualizador está aberto.
   useEffect(() => {
@@ -104,7 +126,7 @@ export default function ImageViewerModal({ src, alt = 'Foto', onClose }) {
 
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={src}
+        src={srcFinal}
         alt={alt}
         draggable={false}
         onClick={(e) => e.stopPropagation()}

@@ -9,6 +9,7 @@ import Avatar from '@/components/Avatar';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import { useAuth } from '@/components/AuthProvider';
 import { subscribeToMailbox, markMailAsRead } from '@/lib/firestore-helpers';
+import { getCachedImageURL } from '@/lib/imageCache';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 
 export default function CorreioPage() {
@@ -138,8 +139,7 @@ function LinhaMensagem({ msg, onAbrir, onVerFoto }) {
             }}
             className="mt-2 block overflow-hidden rounded-lg"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={msg.fotoURL} alt="Foto da mensagem" className="max-h-40 w-full object-cover" />
+            <FotoMensagemCacheada url={msg.fotoURL} />
           </button>
         )}
 
@@ -150,4 +150,24 @@ function LinhaMensagem({ msg, onAbrir, onVerFoto }) {
       </div>
     </div>
   );
+}
+
+// Miniatura da foto anexada, passando pelo cache persistente (mesmo padrão
+// do Avatar.js) — sem isso, toda vez que o Correio é aberto as fotos
+// anexadas baixariam de novo do Firebase Storage.
+function FotoMensagemCacheada({ url }) {
+  const [urlLocal, setUrlLocal] = useState('');
+
+  useEffect(() => {
+    let cancelado = false;
+    getCachedImageURL(url).then((resolvida) => {
+      if (!cancelado) setUrlLocal(resolvida);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [url]);
+
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={urlLocal || url} alt="Foto da mensagem" className="max-h-40 w-full object-cover" />;
 }
