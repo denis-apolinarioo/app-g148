@@ -11,6 +11,8 @@ import EmptyState from '@/components/EmptyState';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import { subscribeToUserPosts, subscribeToUserPrayers, toggleBlockUser } from '@/lib/firestore-helpers';
 import { getConquistasDoUsuario } from '@/lib/achievements';
+import { useAppConfig } from '@/lib/useAppConfig';
+import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
 
 export default function ProfileView({ usuario, usuarioAtual }) {
   const [posts, setPosts] = useState(null);
@@ -19,6 +21,12 @@ export default function ProfileView({ usuario, usuarioAtual }) {
   const [aba, setAba] = useState('posts');
   const [fotoAberta, setFotoAberta] = useState(false);
   const [bloqueando, setBloqueando] = useState(false);
+
+  // Item 12 do Bloco 5 — o Admin pode desligar a função de bloqueio pra todo
+  // mundo (aba Config); enquanto o app ainda não carregou a configuração,
+  // assume ativo (comportamento de sempre).
+  const config = useAppConfig();
+  const bloqueioAtivo = config?.[CHAVE_BLOQUEIO_USUARIO_ATIVO] !== false;
 
   const ehOutraPessoa = usuarioAtual?.uid && usuarioAtual.uid !== usuario.uid;
   const jaBloqueado = usuarioAtual?.bloqueados?.includes(usuario.uid);
@@ -70,7 +78,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
           </span>
         )}
 
-        {ehOutraPessoa && (
+        {ehOutraPessoa && bloqueioAtivo && (
           <button
             onClick={handleAlternarBloqueio}
             disabled={bloqueando}

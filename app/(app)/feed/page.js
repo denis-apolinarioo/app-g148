@@ -13,12 +13,18 @@ import CreatePostSheet from '@/components/CreatePostSheet';
 import EmptyState from '@/components/EmptyState';
 import StreakBadge from '@/components/StreakBadge';
 import { MessageSquare } from 'lucide-react';
+import { useAppConfig } from '@/lib/useAppConfig';
+import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
 
 const QUANTIDADE_BASE = 15;
 const QUANTIDADE_INCREMENTO = 15;
 
 export default function FeedPage() {
   const { perfil } = useAuth();
+  // Item 12 do Bloco 5 — com a função desligada pelo Admin, ninguém mais
+  // some do feed de ninguém, mesmo quem já tinha sido bloqueado antes.
+  const config = useAppConfig();
+  const bloqueioAtivo = config?.[CHAVE_BLOQUEIO_USUARIO_ATIVO] !== false;
   const [posts, setPosts] = useState(() => getFeedPreCarregado());
   const [criando, setCriando] = useState(false);
   const [limite, setLimite] = useState(QUANTIDADE_BASE);
@@ -43,7 +49,7 @@ export default function FeedPage() {
 
   // Item 18 — oculta, só pra quem bloqueou, os posts de quem foi bloqueado
   // (o bloqueio é local ao perfil de quem bloqueia, filtrado aqui no cliente)
-  const postsVisiveis = perfil?.bloqueados?.length
+  const postsVisiveis = bloqueioAtivo && perfil?.bloqueados?.length
     ? posts?.filter((p) => !perfil.bloqueados.includes(p.autorId))
     : posts;
 
