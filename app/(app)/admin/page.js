@@ -15,6 +15,7 @@ import {
   apagarMissao,
   trocarOrdem,
   migrarMissoesDoCodigoParaFirestore,
+  migrarCamposDasMissoes,
 } from '@/lib/missionsRepo';
 import {
   getAllUsers,
@@ -198,6 +199,8 @@ function AbaMissoes() {
   const [missoes, setMissoes] = useState(null);
   const [migrando, setMigrando] = useState(false);
   const [resultadoMigracao, setResultadoMigracao] = useState(null);
+  const [corrigindoCampos, setCorrigindoCampos] = useState(false);
+  const [resultadoCorrecaoCampos, setResultadoCorrecaoCampos] = useState(null);
   const [missaoEditando, setMissaoEditando] = useState(null); // objeto = editar, 'nova' = criar
   const [periodicidadeNova, setPeriodicidadeNova] = useState('diaria');
   const [apagando, setApagando] = useState(null);
@@ -227,6 +230,26 @@ function AbaMissoes() {
       setResultadoMigracao('Não foi possível migrar agora. Tente de novo em instantes.');
     } finally {
       setMigrando(false);
+    }
+  }
+
+  async function handleCorrigirCampos() {
+    if (corrigindoCampos) return;
+    setCorrigindoCampos(true);
+    setResultadoCorrecaoCampos(null);
+    try {
+      const migradas = await migrarCamposDasMissoes();
+      setResultadoCorrecaoCampos(
+        migradas > 0
+          ? `${migradas} missão(ões) com o formato corrigido.`
+          : 'Nada pra corrigir — todas as missões já estão no formato novo.'
+      );
+      carregar();
+    } catch (err) {
+      console.error('Erro ao corrigir formato dos campos das missões:', err);
+      setResultadoCorrecaoCampos('Não foi possível corrigir agora. Tente de novo em instantes.');
+    } finally {
+      setCorrigindoCampos(false);
     }
   }
 
@@ -280,6 +303,22 @@ function AbaMissoes() {
         </button>
         {resultadoMigracao && (
           <p className="mt-2 text-center text-xs text-coffee-500">{resultadoMigracao}</p>
+        )}
+
+        <button
+          onClick={handleCorrigirCampos}
+          disabled={corrigindoCampos}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-coffee-200 py-2.5 text-sm font-semibold text-coffee-700 disabled:opacity-40"
+        >
+          {corrigindoCampos ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <UploadCloud size={14} />
+          )}
+          Corrigir formato dos campos
+        </button>
+        {resultadoCorrecaoCampos && (
+          <p className="mt-2 text-center text-xs text-coffee-500">{resultadoCorrecaoCampos}</p>
         )}
       </div>
 
