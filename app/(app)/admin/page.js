@@ -7,19 +7,26 @@ import TopBar from '@/components/TopBar';
 import LoadingScreen from '@/components/LoadingScreen';
 import EmptyState from '@/components/EmptyState';
 import { ShieldAlert } from 'lucide-react';
+import AdminLoginGate from './_components/AdminLoginGate';
 import AbaAcoes from './_components/AbaAcoes';
 import AbaMissoes from './_components/AbaMissoes';
 import AbaUsuarios from './_components/AbaUsuarios';
 import AbaDesafios from './_components/AbaDesafios';
 import AbaCorreio from './_components/AbaCorreio';
 import AbaDenuncias from './_components/AbaDenuncias';
+import AbaConfiguracoes from './_components/AbaConfiguracoes';
 
-const ABAS = ['Ações', 'Missões', 'Usuários', 'Desafios', 'Correio', 'Denúncias'];
+const ABAS = ['Ações', 'Missões', 'Usuários', 'Desafios', 'Correio', 'Denúncias', 'Config'];
 
 export default function AdminPage() {
-  const { perfil } = useAuth();
+  const { usuarioAuth, perfil } = useAuth();
   const router = useRouter();
   const [aba, setAba] = useState('Ações');
+  // Item 10 do Bloco 4: pede e-mail/senha toda vez que entra na área Admin.
+  // Esse state nasce false toda vez que o componente é montado (ou seja,
+  // toda vez que a pessoa entra em /admin de novo) — não é salvo em lugar
+  // nenhum de propósito, pra pedir confirmação sempre, como pedido.
+  const [desbloqueado, setDesbloqueado] = useState(false);
 
   useEffect(() => {
     if (perfil && !perfil.isAdmin) {
@@ -33,6 +40,15 @@ export default function AdminPage() {
       <div className="mx-auto max-w-md">
         <TopBar titulo="Painel Admin" voltarPara="/perfil" />
         <EmptyState icone={ShieldAlert} titulo="Área restrita a administradores" />
+      </div>
+    );
+  }
+
+  if (!desbloqueado) {
+    return (
+      <div className="mx-auto max-w-md">
+        <TopBar titulo="Painel Admin" voltarPara="/perfil" />
+        <AdminLoginGate usuarioAuth={usuarioAuth} onDesbloqueado={() => setDesbloqueado(true)} />
       </div>
     );
   }
@@ -62,6 +78,7 @@ export default function AdminPage() {
         {aba === 'Desafios' && <AbaDesafios />}
         {aba === 'Correio' && <AbaCorreio />}
         {aba === 'Denúncias' && <AbaDenuncias />}
+        {aba === 'Config' && <AbaConfiguracoes />}
       </div>
     </div>
   );
