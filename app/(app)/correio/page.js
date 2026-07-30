@@ -11,6 +11,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { subscribeToMailbox, markMailAsRead } from '@/lib/firestore-helpers';
 import { getCachedImageURL } from '@/lib/imageCache';
 import { formatDateTimeBR } from '@/lib/dateUtils';
+import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
 
 const QUANTIDADE_BASE_VISIVEL = 20;
 const QUANTIDADE_INCREMENTO_VISIVEL = 20;
@@ -26,16 +27,6 @@ export default function CorreioPage() {
     const unsub = subscribeToMailbox(perfil.uid, setMensagens);
     return () => unsub();
   }, [perfil]);
-
-  async function abrirMensagem(msg) {
-    if (!msg.lida) {
-      try {
-        await markMailAsRead(msg.id);
-      } catch (err) {
-        console.error('Erro ao marcar mensagem como lida:', err);
-      }
-    }
-  }
 
   const fixadas = mensagens?.filter((m) => m.fixada) || [];
   const todasNormais = mensagens?.filter((m) => !m.fixada) || [];
@@ -72,14 +63,14 @@ export default function CorreioPage() {
         {fixadas.length > 0 && (
           <div className="mb-3 space-y-2.5">
             {fixadas.map((msg) => (
-              <LinhaMensagem key={msg.id} msg={msg} onAbrir={abrirMensagem} onVerFoto={setFotoAberta} />
+              <LinhaMensagem key={msg.id} msg={msg} onVerFoto={setFotoAberta} />
             ))}
           </div>
         )}
 
         <div className="space-y-2.5 pb-6">
           {normais.map((msg) => (
-            <LinhaMensagem key={msg.id} msg={msg} onAbrir={abrirMensagem} onVerFoto={setFotoAberta} />
+            <LinhaMensagem key={msg.id} msg={msg} onVerFoto={setFotoAberta} />
           ))}
 
           {temMaisNormais && (
@@ -101,13 +92,23 @@ export default function CorreioPage() {
   );
 }
 
-function LinhaMensagem({ msg, onAbrir, onVerFoto }) {
+function LinhaMensagem({ msg, onVerFoto }) {
   const ehNotificacao = msg.tipo === 'curtida' || msg.tipo === 'comentario';
   const Icone = msg.tipo === 'curtida' ? Heart : msg.tipo === 'comentario' ? MessageCircle : null;
 
+  // 5º — marcar como lida na hora, sem esperar o Firestore confirmar.
+  const [lidaExibida, dispararLeitura] = useAcaoOtimista(msg.lida);
+
+  function abrirMensagem() {
+    if (lidaExibida) return;
+    dispararLeitura(true, () => markMailAsRead(msg.id)).catch((err) => {
+      console.error('Erro ao marcar mensagem como lida:', err);
+    });
+  }
+
   return (
     <div
-      onClick={() => onAbrir(msg)}
+      onClick={abrirMensagem}
       className={`flex w-full items-start gap-3 rounded-xl2 border p-4 shadow-card ${
         msg.fixada
           ? 'border-2 border-gold bg-gold/15 shadow-md'
@@ -118,10 +119,10 @@ function LinhaMensagem({ msg, onAbrir, onVerFoto }) {
           exclusivos (só um dos dois aparecia), então uma mensagem fixada
           E não lida nunca mostrava a bolinha. Agora os dois podem
           aparecer juntos, empilhados nessa coluna estreita. */}
-      {(msg.fixada || !msg.lida) && (
+      {(msg.fixada || !lidaExibida) && (
         <div className="mt-1 flex flex-shrink-0 flex-col items-center gap-1">
           {msg.fixada && <Pin size={13} className="text-gold" fill="currentColor" />}
-          {!msg.lida && <Circle size={8} fill="currentColor" className="text-gold" />}
+          {!lidaExibida && <Circle size={8} fill="currentColor" className="text-gold" />}
         </div>
       )}
 
@@ -149,12 +150,12 @@ function LinhaMensagem({ msg, onAbrir, onVerFoto }) {
             >
               {msg.remetenteNome || 'Alguém'}
             </Link>{' '}
-            <span className={msg.lida ? 'text-coffee-600' : 'font-semibold'}>{msg.texto}</span>
+            <span className={lidaExibida ? 'text-coffee-600' : 'font-semibold'}>{msg.texto}</span>
           </p>
         ) : (
           <p
             className={`whitespace-pre-wrap text-sm ${
-              msg.lida ? 'text-coffee-600' : 'font-semibold text-coffee-800'
+              lidaExibida ? 'text-coffee-600' : 'font-semibold text-coffee-800'
             }`}
           >
             {msg.texto}

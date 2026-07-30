@@ -13,6 +13,7 @@ import { removerPontosPost } from '@/lib/points';
 import { getUsuarioCache } from '@/lib/usersCache';
 import { getCachedImageURL } from '@/lib/imageCache';
 import { formatDateTimeBR } from '@/lib/dateUtils';
+import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
 
 const JANELA_DUPLO_TOQUE = 300; // ms — intervalo pra reconhecer 2 toques como "duplo toque"
 const DURACAO_LONG_PRESS = 500; // ms — tempo segurando pra abrir "quem curtiu"
@@ -26,7 +27,6 @@ export default function PostCard({ post, usuarioAtual }) {
   const [midiaURL, setMidiaURL] = useState(post.midiaURL || '');
   const [mostrarComentarios, setMostrarComentarios] = useState(false);
   const [imagemAberta, setImagemAberta] = useState(false);
-  const [curtindo, setCurtindo] = useState(false);
   const [coracaoAnimado, setCoracaoAnimado] = useState(false);
   const [mostrarCurtidas, setMostrarCurtidas] = useState(false);
   const [editando, setEditando] = useState(false);
@@ -43,6 +43,13 @@ export default function PostCard({ post, usuarioAtual }) {
   const jaCurtiu = post.curtidas?.includes(usuarioAtual?.uid);
   const ehDono = usuarioAtual?.uid === post.autorId;
   const ehAdmin = usuarioAtual?.isAdmin;
+
+  // 2º — curtir na hora, sem esperar o Firestore confirmar (base já
+  // existente em lib/useAcaoOtimista.js — ver comentário do hook).
+  const [jaCurtiuExibido, dispararCurtida, curtindo] = useAcaoOtimista(jaCurtiu);
+  const contagemCurtidasBase = post.curtidas?.length || 0;
+  const contagemCurtidasExibida =
+    contagemCurtidasBase + (jaCurtiuExibido === jaCurtiu ? 0 : jaCurtiuExibido ? 1 : -1);
 
   useEffect(() => {
     getUsuarioCache(post.autorId).then(setAutor);
@@ -72,20 +79,21 @@ export default function PostCard({ post, usuarioAtual }) {
 
   async function handleLike() {
     if (!usuarioAtual || curtindo) return;
-    setCurtindo(true);
     try {
-      await toggleLike(post.id, usuarioAtual.uid, jaCurtiu, {
-        postAutorId: post.autorId,
-        remetente: usuarioAtual,
-      });
-    } finally {
-      setCurtindo(false);
+      await dispararCurtida(!jaCurtiuExibido, () =>
+        toggleLike(post.id, usuarioAtual.uid, jaCurtiu, {
+          postAutorId: post.autorId,
+          remetente: usuarioAtual,
+        })
+      );
+    } catch (err) {
+      console.error('Erro ao curtir/descurtir post:', err);
     }
   }
 
   // Item 19 — duplo toque curte (nunca descurte) e mostra a animação do coração
   function dispararCurtidaComAnimacao() {
-    if (!jaCurtiu) handleLike();
+    if (!jaCurtiuExibido) handleLike();
     setCoracaoAnimado(true);
     setTimeout(() => setCoracaoAnimado(false), 700);
   }
@@ -324,11 +332,11 @@ export default function PostCard({ post, usuarioAtual }) {
           onTouchEnd={cancelarPressionar}
           disabled={curtindo}
           className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-            jaCurtiu ? 'text-red-500' : 'text-coffee-300 hover:text-red-400'
+            jaCurtiuExibido ? 'text-red-500' : 'text-coffee-300 hover:text-red-400'
           }`}
         >
-          <Heart size={17} fill={jaCurtiu ? 'currentColor' : 'none'} />
-          {post.curtidas?.length || 0}
+          <Heart size={17} fill={jaCurtiuExibido ? 'currentColor' : 'none'} />
+          {contagemCurtidasExibida}
         </button>
 
         <button

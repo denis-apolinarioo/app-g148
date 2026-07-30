@@ -11,11 +11,17 @@ import { registerPrayerInteraction, markPrayerAsDone } from '@/lib/firestore-hel
 import { pontuarOracao } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
 import { formatDateBR, isPastDeadline } from '@/lib/dateUtils';
+import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
 
 export default function PrayerCard({ pedido }) {
   const { perfil } = useAuth();
-  const [orando, setOrando] = useState(false);
-  const [jaOrouAgora, setJaOrouAgora] = useState(false);
+  // 4º — "Orei por isso" na hora. Não existe um campo do servidor que diga
+  // "esta pessoa já orou hoje" (só a subcoleção de interações, que não é
+  // lida aqui), então usamos o hook com valor de servidor fixo em `false`:
+  // ele muda pra `true` na hora do toque e nunca é sobreposto de volta —
+  // exatamente o comportamento de sessão que a tela já tinha, só que sem
+  // esperar o Firestore confirmar antes de mudar o botão.
+  const [jaOrouExibido, dispararOracao, orando] = useAcaoOtimista(false);
   const [marcandoFeito, setMarcandoFeito] = useState(false);
 
   // CORREÇÃO DE BUG: nome/foto sempre atuais em vez do dado congelado.
@@ -30,21 +36,19 @@ export default function PrayerCard({ pedido }) {
   const cumprido = pedido.status === 'cumprido';
 
   async function handleOrar() {
-    if (orando || jaOrouAgora) return;
-    setOrando(true);
+    if (orando || jaOrouExibido) return;
     try {
-      const registrou = await registerPrayerInteraction(pedido.id, perfil.uid);
-      if (registrou) {
-        setJaOrouAgora(true);
-        await pontuarOracao(perfil.uid, pedido.id);
-        await verificarConquistas(perfil.uid, perfil.streakAtual || 0, 'oracao');
-      } else {
-        setJaOrouAgora(true); // já tinha orado hoje — trata igual visualmente
-      }
+      await dispararOracao(true, async () => {
+        const registrou = await registerPrayerInteraction(pedido.id, perfil.uid);
+        if (registrou) {
+          await pontuarOracao(perfil.uid, pedido.id);
+          await verificarConquistas(perfil.uid, perfil.streakAtual || 0, 'oracao');
+        }
+        // Se `registrou` for false, a pessoa já tinha orado hoje — trata
+        // igual visualmente (fica marcado como "Orou hoje" de qualquer jeito).
+      });
     } catch (err) {
       console.error('Erro ao registrar oração:', err);
-    } finally {
-      setOrando(false);
     }
   }
 
@@ -103,15 +107,15 @@ export default function PrayerCard({ pedido }) {
           {!cumprido && (
             <button
               onClick={handleOrar}
-              disabled={orando || jaOrouAgora}
+              disabled={orando || jaOrouExibido}
               className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold ${
-                jaOrouAgora
+                jaOrouExibido
                   ? 'bg-coffee-100 text-coffee-400'
                   : 'bg-coffee-700 text-cream'
               }`}
             >
               <HandHeart size={13} />
-              {jaOrouAgora ? 'Orou hoje' : 'Orei por isso'}
+              {jaOrouExibido ? 'Orou hoje' : 'Orei por isso'}
             </button>
           )}
         </div>

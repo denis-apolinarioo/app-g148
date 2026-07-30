@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { subscribeToComments, addComment, deleteComment, toggleCommentLike, createReport } from '@/lib/firestore-helpers';
 import { useAuth } from '@/components/AuthProvider';
 import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
+import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
 import Avatar from '@/components/Avatar';
 import TextoComLinks from '@/components/TextoComLinks';
 import { formatDateTimeBR } from '@/lib/dateUtils';
@@ -17,7 +18,6 @@ function LinhaComentario({ postId, comentario, uidAtual, reportador, podeExcluir
     nome: comentario.autorNome,
     fotoURL: comentario.autorFoto,
   });
-  const [curtindo, setCurtindo] = useState(false);
   const [coracaoAnimado, setCoracaoAnimado] = useState(false);
   const [denunciando, setDenunciando] = useState(false);
   const [denunciado, setDenunciado] = useState(false);
@@ -26,24 +26,30 @@ function LinhaComentario({ postId, comentario, uidAtual, reportador, podeExcluir
   // Item 20 — Curtir comentários
   const jaCurtiu = comentario.curtidas?.includes(uidAtual);
 
+  // 3º — curtir comentário na hora, mesma base otimista do post (2º).
+  const [jaCurtiuExibido, dispararCurtida, curtindo] = useAcaoOtimista(jaCurtiu);
+  const contagemCurtidasBase = comentario.curtidas?.length || 0;
+  const contagemCurtidasExibida =
+    contagemCurtidasBase + (jaCurtiuExibido === jaCurtiu ? 0 : jaCurtiuExibido ? 1 : -1);
+
   async function handleCurtir() {
     if (!uidAtual || curtindo) return;
-    setCurtindo(true);
+    const proximoValor = !jaCurtiuExibido;
     // Anima só quando está curtindo (não quando está descurtindo)
-    if (!jaCurtiu) {
+    if (proximoValor) {
       setCoracaoAnimado(true);
       setTimeout(() => setCoracaoAnimado(false), 700);
     }
     try {
-      await toggleCommentLike(postId, comentario.id, uidAtual, jaCurtiu);
+      await dispararCurtida(proximoValor, () =>
+        toggleCommentLike(postId, comentario.id, uidAtual, jaCurtiu)
+      );
     } catch (err) {
       // Se a regra do Firestore publicada no Console estiver desatualizada
       // (sem a permissão de curtida em comentário), o erro cai aqui — sem
       // esse catch, a tentativa falhava em silêncio e parecia que o botão
       // simplesmente "não fazia nada".
       console.error('Erro ao curtir/descurtir comentário:', err);
-    } finally {
-      setCurtindo(false);
     }
   }
 
@@ -52,7 +58,7 @@ function LinhaComentario({ postId, comentario, uidAtual, reportador, podeExcluir
   function handleTapNoBalao() {
     const agora = Date.now();
     if (agora - ultimoTapRef.current < JANELA_DUPLO_TOQUE) {
-      if (!jaCurtiu) handleCurtir();
+      if (!jaCurtiuExibido) handleCurtir();
       else {
         setCoracaoAnimado(true);
         setTimeout(() => setCoracaoAnimado(false), 700);
@@ -120,11 +126,11 @@ function LinhaComentario({ postId, comentario, uidAtual, reportador, podeExcluir
             onClick={handleCurtir}
             disabled={curtindo}
             className={`flex items-center gap-1 text-[11px] font-medium ${
-              jaCurtiu ? 'text-red-500' : 'text-coffee-300 hover:text-red-400'
+              jaCurtiuExibido ? 'text-red-500' : 'text-coffee-300 hover:text-red-400'
             }`}
           >
-            <Heart size={11} fill={jaCurtiu ? 'currentColor' : 'none'} />
-            {comentario.curtidas?.length > 0 && comentario.curtidas.length}
+            <Heart size={11} fill={jaCurtiuExibido ? 'currentColor' : 'none'} />
+            {contagemCurtidasExibida > 0 && contagemCurtidasExibida}
           </button>
           {podeExcluir && (
             <button
