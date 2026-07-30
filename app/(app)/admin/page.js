@@ -39,12 +39,12 @@ import {
   UploadCloud,
 } from 'lucide-react';
 
-const ABAS = ['Pontos', 'Missões', 'Usuários', 'Desafios', 'Correio'];
+const ABAS = ['Ações', 'Missões', 'Usuários', 'Desafios', 'Correio'];
 
 export default function AdminPage() {
   const { perfil } = useAuth();
   const router = useRouter();
-  const [aba, setAba] = useState('Pontos');
+  const [aba, setAba] = useState('Ações');
 
   useEffect(() => {
     if (perfil && !perfil.isAdmin) {
@@ -81,7 +81,7 @@ export default function AdminPage() {
       </div>
 
       <div className="px-4 py-4">
-        {aba === 'Pontos' && <AbaPontos />}
+        {aba === 'Ações' && <AbaAcoes />}
         {aba === 'Missões' && <AbaMissoes />}
         {aba === 'Usuários' && <AbaUsuarios />}
         {aba === 'Desafios' && <AbaDesafios />}
@@ -92,7 +92,7 @@ export default function AdminPage() {
 }
 
 // ---------------------------------------------------------------------------
-function AbaPontos() {
+function AbaAcoes() {
   const [mapaPontos, setMapaPontos] = useState(null);
   const [salvandoId, setSalvandoId] = useState(null);
   const [salvoId, setSalvoId] = useState(null);
@@ -132,7 +132,10 @@ function AbaPontos() {
       </p>
       <GrupoPontos
         titulo="Outras ações"
-        missoes={[{ id: 'postarNoFeed', titulo: 'Post no Feed' }]}
+        missoes={[
+          { id: 'postarNoFeed', titulo: 'Post no Feed' },
+          { id: 'orarPorAlguem', titulo: 'Orar por alguém' },
+        ]}
         mapa={mapaPontos}
         onSalvar={handleSalvar}
         salvandoId={salvandoId}
