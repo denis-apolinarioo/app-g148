@@ -38,9 +38,23 @@ service cloud.firestore {
     // Permite alterar o array `curtidas` (em posts ou comentários) somente
     // pra adicionar ou remover o PRÓPRIO uid — nunca sobrescrever o array
     // inteiro nem mexer na curtida de outra pessoa.
+    //
+    // CORREÇÃO DEFINITIVA (curtida em comentário): posts sempre nascem com
+    // `curtidas: []` (lib/firestore-helpers.js -> createPost), mas
+    // comentários NUNCA tinham esse campo inicializado (addComment não
+    // gravava `curtidas`). Ler um campo que não existe no documento com
+    // notação de ponto (`resource.data.curtidas`) lança um ERRO na
+    // avaliação da regra do Firestore — não retorna `null` como em
+    // JavaScript — e um erro na regra é tratado como permissão negada.
+    // Ou seja: TODO primeiro "curtir" em QUALQUER comentário (o campo
+    // ainda não existindo) caía nesse erro e era silenciosamente negado,
+    // sempre, pra qualquer comentário, novo ou antigo. É por isso que
+    // funcionava pra posts (sempre tem o campo) e nunca pra comentários.
+    // A forma segura de ler um campo que pode não existir é
+    // `resource.data.get('campo', valorPadrao)`, usada abaixo.
     function apenasProprioCurtiuMudou() {
-      let antes = resource.data.curtidas != null ? resource.data.curtidas : [];
-      let depois = request.resource.data.curtidas != null ? request.resource.data.curtidas : [];
+      let antes = resource.data.get('curtidas', []);
+      let depois = request.resource.data.get('curtidas', []);
       let adicionados = depois.removeAll(antes);
       let removidos = antes.removeAll(depois);
       return apenasEstesCamposMudaram(['curtidas'])
