@@ -5,9 +5,10 @@ import { X, Loader2, Image as ImageIcon, PartyPopper } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { submeterMissaoDiaria, submeterMissaoSemanal, concluirMissaoMensal } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
-import { uploadFoto } from '@/lib/storage';
+import { uploadFoto, uploadAudio } from '@/lib/storage';
 import { CONQUISTAS } from '@/lib/constants';
 import ImageCropper from '@/components/ImageCropper';
+import AudioRecorderButton from '@/components/AudioRecorderButton';
 
 const PROPORCOES = [
   { label: '1:1', w: 1, h: 1 },
@@ -21,6 +22,7 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
   const [srcCorte, setSrcCorte] = useState(''); // URL da imagem bruta pra tela de corte
+  const [blobAudio, setBlobAudio] = useState(null);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [conquistaNova, setConquistaNova] = useState(null);
@@ -48,10 +50,10 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
     setPreviewFoto(URL.createObjectURL(blob));
   }
 
-  const camposPreenchidos =
-    missao.tipo === 'check' ||
-    missao.tipo === 'leitura' ||
-    (missao.campos || []).every((campo) => (resposta[campo.chave] || '').trim());
+  const camposPreenchidos = (missao.campos || []).every((campo) => {
+    if (campo.tipo === 'check') return resposta[campo.chave] === true;
+    return (resposta[campo.chave] || '').trim();
+  });
 
   async function handleConfirmar() {
     if (enviando) return;
@@ -64,23 +66,25 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
         fotoURL = await uploadFoto(perfil.uid, arquivoFoto);
       }
 
-      if (periodicidade === 'diaria') {
-        await submeterMissaoDiaria(missao.id, perfil, resposta, fotoURL);
-      } else if (periodicidade === 'semanal') {
-        await submeterMissaoSemanal(missao.id, perfil, resposta, fotoURL);
-      } else if (periodicidade === 'mensal') {
-        await concluirMissaoMensal(missao.id, perfil);
+      let audioURL = '';
+      if (missao.permiteAudio && blobAudio) {
+        audioURL = await uploadAudio(perfil.uid, blobAudio);
       }
 
-      const contexto =
-        periodicidade === 'mensal' ? 'leitura' : missao.tipo === 'check' ? null : 'missao_diaria';
-      if (contexto) {
-        const novas = await verificarConquistas(perfil.uid, (perfil.streakAtual || 0) + 1, contexto);
-        if (novas.length > 0) {
-          setConquistaNova(CONQUISTAS.find((c) => c.id === novas[0]));
-          setEnviando(false);
-          return; // mostra a tela de conquista antes de fechar
-        }
+      if (periodicidade === 'diaria') {
+        await submeterMissaoDiaria(missao.id, perfil, resposta, fotoURL, audioURL);
+      } else if (periodicidade === 'semanal') {
+        await submeterMissaoSemanal(missao.id, perfil, resposta, fotoURL, audioURL);
+      } else if (periodicidade === 'mensal') {
+        await concluirMissaoMensal(missao.id, perfil, resposta, fotoURL, audioURL);
+      }
+
+      const contexto = periodicidade === 'mensal' ? 'leitura' : 'missao_diaria';
+      const novas = await verificarConquistas(perfil.uid, (perfil.streakAtual || 0) + 1, contexto);
+      if (novas.length > 0) {
+        setConquistaNova(CONQUISTAS.find((c) => c.id === novas[0]));
+        setEnviando(false);
+        return; // mostra a tela de conquista antes de fechar
       }
 
       onConcluida?.();
@@ -160,97 +164,109 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
         </div>
 
         <div className="px-5 py-5">
-          {missao.tipo === 'check' && (
-            <p className="text-center font-display text-lg leading-relaxed text-coffee-700">
-              {missao.perguntaConfirmacao}
-            </p>
-          )}
+          <div className="space-y-4">
+            {missao.instrucoes && (
+              <p className="text-sm text-coffee-600">{missao.instrucoes}</p>
+            )}
 
-          {missao.tipo === 'leitura' && (
-            <div>
-              <p className="text-sm text-coffee-600">{missao.descricao}</p>
-              {missao.linkDrive ? (
-                <a
-                  href={missao.linkDrive}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 block rounded-xl border border-coffee-100 bg-cream-card px-4 py-3 text-center text-sm font-semibold text-coffee-700"
-                >
-                  Abrir material
-                </a>
-              ) : (
-                <p className="mt-3 text-xs text-coffee-300">
-                  O link do material ainda não foi cadastrado pelo administrador.
-                </p>
-              )}
-            </div>
-          )}
+            {missao.linkDrive && (
+              <a
+                href={missao.linkDrive}
+                target="_blank"
+                rel="noreferrer"
+                className="block rounded-xl border border-coffee-100 bg-cream-card px-4 py-3 text-center text-sm font-semibold text-coffee-700"
+              >
+                Abrir material
+              </a>
+            )}
 
-          {(missao.tipo === 'texto' || missao.tipo === 'reflexao') && (
-            <div className="space-y-4">
-              {missao.campos.map((campo) => (
-                <div key={campo.chave}>
-                  <label className="mb-1.5 block text-xs font-medium text-coffee-500">
-                    {campo.label}
-                  </label>
-                  {campo.tipo === 'texto-longo' ? (
-                    <textarea
-                      rows={4}
-                      value={resposta[campo.chave] || ''}
-                      onChange={(e) =>
-                        setResposta((r) => ({ ...r, [campo.chave]: e.target.value }))
-                      }
-                      className="w-full resize-none rounded-xl border border-coffee-100 bg-cream-card p-3.5 text-sm text-coffee-800 placeholder:text-coffee-300"
-                      placeholder="Escreva com suas palavras..."
-                    />
-                  ) : (
+            {(missao.campos || []).map((campo) => (
+              <div key={campo.chave}>
+                {campo.tipo === 'check' ? (
+                  <label className="flex items-center gap-2.5 text-sm text-coffee-700">
                     <input
-                      type={campo.tipo === 'link' ? 'url' : 'text'}
-                      value={resposta[campo.chave] || ''}
+                      type="checkbox"
+                      checked={resposta[campo.chave] === true}
                       onChange={(e) =>
-                        setResposta((r) => ({ ...r, [campo.chave]: e.target.value }))
+                        setResposta((r) => ({ ...r, [campo.chave]: e.target.checked }))
                       }
-                      className="w-full rounded-xl border border-coffee-100 bg-cream-card p-3.5 text-sm text-coffee-800 placeholder:text-coffee-300"
-                      placeholder={campo.tipo === 'link' ? 'https://...' : ''}
+                      className="h-5 w-5 flex-shrink-0 rounded border-coffee-200 text-coffee-700"
                     />
-                  )}
-                </div>
-              ))}
-
-              {missao.permiteFoto && (
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-coffee-500">
-                    Foto (opcional)
+                    <span>{campo.label}</span>
                   </label>
-                  {previewFoto ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={previewFoto}
-                      alt="Prévia"
-                      onClick={() => inputFotoRef.current?.click()}
-                      className="max-h-52 w-full cursor-pointer rounded-xl object-cover"
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => inputFotoRef.current?.click()}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-coffee-200 py-6 text-coffee-400"
-                    >
-                      <ImageIcon size={20} />
-                      <span className="text-sm">Adicionar foto</span>
-                    </button>
-                  )}
-                  <input
-                    ref={inputFotoRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFotoChange}
-                    className="hidden"
+                ) : (
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-coffee-500">
+                      {campo.label}
+                    </label>
+                    {campo.tipo === 'texto-longo' ? (
+                      <textarea
+                        rows={4}
+                        value={resposta[campo.chave] || ''}
+                        onChange={(e) =>
+                          setResposta((r) => ({ ...r, [campo.chave]: e.target.value }))
+                        }
+                        className="w-full resize-none rounded-xl border border-coffee-100 bg-cream-card p-3.5 text-sm text-coffee-800 placeholder:text-coffee-300"
+                        placeholder="Escreva com suas palavras..."
+                      />
+                    ) : (
+                      <input
+                        type={campo.tipo === 'link' ? 'url' : 'text'}
+                        value={resposta[campo.chave] || ''}
+                        onChange={(e) =>
+                          setResposta((r) => ({ ...r, [campo.chave]: e.target.value }))
+                        }
+                        className="w-full rounded-xl border border-coffee-100 bg-cream-card p-3.5 text-sm text-coffee-800 placeholder:text-coffee-300"
+                        placeholder={campo.tipo === 'link' ? 'https://...' : ''}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {missao.permiteFoto && (
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-coffee-500">
+                  Foto (opcional)
+                </label>
+                {previewFoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={previewFoto}
+                    alt="Prévia"
+                    onClick={() => inputFotoRef.current?.click()}
+                    className="max-h-52 w-full cursor-pointer rounded-xl object-cover"
                   />
-                </div>
-              )}
-            </div>
-          )}
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => inputFotoRef.current?.click()}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-coffee-200 py-6 text-coffee-400"
+                  >
+                    <ImageIcon size={20} />
+                    <span className="text-sm">Adicionar foto</span>
+                  </button>
+                )}
+                <input
+                  ref={inputFotoRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFotoChange}
+                  className="hidden"
+                />
+              </div>
+            )}
+
+            {missao.permiteAudio && (
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-coffee-500">
+                  Áudio (opcional)
+                </label>
+                <AudioRecorderButton onGravado={setBlobAudio} onLimpar={() => setBlobAudio(null)} />
+              </div>
+            )}
+          </div>
 
           {erro && <p className="mt-4 text-center text-sm text-red-700">{erro}</p>}
 
@@ -260,7 +276,7 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-3.5 text-sm font-semibold text-cream disabled:opacity-40"
           >
             {enviando && <Loader2 size={16} className="animate-spin" />}
-            {missao.tipo === 'check' ? 'Sim, confirmo' : missao.tipo === 'leitura' ? 'Marcar como concluído' : 'Enviar'}
+            Enviar
           </button>
         </div>
       </div>
