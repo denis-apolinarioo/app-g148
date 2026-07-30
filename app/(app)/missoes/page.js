@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { Sunrise, CalendarDays, Flag } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import TopBar from '@/components/TopBar';
 import MissionCard from '@/components/MissionCard';
 import MissionSubmitModal from '@/components/MissionSubmitModal';
 import StreakBadge from '@/components/StreakBadge';
+import EmptyState from '@/components/EmptyState';
 import { getMissoesPorPeriodicidade } from '@/lib/missionsRepo';
 import { getStatusMissoesDiariasHoje } from '@/lib/points';
 import { doc, getDoc } from 'firebase/firestore';
@@ -109,36 +111,48 @@ export default function MissoesPage() {
         ) : (
           <>
             <Secao titulo="Missões Diárias" subtitulo="Renovam à meia-noite">
-              {missoesDiarias.map((missao) => (
-                <MissionCard
-                  key={missao.id}
-                  missao={missao}
-                  concluida={!!statusDiarias[missao.id]}
-                  onClick={(m) => abrirMissao(m, 'diaria')}
-                />
-              ))}
+              {missoesDiarias.length === 0 ? (
+                <EmptyState icone={Sunrise} titulo="Nenhuma missão diária hoje" />
+              ) : (
+                missoesDiarias.map((missao) => (
+                  <MissionCard
+                    key={missao.id}
+                    missao={missao}
+                    concluida={!!statusDiarias[missao.id]}
+                    onClick={(m) => abrirMissao(m, 'diaria')}
+                  />
+                ))
+              )}
             </Secao>
 
             <Secao titulo="Missões Semanais" subtitulo="Renovam toda semana">
-              {missoesSemanais.map((missao) => (
-                <MissionCard
-                  key={missao.id}
-                  missao={missao}
-                  concluida={!!statusSemanais[missao.id]}
-                  onClick={(m) => abrirMissao(m, 'semanal')}
-                />
-              ))}
+              {missoesSemanais.length === 0 ? (
+                <EmptyState icone={CalendarDays} titulo="Nenhuma missão semanal por enquanto" />
+              ) : (
+                missoesSemanais.map((missao) => (
+                  <MissionCard
+                    key={missao.id}
+                    missao={missao}
+                    concluida={!!statusSemanais[missao.id]}
+                    onClick={(m) => abrirMissao(m, 'semanal')}
+                  />
+                ))
+              )}
             </Secao>
 
             <Secao titulo="Missões do Mês" subtitulo="Desafios de mais fôlego">
-              {missoesMensais.map((missao) => (
-                <MissionCard
-                  key={missao.id}
-                  missao={missao}
-                  concluida={!!statusMensais[missao.id]}
-                  onClick={(m) => abrirMissao(m, 'mensal')}
-                />
-              ))}
+              {missoesMensais.length === 0 ? (
+                <EmptyState icone={Flag} titulo="Nenhuma missão do mês por enquanto" />
+              ) : (
+                missoesMensais.map((missao) => (
+                  <MissionCard
+                    key={missao.id}
+                    missao={missao}
+                    concluida={!!statusMensais[missao.id]}
+                    onClick={(m) => abrirMissao(m, 'mensal')}
+                  />
+                ))
+              )}
             </Secao>
           </>
         )}

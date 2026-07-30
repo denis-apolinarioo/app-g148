@@ -1,14 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Check, Loader2, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Check, Loader2, Search, X } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/components/AuthProvider';
 import { getAllUsers, sendMailMessage, sendMailToMultiple } from '@/lib/firestore-helpers';
 import { uploadFotoCorreio } from '@/lib/storage';
+import { combinaComBusca } from '@/lib/searchUtils';
 
 export default function AbaCorreio() {
   const [usuarios, setUsuarios] = useState([]);
+  const [busca, setBusca] = useState('');
   const [selecionados, setSelecionados] = useState([]);
   const [texto, setTexto] = useState('');
   const [fixada, setFixada] = useState(false);
@@ -23,10 +25,21 @@ export default function AbaCorreio() {
     getAllUsers().then(setUsuarios);
   }, []);
 
-  const todosSelecionados = usuarios.length > 0 && selecionados.length === usuarios.length;
+  const usuariosFiltrados = useMemo(() => {
+    if (!busca.trim()) return usuarios;
+    return usuarios.filter((u) => combinaComBusca(u.nome, busca) || combinaComBusca(u.username, busca));
+  }, [usuarios, busca]);
+
+  const todosSelecionados =
+    usuariosFiltrados.length > 0 && usuariosFiltrados.every((u) => selecionados.includes(u.id));
 
   function alternarTodos() {
-    setSelecionados(todosSelecionados ? [] : usuarios.map((u) => u.id));
+    if (todosSelecionados) {
+      const idsFiltrados = new Set(usuariosFiltrados.map((u) => u.id));
+      setSelecionados((sel) => sel.filter((id) => !idsFiltrados.has(id)));
+    } else {
+      setSelecionados((sel) => [...new Set([...sel, ...usuariosFiltrados.map((u) => u.id)])]);
+    }
   }
 
   function alternarUm(uid) {
@@ -70,6 +83,21 @@ export default function AbaCorreio() {
 
   return (
     <div className="space-y-3">
+      {/* Item 15º — busca de usuário, pra facilitar achar destinatário numa lista maior */}
+      <div className="relative">
+        <Search
+          size={15}
+          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-coffee-300"
+        />
+        <input
+          type="text"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nome ou @username..."
+          className="w-full rounded-lg border border-coffee-100 bg-cream-card py-2 pl-8 pr-3 text-sm text-coffee-800"
+        />
+      </div>
+
       <div className="rounded-xl border border-coffee-100 bg-cream-card">
         {/* Item 36 — selecionar todos */}
         <button
@@ -85,11 +113,16 @@ export default function AbaCorreio() {
             {todosSelecionados && <Check size={13} />}
           </span>
           <span className="text-sm font-semibold text-coffee-700">
-            Selecionar todos ({usuarios.length})
+            Selecionar todos ({usuariosFiltrados.length})
           </span>
         </button>
         <div className="max-h-52 overflow-y-auto">
-          {usuarios.map((u) => {
+          {usuariosFiltrados.length === 0 && (
+            <p className="px-3.5 py-3 text-center text-xs text-coffee-400">
+              Ninguém encontrado com esse nome.
+            </p>
+          )}
+          {usuariosFiltrados.map((u) => {
             const marcado = selecionados.includes(u.id);
             return (
               <button

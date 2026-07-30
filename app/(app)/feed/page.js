@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import MailboxLink from '@/components/MailboxLink';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
@@ -32,6 +32,9 @@ export default function FeedPage() {
         </div>
         <div className="flex items-center gap-3">
           <StreakBadge dias={perfil?.streakAtual || 0} />
+          <Link href="/buscar" className="text-coffee-600">
+            <Search size={22} />
+          </Link>
           <MailboxLink size={22} />
         </div>
       </header>
