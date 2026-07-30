@@ -36,6 +36,12 @@ function LinhaComentario({ postId, comentario, uidAtual, reportador, podeExcluir
     }
     try {
       await toggleCommentLike(postId, comentario.id, uidAtual, jaCurtiu);
+    } catch (err) {
+      // Se a regra do Firestore publicada no Console estiver desatualizada
+      // (sem a permissão de curtida em comentário), o erro cai aqui — sem
+      // esse catch, a tentativa falhava em silêncio e parecia que o botão
+      // simplesmente "não fazia nada".
+      console.error('Erro ao curtir/descurtir comentário:', err);
     } finally {
       setCurtindo(false);
     }

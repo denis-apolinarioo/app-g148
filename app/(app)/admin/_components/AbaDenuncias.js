@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Flag, Check } from 'lucide-react';
+import Link from 'next/link';
+import { Flag, Check, ExternalLink } from 'lucide-react';
 import EmptyState from '@/components/EmptyState';
 import { subscribeToReports, marcarDenunciaResolvida } from '@/lib/firestore-helpers';
 import { formatDateTimeBR } from '@/lib/dateUtils';
@@ -70,18 +71,33 @@ export default function AbaDenuncias() {
             Denunciado por {d.reportadoPorNome || 'alguém'}
           </p>
 
-          <button
-            onClick={() => handleAlternarResolvida(d)}
-            disabled={resolvendoId === d.id}
-            className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
-              d.status === 'resolvida'
-                ? 'border-coffee-200 text-coffee-500'
-                : 'border-coffee-700 bg-coffee-700 text-cream'
-            }`}
-          >
-            <Check size={12} />
-            {d.status === 'resolvida' ? 'Reabrir' : 'Marcar como resolvida'}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {d.postId && (
+              // Item novo (Bloco A) — vai direto no post denunciado (mesmo
+              // quando a denúncia é de um comentário, já que o comentário
+              // mora dentro do post).
+              <Link
+                href={`/post/${d.postId}`}
+                className="flex items-center gap-1.5 rounded-full border border-coffee-200 px-3 py-1.5 text-xs font-medium text-coffee-600"
+              >
+                <ExternalLink size={12} />
+                Ver post
+              </Link>
+            )}
+
+            <button
+              onClick={() => handleAlternarResolvida(d)}
+              disabled={resolvendoId === d.id}
+              className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
+                d.status === 'resolvida'
+                  ? 'border-coffee-200 text-coffee-500'
+                  : 'border-coffee-700 bg-coffee-700 text-cream'
+              }`}
+            >
+              <Check size={12} />
+              {d.status === 'resolvida' ? 'Reabrir' : 'Marcar como resolvida'}
+            </button>
+          </div>
         </div>
       ))}
     </div>

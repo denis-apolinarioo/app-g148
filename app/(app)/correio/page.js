@@ -109,12 +109,20 @@ function LinhaMensagem({ msg, onAbrir, onVerFoto }) {
     <div
       onClick={() => onAbrir(msg)}
       className={`flex w-full items-start gap-3 rounded-xl2 border p-4 shadow-card ${
-        msg.fixada ? 'border-gold/40 bg-gold/10' : 'border-coffee-100 bg-cream-card'
+        msg.fixada
+          ? 'border-2 border-gold bg-gold/15 shadow-md'
+          : 'border-coffee-100 bg-cream-card'
       }`}
     >
-      {msg.fixada && <Pin size={13} className="mt-1 flex-shrink-0 text-gold" />}
-      {!msg.fixada && !msg.lida && (
-        <Circle size={8} fill="currentColor" className="mt-1.5 flex-shrink-0 text-gold" />
+      {/* CORREÇÃO: antes o pin e a bolinha de "novo" eram mutuamente
+          exclusivos (só um dos dois aparecia), então uma mensagem fixada
+          E não lida nunca mostrava a bolinha. Agora os dois podem
+          aparecer juntos, empilhados nessa coluna estreita. */}
+      {(msg.fixada || !msg.lida) && (
+        <div className="mt-1 flex flex-shrink-0 flex-col items-center gap-1">
+          {msg.fixada && <Pin size={13} className="text-gold" fill="currentColor" />}
+          {!msg.lida && <Circle size={8} fill="currentColor" className="text-gold" />}
+        </div>
       )}
 
       {/* Item 33/GLOBAL — avatar e nome de quem curtiu/comentou levam ao perfil */}
@@ -129,6 +137,9 @@ function LinhaMensagem({ msg, onAbrir, onVerFoto }) {
       )}
 
       <div className="min-w-0 flex-1">
+        {msg.fixada && (
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-gold">Fixado</p>
+        )}
         {ehNotificacao ? (
           <p className="text-sm text-coffee-800">
             <Link
