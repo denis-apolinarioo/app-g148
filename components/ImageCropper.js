@@ -294,7 +294,7 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
                 className={
                   'rounded-full border px-3.5 py-1.5 text-xs font-medium ' +
                   (razaoAtual.w === op.w && razaoAtual.h === op.h
-                    ? 'border-cream bg-cream text-coffee-800'
+                    ? 'border-[#FAF6EF] bg-[#FAF6EF] text-[#2C1F14]'
                     : 'border-cream/30 text-cream/70')
                 }
               >

@@ -6,12 +6,14 @@ import { auth } from '@/lib/firebase';
 import { useAuth } from '@/components/AuthProvider';
 import ProfileView from '@/components/ProfileView';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Settings, Crown, LogOut } from 'lucide-react';
+import { Settings, Crown, LogOut, Sun, Moon } from 'lucide-react';
 import MailboxLink from '@/components/MailboxLink';
 import { limparTokenAoSair } from '@/lib/push';
+import { useTema } from '@/lib/theme';
 
 export default function MeuPerfilPage() {
   const { perfil } = useAuth();
+  const [tema, alternarTema] = useTema();
 
   if (!perfil) return <LoadingScreen />;
 
@@ -38,6 +40,13 @@ export default function MeuPerfilPage() {
           )}
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={alternarTema}
+            className="text-coffee-500"
+            aria-label={tema === 'escuro' ? 'Mudar para modo claro' : 'Mudar para modo escuro'}
+          >
+            {tema === 'escuro' ? <Sun size={21} /> : <Moon size={21} />}
+          </button>
           <MailboxLink size={21} />
           <Link href="/perfil/editar" className="text-coffee-500">
             <Settings size={21} />

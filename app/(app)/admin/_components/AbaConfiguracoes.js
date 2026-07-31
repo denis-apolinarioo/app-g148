@@ -63,7 +63,7 @@ export default function AbaConfiguracoes() {
             />
           ) : (
             <span
-              className={`absolute top-1 h-5 w-5 rounded-full bg-cream shadow transition-transform ${
+              className={`absolute top-1 h-5 w-5 rounded-full bg-[#FAF6EF] shadow transition-transform ${
                 bloqueioAtivo ? 'translate-x-6' : 'translate-x-1'
               }`}
             />

@@ -40,6 +40,18 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="G148" />
+        {/*
+          Modo escuro — aplica a classe `dark` na tag <html> ANTES da 1ª
+          pintura da tela (script síncrono no <head>, roda antes do React
+          hidratar). Sem isso, quem prefere escuro veria a tela clara piscar
+          por uma fração de segundo a cada abertura do app. Lê a escolha
+          salva; se a pessoa nunca escolheu, segue a preferência do sistema.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('g148_tema');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'escuro':'claro';}if(t==='escuro'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+          }}
+        />
       </head>
       <body className="font-body">
         <AuthProvider>{children}</AuthProvider>

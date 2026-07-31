@@ -20,6 +20,12 @@ body {
   overscroll-behavior-y: none;
 }
 
+html.dark,
+html.dark body {
+  background-color: #17110b;
+  color: #f3ece0;
+}
+
 /* Foco visível pra navegação por teclado — acessibilidade básica */
 a:focus-visible,
 button:focus-visible,
@@ -27,6 +33,13 @@ input:focus-visible,
 textarea:focus-visible {
   outline: 2px solid #6b4a2f;
   outline-offset: 2px;
+}
+
+html.dark a:focus-visible,
+html.dark button:focus-visible,
+html.dark input:focus-visible,
+html.dark textarea:focus-visible {
+  outline-color: #cbad8a;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -45,9 +58,119 @@ textarea:focus-visible {
   border-radius: 999px;
 }
 
+html.dark ::-webkit-scrollbar-thumb {
+  background-color: #4a3624;
+}
+
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+/* ============================================================================
+ * MODO ESCURO
+ * ----------------------------------------------------------------------------
+ * Em vez de reconfigurar a paleta inteira (o que ia exigir mexer em quase
+ * todo componente do app, já que "coffee-700" por exemplo é usado tanto como
+ * FUNDO de botão quanto como COR DE TEXTO — inverter os dois juntos quebraria
+ * um dos dois), sobrescrevemos aqui, uma por uma, só as classes do Tailwind
+ * que representam FUNDO DE PÁGINA/CARTÃO e TEXTO/BORDA — exatamente as que
+ * precisam inverter (claro vira escuro, escuro vira claro) pra continuar
+ * legível. Cores de botão/selo cheio (bg-coffee-700/800/900, text-cream)
+ * ficam de fora de propósito: já são escuras/acentuadas e continuam
+ * funcionando iguais em qualquer tema, sem precisar de nada aqui.
+ *
+ * A classe `dark` é aplicada na tag <html> pelo lib/theme.js — ver também o
+ * script embutido em app/layout.js que aplica ela ANTES da 1ª pintura da
+ * tela, pra não piscar claro->escuro quando alguém abre o app já preferindo
+ * o escuro.
+ * ============================================================================ */
+
+/* Fundos de página, cartão e superfícies claras (viravam escuras) */
+html.dark .bg-cream {
+  background-color: #17110b;
+}
+html.dark .bg-cream\/95 {
+  background-color: rgb(23 17 11 / 0.95);
+}
+html.dark .bg-cream\/10 {
+  background-color: rgb(23 17 11 / 0.1);
+}
+html.dark .bg-cream-card {
+  background-color: #241a11;
+}
+html.dark .bg-cream-card\/95 {
+  background-color: rgb(36 26 17 / 0.95);
+}
+html.dark .bg-coffee-50 {
+  background-color: #241a11;
+}
+html.dark .bg-coffee-50\/60 {
+  background-color: rgb(36 26 17 / 0.6);
+}
+html.dark .bg-coffee-100 {
+  background-color: #2f2216;
+}
+html.dark .bg-coffee-100\/60 {
+  background-color: rgb(47 34 22 / 0.6);
+}
+html.dark .bg-coffee-200 {
+  background-color: #3a2a1b;
+}
+/* Bolinhas de carregamento do Splash — pequenas, ficam claras (não é
+   "superfície", é decoração em cima do fundo, que já ficou escuro acima). */
+html.dark .bg-coffee-300 {
+  background-color: #b79c79;
+}
+
+/* Bordas e divisores (ficam mais claros, pra continuar visíveis no escuro) */
+html.dark .border-coffee-50 {
+  border-color: #2f2216;
+}
+html.dark .border-coffee-100 {
+  border-color: #3a2a1b;
+}
+html.dark .divide-coffee-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #3a2a1b;
+}
+html.dark .border-coffee-200 {
+  border-color: #4a3624;
+}
+html.dark .border-coffee-300 {
+  border-color: #5c4530;
+}
+html.dark .border-coffee-400 {
+  border-color: #6e5238;
+}
+html.dark .border-coffee-700 {
+  border-color: #8a6644;
+}
+
+/* Texto (fica claro, pra continuar legível em cima do fundo escuro) */
+html.dark .text-coffee-800 {
+  color: #f3ece0;
+}
+html.dark .text-coffee-700 {
+  color: #e8dcc8;
+}
+html.dark .text-coffee-600 {
+  color: #dccbaf;
+}
+html.dark .text-coffee-500 {
+  color: #cbb593;
+}
+html.dark .text-coffee-400 {
+  color: #b79c79;
+}
+html.dark .text-coffee-300 {
+  color: #9c8462;
+}
+html.dark .text-coffee-200 {
+  color: #86714f;
+}
+html.dark .placeholder\:text-coffee-300::placeholder {
+  color: #9c8462;
+}
+
