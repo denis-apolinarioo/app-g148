@@ -222,14 +222,7 @@ export default function NotificacoesPage() {
             <p className="mt-2 text-xs text-red-600">Este aparelho não suporta notificações push.</p>
           )}
           {erro === 'FALHOU' && (
-            <div className="mt-2 space-y-1">
-              <p className="text-xs text-red-600">Não deu pra ativar agora. Tenta de novo em instantes.</p>
-              {erroDetalhe && (
-                <p className="select-all rounded-lg bg-red-50 p-2 text-[11px] leading-snug text-red-700">
-                  {erroDetalhe}
-                </p>
-              )}
-            </div>
+            <p className="mt-2 text-xs text-red-600">Não deu pra ativar agora. Tenta de novo em instantes.</p>
           )}
         </div>
 

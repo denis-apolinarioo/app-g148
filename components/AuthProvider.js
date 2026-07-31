@@ -49,6 +49,7 @@ export function AuthProvider({ children }) {
         const notificacao = new Notification(titulo, {
           body: corpo,
           icon: '/icons/icon-192.png',
+          badge: '/icons/icon-badge-monochrome.png',
           tag: dados.tipo === 'mensagem' ? 'g148-mensagens' : 'g148-social',
         });
         notificacao.onclick = () => {

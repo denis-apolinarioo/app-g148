@@ -43,10 +43,16 @@ messaging.onBackgroundMessage((payload) => {
 
   // Item 22 — agrupamento: mesma `tag` substitui/acumula a notificação
   // anterior da mesma categoria em vez de empilhar uma por uma.
+  //
+  // O `icon` grande fica colorido (icon-192.png); já o `badge` — usado pelo
+  // Android como silhueta na barra de status — precisa ser uma imagem
+  // monocromática com fundo transparente. Passando um ícone colorido e
+  // opaco ali, o Android simplesmente ignora as cores e mostra um quadrado
+  // branco sólido no lugar (era o bug do "quadradinho branco").
   self.registration.showNotification(titulo, {
     body: corpo,
     icon: '/icons/icon-192.png',
-    badge: '/icons/icon-192.png',
+    badge: '/icons/icon-badge-monochrome.png',
     tag: dados.tipo === 'mensagem' ? 'g148-mensagens' : 'g148-social',
     renotify: true,
     data: { url: dados.url || '/correio' },
