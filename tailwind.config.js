@@ -48,9 +48,21 @@ module.exports = {
           '55%': { transform: 'scale(0.95)', opacity: '1' },
           '100%': { transform: 'scale(1)', opacity: '0' },
         },
+        cadeadoAbrindo: {
+          '0%': { transform: 'scale(1) rotate(0deg)', opacity: '1' },
+          '35%': { transform: 'scale(1.25) rotate(-18deg)', opacity: '1' },
+          '65%': { transform: 'scale(1.1) rotate(10deg)', opacity: '1' },
+          '100%': { transform: 'scale(0.4) rotate(0deg)', opacity: '0' },
+        },
+        conquistaRevelada: {
+          '0%': { transform: 'scale(0.8)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
       },
       animation: {
         curtidaPop: 'curtidaPop 0.7s ease-out forwards',
+        cadeadoAbrindo: 'cadeadoAbrindo 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+        conquistaRevelada: 'conquistaRevelada 0.45s ease-out 0.25s both',
       },
     },
   },

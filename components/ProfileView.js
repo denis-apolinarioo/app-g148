@@ -10,7 +10,7 @@ import PrayerCard from '@/components/PrayerCard';
 import EmptyState from '@/components/EmptyState';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import { subscribeToUserPosts, subscribeToUserPrayers, toggleBlockUser } from '@/lib/firestore-helpers';
-import { getConquistasDoUsuario } from '@/lib/achievements';
+import { getConquistasDoUsuario, marcarConquistaVista } from '@/lib/achievements';
 import { useAppConfig } from '@/lib/useAppConfig';
 import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
 
@@ -61,6 +61,19 @@ export default function ProfileView({ usuario, usuarioAtual }) {
     if (!usuario?.uid) return;
     getConquistasDoUsuario(usuario.uid).then(setConquistas);
   }, [usuario?.uid]);
+
+  // Chamado pela AchievementBadge depois que a animação do cadeado abrindo
+  // termina — marca como vista no Firestore e atualiza a tela na hora, sem
+  // esperar recarregar a aba inteira.
+  function handleAbrirConquista(achievementId) {
+    if (usuarioAtual?.uid !== usuario.uid) return; // só o dono pode "abrir" as próprias conquistas
+    setConquistas((atual) =>
+      atual.map((c) => (c.id === achievementId ? { ...c, visto: true } : c))
+    );
+    marcarConquistaVista(usuario.uid, achievementId).catch((err) => {
+      console.error('Erro ao marcar conquista como vista:', err);
+    });
+  }
 
   return (
     <div className="px-4 pb-8 pt-5">
@@ -129,13 +142,11 @@ export default function ProfileView({ usuario, usuarioAtual }) {
             onClick={() => setAba('oracoes')}
             label={`Orações${pedidosAtivos.length ? ` (${pedidosAtivos.length})` : ''}`}
           />
-          {conquistas.length > 0 && (
-            <AbaBtn
-              ativo={aba === 'conquistas'}
-              onClick={() => setAba('conquistas')}
-              label={`Conquistas (${conquistas.length})`}
-            />
-          )}
+          <AbaBtn
+            ativo={aba === 'conquistas'}
+            onClick={() => setAba('conquistas')}
+            label={`Conquistas (${conquistas.filter((c) => c.desbloqueada).length}/${conquistas.length})`}
+          />
         </div>
 
         {aba === 'posts' && (
@@ -159,8 +170,9 @@ export default function ProfileView({ usuario, usuarioAtual }) {
 
         {aba === 'conquistas' && (
           <div className="grid grid-cols-4 gap-3 pt-1">
+            {conquistas.length === 0 && <div className="h-24 animate-pulse rounded-xl2 bg-coffee-100/60" />}
             {conquistas.map((c) => (
-              <AchievementBadge key={c.id} conquista={c} />
+              <AchievementBadge key={c.id} conquista={c} onAberta={handleAbrirConquista} />
             ))}
           </div>
         )}

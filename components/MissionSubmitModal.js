@@ -5,6 +5,7 @@ import { X, Loader2, Image as ImageIcon, PartyPopper } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { submeterMissaoDiaria, submeterMissaoSemanal, concluirMissaoMensal } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
+import { vibrarMissaoConcluida } from '@/lib/haptics';
 import { uploadFoto, uploadAudio } from '@/lib/storage';
 import { CONQUISTAS } from '@/lib/constants';
 import ImageCropper from '@/components/ImageCropper';
@@ -78,6 +79,8 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
       } else if (periodicidade === 'mensal') {
         await concluirMissaoMensal(missao.id, perfil, resposta, fotoURL, audioURL);
       }
+
+      vibrarMissaoConcluida();
 
       const contexto = periodicidade === 'mensal' ? 'leitura' : 'missao_diaria';
       const novas = await verificarConquistas(perfil.uid, (perfil.streakAtual || 0) + 1, contexto);

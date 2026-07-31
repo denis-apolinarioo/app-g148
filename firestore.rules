@@ -200,7 +200,14 @@ service cloud.firestore {
       allow create: if isSignedIn() &&
         request.resource.data.uid == request.auth.uid &&
         docId == request.auth.uid + '_' + request.resource.data.achievementId;
-      allow update, delete: if false;
+      // Só permite marcar a própria conquista como "vista" (usado depois da
+      // animação do cadeado abrindo na aba de conquistas do perfil) — nenhum
+      // outro campo pode mudar por essa via.
+      allow update: if isSignedIn() &&
+        resource.data.uid == request.auth.uid &&
+        apenasEstesCamposMudaram(['visto']) &&
+        request.resource.data.visto == true;
+      allow delete: if false;
     }
 
     // ------------------------------------------------------------------------
