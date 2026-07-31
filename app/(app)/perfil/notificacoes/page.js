@@ -37,6 +37,10 @@ export default function NotificacoesPage() {
   const [verificandoAoAbrir, setVerificandoAoAbrir] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
+  // Detalhe cru do erro (código/mensagem do Firebase), só pra debug em tela —
+  // sem isso, um erro de getToken() virava só "FALHOU" e não dava pra saber
+  // o motivo real sem conectar o aparelho no PC.
+  const [erroDetalhe, setErroDetalhe] = useState('');
   const [prefs, setPrefs] = useState({});
   const [silencio, setSilencio] = useState(SILENCIO_PADRAO);
 
@@ -65,7 +69,16 @@ export default function NotificacoesPage() {
       })
       .catch((err) => {
         console.error('Não foi possível confirmar o token de push ao abrir a tela:', err);
-        if (!cancelado) setAtivado(false);
+        if (!cancelado) {
+          setAtivado(false);
+          // Só os erros "esperados" (sem suporte, iOS sem instalar) já têm
+          // tratamento próprio na tela; qualquer outro código (é o caso mais
+          // provável aqui, tipo erro do getToken()) mostra a mensagem crua.
+          if (err.message !== 'IOS_PRECISA_INSTALAR' && err.message !== 'NAO_SUPORTADO') {
+            setErro('FALHOU');
+            setErroDetalhe(err.code ? `${err.code}: ${err.message}` : String(err.message || err));
+          }
+        }
       })
       .finally(() => {
         if (!cancelado) setVerificandoAoAbrir(false);
@@ -88,6 +101,7 @@ export default function NotificacoesPage() {
 
   async function handleAtivar() {
     setErro('');
+    setErroDetalhe('');
     setCarregando(true);
     try {
       await ativarNotificacoes(perfil.uid);
@@ -101,6 +115,7 @@ export default function NotificacoesPage() {
       } else {
         console.error('Erro ao ativar notificações:', err);
         setErro('FALHOU');
+        setErroDetalhe(err.code ? `${err.code}: ${err.message}` : String(err.message || err));
       }
       setAtivado(false);
     } finally {
@@ -207,7 +222,14 @@ export default function NotificacoesPage() {
             <p className="mt-2 text-xs text-red-600">Este aparelho não suporta notificações push.</p>
           )}
           {erro === 'FALHOU' && (
-            <p className="mt-2 text-xs text-red-600">Não deu pra ativar agora. Tenta de novo em instantes.</p>
+            <div className="mt-2 space-y-1">
+              <p className="text-xs text-red-600">Não deu pra ativar agora. Tenta de novo em instantes.</p>
+              {erroDetalhe && (
+                <p className="select-all rounded-lg bg-red-50 p-2 text-[11px] leading-snug text-red-700">
+                  {erroDetalhe}
+                </p>
+              )}
+            </div>
           )}
         </div>
 

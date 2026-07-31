@@ -1,10 +1,12 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { getUserProfile, subscribeToUserProfile } from '@/lib/firestore-helpers';
 import { solicitarArmazenamentoPersistente } from '@/lib/imageCache';
+import { escutarPushEmPrimeiroPlano, sincronizarBadge } from '@/lib/push';
 
 const AuthContext = createContext({
   usuarioAuth: null,
@@ -16,10 +18,55 @@ export function AuthProvider({ children }) {
   const [usuarioAuth, setUsuarioAuth] = useState(null);
   const [perfil, setPerfil] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     solicitarArmazenamentoPersistente();
   }, []);
+
+  // Com o app ABERTO, quem recebe o push é este listener (não o Service
+  // Worker — é assim que o FCM funciona). A função escutarPushEmPrimeiroPlano
+  // já existia em lib/push.js, mas nunca era chamada em lugar nenhum: o push
+  // chegava, e nada aparecia na tela. Aqui ela é ligada globalmente (uma vez
+  // só, pro app inteiro), espelhando o mesmo tratamento que o Service Worker
+  // já faz em background (public/firebase-messaging-sw.js): mostra uma
+  // notificação e sincroniza o badge do ícone.
+  useEffect(() => {
+    if (!usuarioAuth) return undefined;
+    let cancelado = false;
+    let pararDeEscutar = () => {};
+
+    escutarPushEmPrimeiroPlano((payload) => {
+      const dados = payload.data || {};
+      const titulo = (payload.notification && payload.notification.title) || 'G148';
+      const corpo = (payload.notification && payload.notification.body) || '';
+
+      if (dados.badgeCount !== undefined) {
+        sincronizarBadge(Number(dados.badgeCount) || 0);
+      }
+
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        const notificacao = new Notification(titulo, {
+          body: corpo,
+          icon: '/icons/icon-192.png',
+          tag: dados.tipo === 'mensagem' ? 'g148-mensagens' : 'g148-social',
+        });
+        notificacao.onclick = () => {
+          window.focus();
+          router.push(dados.url || '/correio');
+          notificacao.close();
+        };
+      }
+    }).then((unsub) => {
+      if (cancelado) unsub();
+      else pararDeEscutar = unsub;
+    });
+
+    return () => {
+      cancelado = true;
+      pararDeEscutar();
+    };
+  }, [usuarioAuth, router]);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
