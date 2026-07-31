@@ -31,6 +31,17 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
     }
 
+    // Reforço do travamento de usuário (Admin → Usuários → travar/destravar):
+    // até agora `travado` só derrubava a experiência no app (tela de bloqueio
+    // em app/(app)/layout.js) e impedia a PRÓPRIA pessoa de se destravar —
+    // mas não impedia escrever em outras coleções direto no Firestore. Esta
+    // função é usada abaixo, adicionada com `&&` nas regras que já existiam,
+    // sem remover nenhuma condição anterior.
+    function usuarioTravado() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('travado', false) == true;
+    }
+
     function apenasEstesCamposMudaram(campos) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos);
     }
@@ -57,7 +68,8 @@ service cloud.firestore {
       let depois = request.resource.data.get('curtidas', []);
       let adicionados = depois.removeAll(antes);
       let removidos = antes.removeAll(depois);
-      return apenasEstesCamposMudaram(['curtidas'])
+      return !usuarioTravado()
+        && apenasEstesCamposMudaram(['curtidas'])
         && (adicionados.size() + removidos.size()) == 1
         && (adicionados.size() == 0 || adicionados.hasOnly([request.auth.uid]))
         && (removidos.size() == 0 || removidos.hasOnly([request.auth.uid]));
@@ -106,9 +118,9 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /posts/{postId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.autorId == request.auth.uid;
+      allow create: if isSignedIn() && !usuarioTravado() && request.resource.data.autorId == request.auth.uid;
       allow update: if isSignedIn() && (
-        resource.data.autorId == request.auth.uid ||
+        (resource.data.autorId == request.auth.uid && !usuarioTravado()) ||
         isAdmin() ||
         apenasProprioCurtiuMudou() ||
         comentariosCountMudouEmUm()
@@ -117,7 +129,7 @@ service cloud.firestore {
 
       match /comentarios/{commentId} {
         allow read: if isSignedIn();
-        allow create: if isSignedIn() && request.resource.data.autorId == request.auth.uid;
+        allow create: if isSignedIn() && !usuarioTravado() && request.resource.data.autorId == request.auth.uid;
         // CORREÇÃO: antes bloqueava qualquer alteração, o que impedia
         // inclusive a curtida em comentário. Agora, qualquer pessoa logada
         // pode adicionar ou remover só o PRÓPRIO uid do array `curtidas`
@@ -133,10 +145,10 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /prayers/{prayerId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.autorId == request.auth.uid;
+      allow create: if isSignedIn() && !usuarioTravado() && request.resource.data.autorId == request.auth.uid;
       allow update: if isSignedIn() && (
         (resource.data.autorId == request.auth.uid && apenasEstesCamposMudaram(['status'])) ||
-        apenasEstesCamposMudaram(['totalOracoes']) ||
+        (apenasEstesCamposMudaram(['totalOracoes']) && !usuarioTravado()) ||
         isAdmin()
       );
       allow delete: if isSignedIn() && (resource.data.autorId == request.auth.uid || isAdmin());
@@ -146,7 +158,7 @@ service cloud.firestore {
       // no mesmo dia mesmo que alguém tente burlar a tela.
       match /interacoes/{interacaoId} {
         allow read: if isSignedIn();
-        allow create: if isSignedIn() &&
+        allow create: if isSignedIn() && !usuarioTravado() &&
           request.resource.data.uid == request.auth.uid &&
           interacaoId == request.auth.uid + '_' + request.resource.data.data;
         allow update, delete: if false;
@@ -171,7 +183,7 @@ service cloud.firestore {
     // ------------------------------------------------------------------------
     match /missionSubmissions/{submissionId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() &&
+      allow create: if isSignedIn() && !usuarioTravado() &&
         request.resource.data.uid == request.auth.uid &&
         submissionId.matches(request.auth.uid + '_.*');
       allow update, delete: if false;
@@ -222,7 +234,7 @@ service cloud.firestore {
       allow create: if isAdmin();
       allow update: if isSignedIn() && (
         isAdmin() ||
-        (resource.data.destinatarioId == request.auth.uid && apenasEstesCamposMudaram(['status']))
+        (resource.data.destinatarioId == request.auth.uid && !usuarioTravado() && apenasEstesCamposMudaram(['status']))
       );
       allow delete: if isAdmin();
     }
@@ -239,7 +251,7 @@ service cloud.firestore {
         (resource.data.destinatarioId == request.auth.uid || resource.data.remetenteId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && request.resource.data.remetenteId == request.auth.uid && (
         (isAdmin() && request.resource.data.tipo == 'mensagem') ||
-        (request.resource.data.tipo in ['curtida', 'comentario'] &&
+        (!usuarioTravado() && request.resource.data.tipo in ['curtida', 'comentario'] &&
           request.resource.data.destinatarioId != request.auth.uid)
       );
       allow update: if isSignedIn() && (
