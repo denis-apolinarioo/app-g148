@@ -79,13 +79,17 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && userId == request.auth.uid;
       allow update: if isSignedIn() && (
-        // A própria pessoa pode editar seu perfil, MENOS o campo isAdmin
-        // (impede que alguém se autopromova a administrador).
+        // A própria pessoa pode editar seu perfil, MENOS os campos isAdmin
+        // e travado (impede autopromoção a admin e autodesbloqueio).
         (userId == request.auth.uid &&
-          request.resource.data.isAdmin == resource.data.isAdmin) ||
-        // Um admin pode ajustar só os pontos de outra pessoa (usado ao
-        // aprovar um desafio individual).
-        (isAdmin() && apenasEstesCamposMudaram(['pontos']))
+          request.resource.data.isAdmin == resource.data.isAdmin &&
+          request.resource.data.get('travado', false) == resource.data.get('travado', false)) ||
+        // Um admin pode ajustar os pontos OU o travamento de outra pessoa
+        // (usado ao aprovar um desafio individual, e ao travar/destravar
+        // acesso — lib/firestore-helpers.js -> toggleTravarUsuario). Antes
+        // só `pontos` estava liberado aqui, então travar/destravar sempre
+        // dava permissão negada, mesmo com o botão existindo no Admin.
+        (isAdmin() && (apenasEstesCamposMudaram(['pontos']) || apenasEstesCamposMudaram(['travado'])))
       );
       allow delete: if false;
     }

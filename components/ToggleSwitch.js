@@ -16,8 +16,8 @@ export default function ToggleSwitch({ ativo, onChange, disabled = false }) {
       } ${disabled ? 'opacity-40' : ''}`}
     >
       <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-cream-card shadow transition-transform ${
-          ativo ? 'translate-x-[22px]' : 'translate-x-0.5'
+        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[#FAF6EF] shadow transition-transform ${
+          ativo ? 'translate-x-5' : 'translate-x-0'
         }`}
       />
     </button>
