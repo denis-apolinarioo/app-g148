@@ -1,12 +1,19 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Loader2, Search, X } from 'lucide-react';
+import { Check, Loader2, Pin, Search, Trash2, X } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/components/AuthProvider';
-import { getAllUsers, sendMailMessage, sendMailToMultiple } from '@/lib/firestore-helpers';
+import {
+  getAllUsers,
+  sendMailMessage,
+  sendMailToMultiple,
+  subscribeToMailHistory,
+  deleteMailMessage,
+} from '@/lib/firestore-helpers';
 import { uploadFotoCorreioComThumb } from '@/lib/storage';
 import { combinaComBusca } from '@/lib/searchUtils';
+import { formatDateTimeBR } from '@/lib/dateUtils';
 
 export default function AbaCorreio() {
   const [usuarios, setUsuarios] = useState([]);
@@ -206,6 +213,171 @@ export default function AbaCorreio() {
           ? 'Enviado!'
           : `Enviar mensagem${selecionados.length > 1 ? ` (${selecionados.length} pessoas)` : ''}`}
       </button>
+
+      <HistoricoMensagens usuarios={usuarios} />
+    </div>
+  );
+}
+
+// Item 14º do Bloco 7 — histórico de mensagens enviadas, geral ou por
+// pessoa, com exclusão. Fica na mesma aba porque é a mesma área (Correio)
+// do painel Admin.
+function HistoricoMensagens({ usuarios }) {
+  const [modo, setModo] = useState('geral'); // 'geral' | 'pessoa'
+  const [buscaPessoa, setBuscaPessoa] = useState('');
+  const [pessoaId, setPessoaId] = useState('');
+  const [historico, setHistorico] = useState(null);
+  const [apagandoId, setApagandoId] = useState(null);
+
+  useEffect(() => {
+    if (modo === 'pessoa' && !pessoaId) {
+      setHistorico(null);
+      return undefined;
+    }
+    setHistorico(null);
+    const unsub = subscribeToMailHistory(setHistorico, modo === 'pessoa' ? pessoaId : null);
+    return () => unsub();
+  }, [modo, pessoaId]);
+
+  const pessoasFiltradas = useMemo(() => {
+    if (!buscaPessoa.trim()) return usuarios;
+    return usuarios.filter(
+      (u) => combinaComBusca(u.nome, buscaPessoa) || combinaComBusca(u.username, buscaPessoa)
+    );
+  }, [usuarios, buscaPessoa]);
+
+  const pessoaSelecionada = usuarios.find((u) => u.id === pessoaId);
+
+  async function handleApagar(msg) {
+    if (!confirm('Apagar esta mensagem? Some do Correio de quem recebeu (mesmo se estiver fixada).')) {
+      return;
+    }
+    setApagandoId(msg.id);
+    try {
+      await deleteMailMessage(msg.id);
+    } catch (err) {
+      console.error('Erro ao apagar mensagem:', err);
+    } finally {
+      setApagandoId(null);
+    }
+  }
+
+  return (
+    <div className="space-y-3 border-t border-coffee-100 pt-5">
+      <h3 className="font-destaque text-sm font-semibold text-coffee-700">Histórico de mensagens</h3>
+
+      <div className="flex gap-1.5">
+        <button
+          type="button"
+          onClick={() => setModo('geral')}
+          className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
+            modo === 'geral' ? 'bg-coffee-700 text-cream' : 'bg-cream-card text-coffee-500'
+          }`}
+        >
+          Geral
+        </button>
+        <button
+          type="button"
+          onClick={() => setModo('pessoa')}
+          className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
+            modo === 'pessoa' ? 'bg-coffee-700 text-cream' : 'bg-cream-card text-coffee-500'
+          }`}
+        >
+          Por pessoa
+        </button>
+      </div>
+
+      {modo === 'pessoa' && (
+        <div className="space-y-2">
+          <div className="relative">
+            <Search
+              size={14}
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-coffee-300"
+            />
+            <input
+              type="text"
+              value={pessoaSelecionada ? pessoaSelecionada.nome : buscaPessoa}
+              onChange={(e) => {
+                setPessoaId('');
+                setBuscaPessoa(e.target.value);
+              }}
+              placeholder="Buscar pessoa por nome ou @username..."
+              className="w-full rounded-lg border border-coffee-100 bg-cream-card py-2 pl-8 pr-3 text-sm text-coffee-800"
+            />
+          </div>
+          {!pessoaId && buscaPessoa.trim() && (
+            <div className="max-h-40 overflow-y-auto rounded-lg border border-coffee-100 bg-cream-card">
+              {pessoasFiltradas.length === 0 && (
+                <p className="px-3 py-2.5 text-center text-xs text-coffee-400">Ninguém encontrado.</p>
+              )}
+              {pessoasFiltradas.map((u) => (
+                <button
+                  key={u.id}
+                  type="button"
+                  onClick={() => {
+                    setPessoaId(u.id);
+                    setBuscaPessoa('');
+                  }}
+                  className="flex w-full items-center gap-2.5 border-b border-coffee-50 px-3 py-2 last:border-b-0"
+                >
+                  <Avatar src={u.fotoURL} nome={u.nome} tamanho="sm" />
+                  <span className="truncate text-sm text-coffee-700">{u.nome}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {modo === 'pessoa' && !pessoaId ? (
+        <p className="text-xs text-coffee-300">Escolha uma pessoa pra ver o histórico com ela.</p>
+      ) : historico === null ? (
+        <div className="space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-14 animate-pulse rounded-lg bg-coffee-100/60" />
+          ))}
+        </div>
+      ) : historico.length === 0 ? (
+        <p className="text-xs text-coffee-300">Nenhuma mensagem enviada ainda.</p>
+      ) : (
+        <div className="space-y-2">
+          {historico.map((msg) => {
+            const destinatario = usuarios.find((u) => u.id === msg.destinatarioId);
+            return (
+              <div
+                key={msg.id}
+                className="flex items-start gap-2.5 rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1 text-xs font-semibold text-coffee-700">
+                    {msg.fixada && <Pin size={11} className="text-gold" fill="currentColor" />}
+                    {modo === 'geral' ? destinatario?.nome || 'Alguém' : formatDateTimeBR(msg.createdAt)}
+                  </p>
+                  <p className="mt-0.5 truncate text-xs text-coffee-500">{msg.texto}</p>
+                  {modo === 'geral' && (
+                    <p className="mt-0.5 text-[11px] text-coffee-300">
+                      {msg.createdAt ? formatDateTimeBR(msg.createdAt) : 'agora'}
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleApagar(msg)}
+                  disabled={apagandoId === msg.id}
+                  aria-label="Apagar mensagem"
+                  className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-coffee-300 hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
+                >
+                  {apagandoId === msg.id ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={13} />
+                  )}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

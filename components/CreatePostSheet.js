@@ -9,6 +9,7 @@ import { verificarConquistas } from '@/lib/achievements';
 import { uploadFotoComThumb, uploadAudio } from '@/lib/storage';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
 import ImageCropper from '@/components/ImageCropper';
+import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
 
 const CATEGORIAS = [null, 'Relato', 'Oração'];
 const PROPORCOES = [
@@ -30,6 +31,8 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   const [erro, setErro] = useState('');
   const inputFotoRef = useRef(null);
   const inputCameraRef = useRef(null);
+  // Item 17 do Bloco 9 — debounce simples pra ignorar duplo toque rápido.
+  const emDebouncePublicar = useProtecaoCliqueDuplo();
 
   // CORREÇÃO: o ImageCropper espera receber a prop "src" (uma URL), não o
   // arquivo bruto. Por isso a tela de corte fechava/travava ao tirar foto ou
@@ -62,7 +65,7 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
     (aba === 'audio' && blobAudio);
 
   async function handlePublicar() {
-    if (!podePublicar || publicando) return;
+    if (!podePublicar || publicando || emDebouncePublicar()) return;
     setPublicando(true);
     setErro('');
     try {

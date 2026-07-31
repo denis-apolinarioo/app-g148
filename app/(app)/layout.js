@@ -8,6 +8,7 @@ import { useAuth } from '@/components/AuthProvider';
 import LoadingScreen from '@/components/LoadingScreen';
 import BottomNav from '@/components/BottomNav';
 import ConexaoBanner from '@/components/ConexaoBanner';
+import { processarFilaOffline } from '@/lib/offlineQueue';
 import { Lock } from 'lucide-react';
 
 export default function AppLayout({ children }) {
@@ -22,6 +23,14 @@ export default function AppLayout({ children }) {
       router.replace('/onboarding');
     }
   }, [carregando, usuarioAuth, perfil, router]);
+
+  // Item 16 do Bloco 8 — se o app abrir já com internet e sobrou alguma
+  // ação da última vez que ficou offline, tenta reprocessar a fila aqui.
+  // A reconexão *durante* o uso já é tratada dentro do próprio
+  // lib/offlineQueue.js (aoReconectar), sem precisar disso de novo.
+  useEffect(() => {
+    if (usuarioAuth) processarFilaOffline();
+  }, [usuarioAuth]);
 
   if (carregando || !usuarioAuth || !perfil) {
     return <LoadingScreen />;

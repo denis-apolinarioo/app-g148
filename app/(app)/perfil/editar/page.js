@@ -162,6 +162,13 @@ export default function EditarPerfilPage() {
         </button>
 
         <Link
+          href="/perfil/notificacoes"
+          className="block rounded-xl border border-coffee-100 px-4 py-3 text-center text-sm font-medium text-coffee-600"
+        >
+          Notificações
+        </Link>
+
+        <Link
           href="/termos"
           className="block pt-1 text-center text-xs text-coffee-300 underline underline-offset-2"
         >

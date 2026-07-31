@@ -79,17 +79,13 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && userId == request.auth.uid;
       allow update: if isSignedIn() && (
-        // A própria pessoa pode editar seu perfil, MENOS os campos isAdmin
-        // (impede autopromoção a administrador) e travado (item 13 do
-        // Bloco 6 — impede se autodestravar caso um admin tenha travado
-        // o acesso dela).
+        // A própria pessoa pode editar seu perfil, MENOS o campo isAdmin
+        // (impede que alguém se autopromova a administrador).
         (userId == request.auth.uid &&
-          request.resource.data.isAdmin == resource.data.isAdmin &&
-          request.resource.data.get('travado', false) == resource.data.get('travado', false)) ||
-        // Um admin pode ajustar os pontos de outra pessoa (usado ao
-        // aprovar um desafio individual) e travar/destravar o acesso dela
-        // (item 13 do Bloco 6).
-        (isAdmin() && apenasEstesCamposMudaram(['pontos', 'travado']))
+          request.resource.data.isAdmin == resource.data.isAdmin) ||
+        // Um admin pode ajustar só os pontos de outra pessoa (usado ao
+        // aprovar um desafio individual).
+        (isAdmin() && apenasEstesCamposMudaram(['pontos']))
       );
       allow delete: if false;
     }
@@ -226,8 +222,10 @@ service cloud.firestore {
     // OUTRA pessoa (nunca para si mesma). Só remetente e destinatário leem.
     // ------------------------------------------------------------------------
     match /mailbox/{messageId} {
+      // Item 14º do Bloco 7 — admin pode ler qualquer mensagem (histórico
+      // geral/por pessoa), além das próprias regras que já existiam.
       allow read: if isSignedIn() &&
-        (resource.data.destinatarioId == request.auth.uid || resource.data.remetenteId == request.auth.uid);
+        (resource.data.destinatarioId == request.auth.uid || resource.data.remetenteId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && request.resource.data.remetenteId == request.auth.uid && (
         (isAdmin() && request.resource.data.tipo == 'mensagem') ||
         (request.resource.data.tipo in ['curtida', 'comentario'] &&
@@ -237,7 +235,11 @@ service cloud.firestore {
         (resource.data.destinatarioId == request.auth.uid && apenasEstesCamposMudaram(['lida'])) ||
         (isAdmin() && apenasEstesCamposMudaram(['fixada']))
       );
-      allow delete: if false;
+      // Item 14º — admin pode apagar qualquer mensagem do histórico.
+      // Item 15º — quem recebeu pode fechar (apagar) suas próprias
+      // mensagens/notificações não fixadas (fixada nunca pode ser fechada).
+      allow delete: if isAdmin() || (isSignedIn() &&
+        resource.data.destinatarioId == request.auth.uid && resource.data.fixada != true);
     }
 
     // ------------------------------------------------------------------------
@@ -266,6 +268,21 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow create: if isAdmin() && request.resource.data.adminId == request.auth.uid;
       allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // TOKENS DE PUSH (Bloco 10) — lib/push.js grava/apaga o token do próprio
+    // aparelho. Sem regra nenhuma aqui, salvar/remover o token dá erro de
+    // permissão e o push nunca chega a funcionar. Ninguém precisa ler essa
+    // coleção pelo cliente (as Cloud Functions leem via Admin SDK, que já
+    // ignora essas regras) — só criar/atualizar/apagar o próprio token.
+    // ------------------------------------------------------------------------
+    match /pushTokens/{tokenId} {
+      allow read: if false;
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
     }
 
     // ------------------------------------------------------------------------

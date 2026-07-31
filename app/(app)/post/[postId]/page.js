@@ -9,11 +9,14 @@ import EmptyState from '@/components/EmptyState';
 import { useAuth } from '@/components/AuthProvider';
 import { subscribeToPost } from '@/lib/firestore-helpers';
 
-// Tela de post individual — hoje só usada pelo botão "Ver post" da aba de
-// Denúncias do Admin (item 17), pra ir direto no post denunciado (inclusive
-// quando a denúncia é de um COMENTÁRIO, já que o comentário mora dentro do
-// post). Não existe em nenhum outro lugar do app: o Feed continua sendo a
-// lista normal, essa rota é só um "atalho" direto pra um post pelo ID.
+// Tela de post individual — usada pelo botão "Ver post" da aba de Denúncias
+// do Admin (item 17), pra ir direto no post denunciado (inclusive quando a
+// denúncia é de um COMENTÁRIO, já que o comentário mora dentro do post), e
+// também pelo clique numa notificação de curtida/comentário no Correio
+// (item 15º do Bloco 7). Não existe em nenhum outro lugar do app: o Feed
+// continua sendo a lista normal, essa rota é só um "atalho" direto pra um
+// post pelo ID — por isso o botão de voltar usa o histórico do navegador em
+// vez de um destino fixo (as duas origens são diferentes).
 export default function PostIndividualPage() {
   const { postId } = useParams();
   const { perfil } = useAuth();
@@ -31,7 +34,7 @@ export default function PostIndividualPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <TopBar titulo="Post" voltarPara="/admin" />
+      <TopBar titulo="Post" voltarPorHistorico />
 
       <div className="space-y-4 px-4 py-4">
         {carregando && <div className="h-40 animate-pulse rounded-xl2 bg-coffee-100/60" />}

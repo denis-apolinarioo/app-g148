@@ -2,25 +2,33 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Mailbox, Circle, Heart, MessageCircle, Pin } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Mailbox, Circle, Heart, MessageCircle, Pin, X } from 'lucide-react';
 import TopBar from '@/components/TopBar';
 import EmptyState from '@/components/EmptyState';
 import Avatar from '@/components/Avatar';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import { useAuth } from '@/components/AuthProvider';
-import { subscribeToMailbox, markMailAsRead } from '@/lib/firestore-helpers';
+import { subscribeToMailbox, markMailAsRead, deleteMailMessage } from '@/lib/firestore-helpers';
 import { getCachedImageURL } from '@/lib/imageCache';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
 
 const QUANTIDADE_BASE_VISIVEL = 20;
 const QUANTIDADE_INCREMENTO_VISIVEL = 20;
+// Item 15º do Bloco 7 — a partir de quantos pixels de arrasto uma notificação
+// é considerada "fechada" (senão, volta pro lugar).
+const LIMIAR_ARRASTO_FECHAR = 80;
 
 export default function CorreioPage() {
   const { perfil } = useAuth();
   const [mensagens, setMensagens] = useState(null);
   const [fotoAberta, setFotoAberta] = useState('');
+  const [mensagemTelaCheia, setMensagemTelaCheia] = useState(null);
   const [qtdVisivel, setQtdVisivel] = useState(QUANTIDADE_BASE_VISIVEL);
+  // Item 15º — fechar some da tela na hora, mesmo antes do Firestore
+  // confirmar a exclusão (mesma base otimista já usada no resto do Correio).
+  const [escondidos, setEscondidos] = useState(() => new Set());
 
   useEffect(() => {
     if (!perfil) return undefined;
@@ -28,8 +36,22 @@ export default function CorreioPage() {
     return () => unsub();
   }, [perfil]);
 
-  const fixadas = mensagens?.filter((m) => m.fixada) || [];
-  const todasNormais = mensagens?.filter((m) => !m.fixada) || [];
+  function fecharMensagem(msg) {
+    setEscondidos((atual) => new Set(atual).add(msg.id));
+    deleteMailMessage(msg.id).catch((err) => {
+      console.error('Erro ao fechar mensagem:', err);
+      // Reverte: se apagar falhou (ex.: sem internet), a mensagem volta a aparecer.
+      setEscondidos((atual) => {
+        const novo = new Set(atual);
+        novo.delete(msg.id);
+        return novo;
+      });
+    });
+  }
+
+  const visiveis = mensagens?.filter((m) => !escondidos.has(m.id)) || [];
+  const fixadas = visiveis.filter((m) => m.fixada);
+  const todasNormais = visiveis.filter((m) => !m.fixada);
   // Item 21º — só exibição paginada. A escuta em tempo real já traz todo o
   // histórico da pessoa (subscribeToMailbox não usa orderBy, pra não
   // depender de índice composto), e como isso cresce por pessoa — bem mais
@@ -63,14 +85,26 @@ export default function CorreioPage() {
         {fixadas.length > 0 && (
           <div className="mb-3 space-y-2.5">
             {fixadas.map((msg) => (
-              <LinhaMensagem key={msg.id} msg={msg} onVerFoto={setFotoAberta} />
+              <LinhaMensagem
+                key={msg.id}
+                msg={msg}
+                onVerFoto={setFotoAberta}
+                onAbrirTelaCheia={setMensagemTelaCheia}
+                onFechar={fecharMensagem}
+              />
             ))}
           </div>
         )}
 
         <div className="space-y-2.5 pb-6">
           {normais.map((msg) => (
-            <LinhaMensagem key={msg.id} msg={msg} onVerFoto={setFotoAberta} />
+            <LinhaMensagem
+              key={msg.id}
+              msg={msg}
+              onVerFoto={setFotoAberta}
+              onAbrirTelaCheia={setMensagemTelaCheia}
+              onFechar={fecharMensagem}
+            />
           ))}
 
           {temMaisNormais && (
@@ -88,28 +122,86 @@ export default function CorreioPage() {
       {fotoAberta && (
         <ImageViewerModal src={fotoAberta} alt="Foto da mensagem" onClose={() => setFotoAberta('')} />
       )}
+
+      {mensagemTelaCheia && (
+        <MensagemTelaCheiaModal
+          msg={mensagemTelaCheia}
+          onClose={() => setMensagemTelaCheia(null)}
+          onVerFoto={setFotoAberta}
+        />
+      )}
     </div>
   );
 }
 
-function LinhaMensagem({ msg, onVerFoto }) {
+function LinhaMensagem({ msg, onVerFoto, onAbrirTelaCheia, onFechar }) {
+  const router = useRouter();
   const ehNotificacao = msg.tipo === 'curtida' || msg.tipo === 'comentario';
   const Icone = msg.tipo === 'curtida' ? Heart : msg.tipo === 'comentario' ? MessageCircle : null;
+  // Item 15º — fixadas não podem ser fechadas/arrastadas.
+  const podeFechar = !msg.fixada;
 
   // 5º — marcar como lida na hora, sem esperar o Firestore confirmar.
   const [lidaExibida, dispararLeitura] = useAcaoOtimista(msg.lida);
 
-  function abrirMensagem() {
+  // Item 15º — arrastar horizontalmente pra fechar (além do botão de X).
+  const [arrastando, setArrastando] = useState(false);
+  const [arrastoX, setArrastoX] = useState(0);
+  const [inicioX, setInicioX] = useState(0);
+
+  function marcarComoLida() {
     if (lidaExibida) return;
     dispararLeitura(true, () => markMailAsRead(msg.id)).catch((err) => {
       console.error('Erro ao marcar mensagem como lida:', err);
     });
   }
 
+  // Item 15º — clique leva pro lugar certo: post curtido/comentado, mensagem
+  // em tela cheia, ou (via os links de nome/foto abaixo, que já têm
+  // stopPropagation) o perfil de quem curtiu/comentou.
+  function handleClique() {
+    marcarComoLida();
+    if (ehNotificacao && msg.postId) {
+      router.push(`/post/${msg.postId}`);
+    } else if (!ehNotificacao) {
+      onAbrirTelaCheia(msg);
+    }
+  }
+
+  function handlePointerDown(e) {
+    if (!podeFechar) return;
+    setInicioX(e.clientX);
+    setArrastando(true);
+  }
+  function handlePointerMove(e) {
+    if (!arrastando) return;
+    setArrastoX(e.clientX - inicioX);
+  }
+  function encerrarArrasto() {
+    if (!arrastando) return;
+    setArrastando(false);
+    if (Math.abs(arrastoX) > LIMIAR_ARRASTO_FECHAR) {
+      onFechar(msg);
+    } else {
+      setArrastoX(0);
+    }
+  }
+
   return (
     <div
-      onClick={abrirMensagem}
-      className={`flex w-full items-start gap-3 rounded-xl2 border p-4 shadow-card ${
+      onClick={handleClique}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={encerrarArrasto}
+      onPointerLeave={encerrarArrasto}
+      style={{
+        transform: `translateX(${arrastoX}px)`,
+        opacity: 1 - Math.min(Math.abs(arrastoX) / 250, 0.7),
+        touchAction: podeFechar ? 'pan-y' : 'auto',
+      }}
+      className={`relative flex w-full items-start gap-3 rounded-xl2 border p-4 shadow-card ${
+        arrastando ? '' : 'transition-transform duration-200'
+      } ${
         msg.fixada
           ? 'border-2 border-gold bg-gold/15 shadow-md'
           : 'border-coffee-100 bg-cream-card'
@@ -137,7 +229,7 @@ function LinhaMensagem({ msg, onVerFoto }) {
         </Link>
       )}
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 pr-5">
         {msg.fixada && (
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-gold">Fixado</p>
         )}
@@ -177,7 +269,72 @@ function LinhaMensagem({ msg, onVerFoto }) {
         )}
 
         <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-coffee-300">
-          {Icone && <Icone size={11} />}
+          {/* Item 15º — ícones preenchidos em vez de vazados */}
+          {Icone && <Icone size={11} fill="currentColor" />}
+          {msg.createdAt ? formatDateTimeBR(msg.createdAt) : 'agora'}
+        </p>
+      </div>
+
+      {/* Item 15º — fechar (além de arrastar), exceto mensagens fixadas */}
+      {podeFechar && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onFechar(msg);
+          }}
+          aria-label="Fechar"
+          className="absolute right-2.5 top-2.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-coffee-300 hover:bg-coffee-50 hover:text-coffee-600"
+        >
+          <X size={13} />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Item 15º — "mensagem em tela cheia": abre a mensagem completa (com foto
+// grande, se tiver) num modal, ao clicar numa mensagem que não é notificação
+// automática de curtida/comentário.
+function MensagemTelaCheiaModal({ msg, onClose, onVerFoto }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream-card p-5 sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mb-3 flex items-start justify-between gap-2">
+          {msg.fixada ? (
+            <p className="text-[10px] font-bold uppercase tracking-wide text-gold">Fixado</p>
+          ) : (
+            <span />
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-coffee-400 hover:bg-coffee-50"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <p className="whitespace-pre-wrap text-base text-coffee-800">{msg.texto}</p>
+
+        {msg.fotoURL && (
+          <button
+            type="button"
+            onClick={() => onVerFoto(msg.fotoURL)}
+            className="mt-3 block overflow-hidden rounded-lg"
+          >
+            <FotoMensagemCacheada url={msg.fotoURL} />
+          </button>
+        )}
+
+        <p className="mt-3 text-xs text-coffee-300">
           {msg.createdAt ? formatDateTimeBR(msg.createdAt) : 'agora'}
         </p>
       </div>

@@ -6,6 +6,9 @@ import { subscribeToComments, addComment, deleteComment, toggleCommentLike, crea
 import { useAuth } from '@/components/AuthProvider';
 import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
 import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
+import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
+import { estaOffline } from '@/lib/connectivity';
+import { enfileirarAcaoOffline } from '@/lib/offlineQueue';
 import Avatar from '@/components/Avatar';
 import TextoComLinks from '@/components/TextoComLinks';
 import { formatDateTimeBR } from '@/lib/dateUtils';
@@ -28,12 +31,14 @@ function LinhaComentario({ postId, comentario, uidAtual, reportador, podeExcluir
 
   // 3º — curtir comentário na hora, mesma base otimista do post (2º).
   const [jaCurtiuExibido, dispararCurtida, curtindo] = useAcaoOtimista(jaCurtiu);
+  // Item 17 do Bloco 9 — debounce simples pra ignorar duplo toque rápido.
+  const emDebounceCurtida = useProtecaoCliqueDuplo();
   const contagemCurtidasBase = comentario.curtidas?.length || 0;
   const contagemCurtidasExibida =
     contagemCurtidasBase + (jaCurtiuExibido === jaCurtiu ? 0 : jaCurtiuExibido ? 1 : -1);
 
   async function handleCurtir() {
-    if (!uidAtual || curtindo) return;
+    if (!uidAtual || curtindo || emDebounceCurtida()) return;
     const proximoValor = !jaCurtiuExibido;
     // Anima só quando está curtindo (não quando está descurtindo)
     if (proximoValor) {
@@ -41,9 +46,20 @@ function LinhaComentario({ postId, comentario, uidAtual, reportador, podeExcluir
       setTimeout(() => setCoracaoAnimado(false), 700);
     }
     try {
-      await dispararCurtida(proximoValor, () =>
-        toggleCommentLike(postId, comentario.id, uidAtual, jaCurtiu)
-      );
+      await dispararCurtida(proximoValor, async () => {
+        if (estaOffline()) {
+          // Item 16 do Bloco 8 — mesma ideia da curtida de post: guarda a
+          // ação e mantém a tela otimista, sem tentar o Firestore agora.
+          enfileirarAcaoOffline('curtidaComentario', {
+            postId,
+            commentId: comentario.id,
+            uid: uidAtual,
+            jaCurtiu,
+          });
+          return;
+        }
+        await toggleCommentLike(postId, comentario.id, uidAtual, jaCurtiu);
+      });
     } catch (err) {
       // Se a regra do Firestore publicada no Console estiver desatualizada
       // (sem a permissão de curtida em comentário), o erro cai aqui — sem
@@ -165,6 +181,8 @@ export default function CommentSection({ postId, postAutorId }) {
   const [comentarios, setComentarios] = useState([]);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
+  // Item 17 do Bloco 9 — debounce simples pra ignorar duplo toque rápido.
+  const emDebounceEnviar = useProtecaoCliqueDuplo();
 
   useEffect(() => {
     const unsub = subscribeToComments(postId, setComentarios);
@@ -174,7 +192,7 @@ export default function CommentSection({ postId, postAutorId }) {
   async function handleEnviar(e) {
     e.preventDefault();
     const valor = texto.trim();
-    if (!valor || enviando) return;
+    if (!valor || enviando || emDebounceEnviar()) return;
     setEnviando(true);
     setTexto('');
     try {

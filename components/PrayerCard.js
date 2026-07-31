@@ -12,6 +12,8 @@ import { pontuarOracao } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
 import { formatDateBR, isPastDeadline } from '@/lib/dateUtils';
 import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
+import { estaOffline } from '@/lib/connectivity';
+import { enfileirarAcaoOffline } from '@/lib/offlineQueue';
 
 export default function PrayerCard({ pedido }) {
   const { perfil } = useAuth();
@@ -39,6 +41,16 @@ export default function PrayerCard({ pedido }) {
     if (orando || jaOrouExibido) return;
     try {
       await dispararOracao(true, async () => {
+        if (estaOffline()) {
+          // Item 16 do Bloco 8 — sem internet: guarda a ação, mantém a
+          // tela como "Orou hoje" (otimista) e não tenta o Firestore agora.
+          enfileirarAcaoOffline('oracao', {
+            prayerId: pedido.id,
+            uid: perfil.uid,
+            streakAtual: perfil.streakAtual || 0,
+          });
+          return;
+        }
         const registrou = await registerPrayerInteraction(pedido.id, perfil.uid);
         if (registrou) {
           await pontuarOracao(perfil.uid, pedido.id);

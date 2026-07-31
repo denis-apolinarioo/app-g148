@@ -8,6 +8,7 @@ import ProfileView from '@/components/ProfileView';
 import LoadingScreen from '@/components/LoadingScreen';
 import { Settings, Crown, LogOut } from 'lucide-react';
 import MailboxLink from '@/components/MailboxLink';
+import { limparTokenAoSair } from '@/lib/push';
 
 export default function MeuPerfilPage() {
   const { perfil } = useAuth();
@@ -16,6 +17,10 @@ export default function MeuPerfilPage() {
 
   async function handleSair() {
     if (confirm('Sair da sua conta?')) {
+      // Item 25 do Bloco 10 — remove o token de push deste aparelho ANTES
+      // de sair, senão quem ficar logado em outra conta nesse mesmo
+      // navegador continuaria recebendo pushes da conta anterior.
+      await limparTokenAoSair();
       await signOut(auth);
     }
   }

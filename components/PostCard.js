@@ -14,6 +14,9 @@ import { getUsuarioCache } from '@/lib/usersCache';
 import { getCachedImageURL } from '@/lib/imageCache';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
+import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
+import { estaOffline } from '@/lib/connectivity';
+import { enfileirarAcaoOffline } from '@/lib/offlineQueue';
 
 const JANELA_DUPLO_TOQUE = 300; // ms — intervalo pra reconhecer 2 toques como "duplo toque"
 const DURACAO_LONG_PRESS = 500; // ms — tempo segurando pra abrir "quem curtiu"
@@ -47,6 +50,8 @@ export default function PostCard({ post, usuarioAtual }) {
   // 2º — curtir na hora, sem esperar o Firestore confirmar (base já
   // existente em lib/useAcaoOtimista.js — ver comentário do hook).
   const [jaCurtiuExibido, dispararCurtida, curtindo] = useAcaoOtimista(jaCurtiu);
+  // Item 17 do Bloco 9 — debounce simples pra ignorar duplo toque rápido.
+  const emDebounceCurtida = useProtecaoCliqueDuplo();
   const contagemCurtidasBase = post.curtidas?.length || 0;
   const contagemCurtidasExibida =
     contagemCurtidasBase + (jaCurtiuExibido === jaCurtiu ? 0 : jaCurtiuExibido ? 1 : -1);
@@ -78,14 +83,35 @@ export default function PostCard({ post, usuarioAtual }) {
   }, []);
 
   async function handleLike() {
-    if (!usuarioAtual || curtindo) return;
+    if (!usuarioAtual || curtindo || emDebounceCurtida()) return;
     try {
-      await dispararCurtida(!jaCurtiuExibido, () =>
-        toggleLike(post.id, usuarioAtual.uid, jaCurtiu, {
+      await dispararCurtida(!jaCurtiuExibido, async () => {
+        if (estaOffline()) {
+          // Item 16 do Bloco 8 — sem internet: guarda a ação e não tenta
+          // falar com o Firestore agora. A tela já mudou (otimista) e não
+          // é desfeita — a curtida "de verdade" acontece quando a fila for
+          // reprocessada, assim que a conexão voltar.
+          enfileirarAcaoOffline('curtidaPost', {
+            postId: post.id,
+            uid: usuarioAtual.uid,
+            jaCurtiu,
+            contexto: {
+              postAutorId: post.autorId,
+              remetente: {
+                uid: usuarioAtual.uid,
+                nome: usuarioAtual.nome,
+                fotoURL: usuarioAtual.fotoURL,
+                username: usuarioAtual.username,
+              },
+            },
+          });
+          return;
+        }
+        await toggleLike(post.id, usuarioAtual.uid, jaCurtiu, {
           postAutorId: post.autorId,
           remetente: usuarioAtual,
-        })
-      );
+        });
+      });
     } catch (err) {
       console.error('Erro ao curtir/descurtir post:', err);
     }

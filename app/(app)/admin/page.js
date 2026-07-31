@@ -15,8 +15,9 @@ import AbaDesafios from './_components/AbaDesafios';
 import AbaCorreio from './_components/AbaCorreio';
 import AbaDenuncias from './_components/AbaDenuncias';
 import AbaConfiguracoes from './_components/AbaConfiguracoes';
+import AbaHistorico from './_components/AbaHistorico';
 
-const ABAS = ['Ações', 'Missões', 'Usuários', 'Desafios', 'Correio', 'Denúncias', 'Config'];
+const ABAS = ['Ações', 'Missões', 'Usuários', 'Desafios', 'Correio', 'Denúncias', 'Histórico', 'Config'];
 
 export default function AdminPage() {
   const { usuarioAuth, perfil } = useAuth();
@@ -78,6 +79,7 @@ export default function AdminPage() {
         {aba === 'Desafios' && <AbaDesafios />}
         {aba === 'Correio' && <AbaCorreio />}
         {aba === 'Denúncias' && <AbaDenuncias />}
+        {aba === 'Histórico' && <AbaHistorico />}
         {aba === 'Config' && <AbaConfiguracoes />}
       </div>
     </div>
