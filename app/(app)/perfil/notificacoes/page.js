@@ -22,6 +22,19 @@ export default function NotificacoesPage() {
   const { perfil } = useAuth();
   const [plataforma, setPlataforma] = useState({ ios: false, standalone: false, suportado: false });
   const [permissao, setPermissao] = useState('default');
+  // Item novo — "ativado" agora é um estado PRÓPRIO, separado da permissão do
+  // navegador. `permissao === 'granted'` só diz que o navegador autorizou
+  // notificações algum dia; isso não significa que o token do FCM esteja
+  // salvo no Firestore agora (ele pode nunca ter sido salvo, ou ter sido
+  // apagado depois). Antes a tela usava `permissao === 'granted'` direto
+  // pra decidir "Ativar" vs "Desativar", então: (1) quem já tinha aceitado
+  // a permissão em algum momento passado via a tela sempre como "ativado"
+  // sem o token nunca ter sido de fato registrado, e o push nunca chegava;
+  // (2) apertar "Desativar" apagava o token certinho, mas a tela continuava
+  // achando que estava ativado (permissão do navegador não muda por código),
+  // então parecia que o botão não fazia nada.
+  const [ativado, setAtivado] = useState(false);
+  const [verificandoAoAbrir, setVerificandoAoAbrir] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
   const [prefs, setPrefs] = useState({});
@@ -31,6 +44,37 @@ export default function NotificacoesPage() {
     setPlataforma(detectarPlataforma());
     setPermissao(permissaoAtual());
   }, []);
+
+  // Ao abrir a tela, se o navegador já tinha concedido permissão antes (de
+  // uma visita anterior), tenta confirmar/renovar o token agora — sem pedir
+  // permissão de novo (o navegador não reexibe o popup quando já está
+  // 'granted', então isso roda em silêncio). Se der certo, aí sim marca como
+  // ativado de verdade. Se falhar, deixa a tela mostrar "Ativar" pra pessoa
+  // tentar de novo manualmente e ver o erro.
+  useEffect(() => {
+    if (!perfil) return;
+    const { ios, standalone, suportado } = detectarPlataforma();
+    if (!suportado || (ios && !standalone)) return;
+    if (permissaoAtual() !== 'granted') return;
+
+    let cancelado = false;
+    setVerificandoAoAbrir(true);
+    ativarNotificacoes(perfil.uid)
+      .then(() => {
+        if (!cancelado) setAtivado(true);
+      })
+      .catch((err) => {
+        console.error('Não foi possível confirmar o token de push ao abrir a tela:', err);
+        if (!cancelado) setAtivado(false);
+      })
+      .finally(() => {
+        if (!cancelado) setVerificandoAoAbrir(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [perfil?.uid]);
 
   // Item 23/26 — os campos vêm do perfil (já reativo via AuthProvider), só
   // espelha em estado local pra deixar os toggles/inputs controlados.
@@ -48,6 +92,7 @@ export default function NotificacoesPage() {
     try {
       await ativarNotificacoes(perfil.uid);
       setPermissao('granted');
+      setAtivado(true);
     } catch (err) {
       if (err.message === 'IOS_PRECISA_INSTALAR' || err.message === 'NAO_SUPORTADO') {
         setErro(err.message);
@@ -57,6 +102,7 @@ export default function NotificacoesPage() {
         console.error('Erro ao ativar notificações:', err);
         setErro('FALHOU');
       }
+      setAtivado(false);
     } finally {
       setCarregando(false);
     }
@@ -67,6 +113,7 @@ export default function NotificacoesPage() {
     try {
       await desativarNotificacoes();
       setPermissao(permissaoAtual());
+      setAtivado(false);
     } finally {
       setCarregando(false);
     }
@@ -91,7 +138,7 @@ export default function NotificacoesPage() {
     }
   }
 
-  const jaAtivado = permissao === 'granted';
+  const jaAtivado = ativado;
   const iosSemInstalar = plataforma.ios && !plataforma.standalone;
 
   return (
@@ -148,11 +195,11 @@ export default function NotificacoesPage() {
           ) : (
             <button
               onClick={jaAtivado ? handleDesativar : handleAtivar}
-              disabled={carregando || !plataforma.suportado || iosSemInstalar}
+              disabled={carregando || verificandoAoAbrir || !plataforma.suportado || iosSemInstalar}
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-2.5 text-sm font-semibold text-cream disabled:opacity-40"
             >
-              {carregando && <Loader2 size={15} className="animate-spin" />}
-              {jaAtivado ? 'Desativar notificações' : 'Ativar notificações'}
+              {(carregando || verificandoAoAbrir) && <Loader2 size={15} className="animate-spin" />}
+              {verificandoAoAbrir ? 'Confirmando...' : jaAtivado ? 'Desativar notificações' : 'Ativar notificações'}
             </button>
           )}
 
