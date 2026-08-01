@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/AuthProvider';
@@ -28,6 +28,22 @@ export default function EditarPerfilPage() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const inputFotoRef = useRef(null);
+
+  // CORREÇÃO DE VAZAMENTO: tanto srcCorte (URL bruta pra tela de corte)
+  // quanto previewFoto (prévia depois de cortar) são blob: locais que
+  // nunca eram revogados — nem trocando de foto, nem cancelando o corte,
+  // nem saindo da tela sem salvar. Revoga a anterior sempre que o valor
+  // muda e também ao desmontar.
+  useEffect(() => {
+    return () => {
+      if (srcCorte) URL.revokeObjectURL(srcCorte);
+    };
+  }, [srcCorte]);
+  useEffect(() => {
+    return () => {
+      if (previewFoto) URL.revokeObjectURL(previewFoto);
+    };
+  }, [previewFoto]);
 
   if (!perfil) return <LoadingScreen />;
 

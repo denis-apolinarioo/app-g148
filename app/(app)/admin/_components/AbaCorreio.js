@@ -60,6 +60,15 @@ export default function AbaCorreio() {
     setPreviewFoto(URL.createObjectURL(arquivo));
   }
 
+  // CORREÇÃO DE VAZAMENTO: previewFoto (blob: local) nunca era revogada —
+  // ficava viva mesmo trocando de foto ou fechando a tela sem enviar.
+  // Revoga a anterior sempre que ela muda (nova foto) e também ao desmontar.
+  useEffect(() => {
+    return () => {
+      if (previewFoto) URL.revokeObjectURL(previewFoto);
+    };
+  }, [previewFoto]);
+
   async function handleEnviar() {
     if (selecionados.length === 0 || !texto.trim() || enviando) return;
     setEnviando(true);

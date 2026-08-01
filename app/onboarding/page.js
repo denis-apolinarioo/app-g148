@@ -73,6 +73,14 @@ export default function OnboardingPage() {
     setPreviewFoto(URL.createObjectURL(arquivo));
   }
 
+  // CORREÇÃO DE VAZAMENTO: previewFoto (blob: local) nunca era revogada.
+  // Revoga a anterior sempre que ela muda (nova foto) e também ao desmontar.
+  useEffect(() => {
+    return () => {
+      if (previewFoto) URL.revokeObjectURL(previewFoto);
+    };
+  }, [previewFoto]);
+
   const formValido =
     nome.trim().length >= 2 && statusUsername === 'disponivel' && dataNascimento;
 

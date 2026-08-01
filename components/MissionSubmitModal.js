@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Loader2, Image as ImageIcon, PartyPopper } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { submeterMissao } from '@/lib/points';
@@ -50,6 +50,15 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
     setArquivoFoto(file);
     setPreviewFoto(URL.createObjectURL(blob));
   }
+
+  // CORREÇÃO DE VAZAMENTO: previewFoto (blob: local) nunca era revogada —
+  // ficava viva mesmo trocando de foto ou fechando a tela sem publicar.
+  // Revoga a anterior sempre que ela muda (nova foto) e também ao desmontar.
+  useEffect(() => {
+    return () => {
+      if (previewFoto) URL.revokeObjectURL(previewFoto);
+    };
+  }, [previewFoto]);
 
   // Só os campos marcados como obrigatórios travam o envio — os opcionais
   // podem ficar em branco (ver Admin > Missões > cada campo tem um toggle

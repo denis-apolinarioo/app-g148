@@ -22,14 +22,31 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   const analyserRef = useRef(null);
   const animFrameRef = useRef(null);
   const duracaoRef = useRef(0);
+  // CORREÇÃO DE VAZAMENTO: o AudioContext (usado só pra animar as
+  // barrinhas de volume) nunca era fechado — cada gravação criava um novo
+  // e o navegador tem um limite de contextos simultâneos por aba. Guardado
+  // aqui pra poder chamar ctx.close() assim que a gravação parar (ou se o
+  // componente desmontar no meio de uma gravação).
+  const audioCtxRef = useRef(null);
 
   useEffect(() => {
     return () => {
       clearInterval(intervalRef.current);
       cancelAnimationFrame(animFrameRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
+      audioCtxRef.current?.close().catch(() => {});
     };
   }, []);
+
+  // CORREÇÃO DE VAZAMENTO: a prévia gravada (audioURL, um blob: local)
+  // nunca era revogada — ficava viva na memória mesmo depois de descartar
+  // a gravação ou fechar a tela. Revoga a URL anterior sempre que ela é
+  // trocada (nova gravação ou "limpar") e também ao desmontar.
+  useEffect(() => {
+    return () => {
+      if (audioURL) URL.revokeObjectURL(audioURL);
+    };
+  }, [audioURL]);
 
   function animarBarras() {
     if (!analyserRef.current) return;
@@ -58,6 +75,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
       streamRef.current = stream;
 
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
@@ -93,6 +111,10 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
         stream.getTracks().forEach((t) => t.stop());
         cancelAnimationFrame(animFrameRef.current);
         setBarras(Array(28).fill(3));
+        // Já animou as barrinhas o que precisava — fecha o AudioContext
+        // pra não acumular um por gravação enquanto a tela ficar aberta.
+        audioCtxRef.current?.close().catch(() => {});
+        audioCtxRef.current = null;
       };
 
       recorder.start(200);

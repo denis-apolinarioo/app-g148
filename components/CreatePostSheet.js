@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Image as ImageIcon, Mic as MicIcon, Type, Loader2, Camera } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { createPost } from '@/lib/firestore-helpers';
@@ -58,6 +58,15 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
     setArquivoFoto(file);
     setPreviewFoto(URL.createObjectURL(blob));
   }
+
+  // CORREÇÃO DE VAZAMENTO: previewFoto (blob: local) nunca era revogada —
+  // ficava viva mesmo trocando de foto ou fechando a tela sem publicar.
+  // Revoga a anterior sempre que ela muda (nova foto) e também ao desmontar.
+  useEffect(() => {
+    return () => {
+      if (previewFoto) URL.revokeObjectURL(previewFoto);
+    };
+  }, [previewFoto]);
 
   const podePublicar =
     (aba === 'texto' && texto.trim()) ||
