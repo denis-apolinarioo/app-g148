@@ -12,29 +12,15 @@ import { combinaComBusca } from '@/lib/searchUtils';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
 
-// Rótulo de reserva pra qualquer ação que ainda não tenha um título
-// dedicado em <TituloRegistro> abaixo — evita mostrar o identificador cru
-// (ex.: "editar_missao") se um dia surgir uma ação nova sem ajuste ainda.
-const ROTULO_RESERVA = {
+// Item 9º do Bloco 3 — tela de histórico das ações do admin (por enquanto,
+// ajuste manual de pontos e o toggle de bloqueio de usuário usam isso — mas
+// qualquer ação futura que chamar registrarAcaoAdmin() já aparece aqui de
+// graça).
+const ROTULOS_ACAO = {
   ajustar_pontos: 'Ajuste manual de pontos',
-  travar_usuario: 'Bloqueou um usuário',
-  destravar_usuario: 'Desbloqueou um usuário',
+  ajustar_dracma: 'Ajuste manual de Dracma',
   editar_configuracoes_app: 'Configuração alterada',
-  criar_missao: 'Missão criada',
-  editar_missao: 'Missão editada',
-  excluir_missao: 'Missão excluída',
-  ajustar_pontos_acao: 'Pontos de uma ação ajustados',
-  resolver_denuncia: 'Denúncia marcada como resolvida',
-  reabrir_denuncia: 'Denúncia reaberta',
 };
-
-// Ações em que o nome da pessoa já entra dentro do próprio título — nesses
-// casos não repete "em Fulano" numa segunda linha.
-const ACOES_COM_NOME_NO_TITULO = ['ajustar_pontos', 'travar_usuario', 'destravar_usuario'];
-
-// Ações em que mostrar "valor antes → depois" seria redundante (o título
-// já diz o que aconteceu) ou não faz sentido (nenhum valor numérico real).
-const ACOES_SEM_LINHA_DE_VALOR = ['travar_usuario', 'destravar_usuario', 'editar_configuracoes_app'];
 
 const PAGINA = 15;
 
@@ -100,7 +86,7 @@ function HistoricoRecentes() {
       <EmptyState
         icone={History}
         titulo="Nenhum registro ainda"
-        descricao="Ações administrativas (ajustar pontos, criar/editar missão, bloquear usuário, etc.) aparecem aqui."
+        descricao="Ações administrativas (como ajuste manual de pontos) aparecem aqui."
       />
     );
   }
@@ -204,8 +190,8 @@ function HistoricoPorUsuario() {
         {registros?.length === 0 && !erro && (
           <EmptyState
             icone={History}
-            titulo="Nenhum registro encontrado"
-            descricao="Essa pessoa ainda não teve nenhuma ação administrativa registrada."
+            titulo="Nenhum ajuste encontrado"
+            descricao="Essa pessoa ainda não teve pontos alterados manualmente."
           />
         )}
 
@@ -244,7 +230,7 @@ function HistoricoPorUsuario() {
 
       {usuarios !== null && !busca.trim() && (
         <p className="px-1 text-xs text-coffee-300">
-          Digite um nome ou @username pra ver o histórico dessa pessoa.
+          Digite um nome ou @username pra ver o histórico de pontos dessa pessoa.
         </p>
       )}
 
@@ -273,57 +259,9 @@ function HistoricoPorUsuario() {
 }
 
 // ----------------------------------------------------------------------------
-// Título amigável de cada tipo de ação, já com o nome da pessoa/missão/
-// denúncia embutido (em vez de mostrar o identificador cru tipo
-// "ajustar_pontos" ou valores true/false crus).
-// ----------------------------------------------------------------------------
-function TituloRegistro({ registro, alvo, mostrarNomeNoTitulo }) {
-  const nomeAlvo = mostrarNomeNoTitulo && alvo?.nome && alvo.nome !== '...' ? alvo.nome : null;
-  const nomeAlvoLink = nomeAlvo ? (
-    <Link href={`/u/${alvo.username || registro.alvoId}`} className="underline decoration-coffee-300">
-      {nomeAlvo}
-    </Link>
-  ) : null;
-
-  switch (registro.acao) {
-    case 'ajustar_pontos':
-      return nomeAlvoLink ? (
-        <>Ajuste manual de pontos do usuário &quot;{nomeAlvoLink}&quot;</>
-      ) : (
-        'Ajuste manual de pontos'
-      );
-    case 'travar_usuario':
-      return nomeAlvoLink ? <>Bloqueou o usuário &quot;{nomeAlvoLink}&quot;</> : 'Bloqueou um usuário';
-    case 'destravar_usuario':
-      return nomeAlvoLink ? <>Desbloqueou o usuário &quot;{nomeAlvoLink}&quot;</> : 'Desbloqueou um usuário';
-    case 'editar_configuracoes_app':
-      if (registro.alvoId === CHAVE_BLOQUEIO_USUARIO_ATIVO) {
-        return registro.valorDepois
-          ? 'Ativou a função de bloquear usuários'
-          : 'Desativou a função de bloquear usuários';
-      }
-      return 'Configuração alterada';
-    case 'criar_missao':
-      return <>Criou a missão &quot;{registro.detalhes || registro.alvoId}&quot;</>;
-    case 'editar_missao':
-      return <>Editou a missão &quot;{registro.detalhes || registro.alvoId}&quot;</>;
-    case 'excluir_missao':
-      return <>Excluiu a missão &quot;{registro.detalhes || registro.alvoId}&quot;</>;
-    case 'ajustar_pontos_acao':
-      return <>Ajustou os pontos de &quot;{registro.detalhes || registro.alvoId}&quot;</>;
-    case 'resolver_denuncia':
-      return <>Marcou como resolvida a denúncia — {registro.detalhes || 'conteúdo removido'}</>;
-    case 'reabrir_denuncia':
-      return <>Reabriu a denúncia — {registro.detalhes || 'conteúdo removido'}</>;
-    default:
-      return ROTULO_RESERVA[registro.acao] || registro.acao || 'Ação administrativa';
-  }
-}
-
-// ----------------------------------------------------------------------------
 // Uma linha de registro. `ocultarAlvo` é usado na aba "Buscar por pessoa"
-// (já mostramos a pessoa no topo, então o título não precisa repetir o
-// nome dela).
+// (já mostramos a pessoa no topo, então não repete "em Fulano" em cada
+// linha).
 // ----------------------------------------------------------------------------
 function LinhaRegistro({ registro, ocultarAlvo = false }) {
   const mostrarAlvo = !ocultarAlvo && registro.alvoTipo === 'users' && Boolean(registro.alvoId);
@@ -339,24 +277,23 @@ function LinhaRegistro({ registro, ocultarAlvo = false }) {
   }
 
   const temValores = registro.valorAntes !== undefined && registro.valorDepois !== undefined;
-  const mostrarLinhaValor = temValores && !ACOES_SEM_LINHA_DE_VALOR.includes(registro.acao);
-  const nomeJaNoTitulo = ACOES_COM_NOME_NO_TITULO.includes(registro.acao);
-  // Pra ações sem título dedicado que ainda assim têm um alvo de usuário,
-  // mantém a linha "em Fulano" de reserva (não perde a informação).
-  const mostrarLinhaAlvoReserva = mostrarAlvo && !nomeJaNoTitulo;
+  // O toggle de "ativar/desativar o recurso de bloquear usuário" (aba Config)
+  // vira um registro com valorDepois true/false — mostrar "Bloqueou"/
+  // "Desbloqueou" em vez de "true"/"false" cru.
+  const ehToggleBloqueio = registro.alvoId === CHAVE_BLOQUEIO_USUARIO_ATIVO;
 
   return (
     <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-3.5">
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm font-semibold text-coffee-800">
-          <TituloRegistro registro={registro} alvo={alvo} mostrarNomeNoTitulo={mostrarAlvo && nomeJaNoTitulo} />
+          {ROTULOS_ACAO[registro.acao] || registro.acao || 'Ação administrativa'}
         </p>
         <p className="flex-shrink-0 text-[11px] text-coffee-300">{dataFormatada}</p>
       </div>
 
       <p className="mt-1 text-xs text-coffee-500">
         por <span className="font-medium text-coffee-700">{registro.adminNome || 'admin'}</span>
-        {mostrarLinhaAlvoReserva && (
+        {mostrarAlvo && (
           <>
             {' '}
             em{' '}
@@ -370,14 +307,20 @@ function LinhaRegistro({ registro, ocultarAlvo = false }) {
         )}
       </p>
 
-      {mostrarLinhaValor && (
-        <p className="mt-1 text-xs text-coffee-500">
-          {formatarValor(registro.valorAntes)} →{' '}
-          <span className="font-semibold text-coffee-700">{formatarValor(registro.valorDepois)}</span>
+      {temValores && (
+        <p className="mt-1 text-xs font-semibold text-coffee-700">
+          {ehToggleBloqueio ? (
+            registro.valorDepois ? 'Bloqueou' : 'Desbloqueou'
+          ) : (
+            <>
+              <span className="font-normal text-coffee-500">{formatarValor(registro.valorAntes)} → </span>
+              {formatarValor(registro.valorDepois)}
+            </>
+          )}
         </p>
       )}
 
-      {registro.detalhes && registro.acao === 'ajustar_pontos' && (
+      {registro.detalhes && (
         <p className="mt-1.5 rounded-lg bg-cream px-2.5 py-1.5 text-xs text-coffee-600">{registro.detalhes}</p>
       )}
     </div>

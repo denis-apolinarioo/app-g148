@@ -96,12 +96,13 @@ service cloud.firestore {
         (userId == request.auth.uid &&
           request.resource.data.isAdmin == resource.data.isAdmin &&
           request.resource.data.get('travado', false) == resource.data.get('travado', false)) ||
-        // Um admin pode ajustar os pontos OU o travamento de outra pessoa
-        // (usado ao aprovar um desafio individual, e ao travar/destravar
-        // acesso — lib/firestore-helpers.js -> toggleTravarUsuario). Antes
-        // só `pontos` estava liberado aqui, então travar/destravar sempre
-        // dava permissão negada, mesmo com o botão existindo no Admin.
-        (isAdmin() && (apenasEstesCamposMudaram(['pontos']) || apenasEstesCamposMudaram(['travado'])))
+        // Um admin pode ajustar os pontos, o Dracma OU o travamento de outra
+        // pessoa (usado ao aprovar um desafio individual, ao ajustar saldo
+        // manualmente — lib/dracma.js -> ajustarDracmaManualmente — e ao
+        // travar/destravar acesso — lib/firestore-helpers.js ->
+        // toggleTravarUsuario). PACOTE 2: adicionado `dracmas` a esta lista
+        // (antes só `pontos`/`travado` estavam liberados aqui).
+        (isAdmin() && (apenasEstesCamposMudaram(['pontos']) || apenasEstesCamposMudaram(['dracmas']) || apenasEstesCamposMudaram(['travado'])))
       );
       allow delete: if false;
     }
@@ -198,6 +199,18 @@ service cloud.firestore {
     // risco aceito pra comunidade pequena de confiança já assumido pra
     // `pontos` (ver comentário no topo do arquivo).
     match /pointsLog/{logId} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || isAdmin());
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // PACOTE 2 — Histórico auditável de cada transação de Dracma (ganho por
+    // missão/ação, ajuste manual do admin — e no futuro, transferências).
+    // Nunca editável depois de criado. Mesma limitação conhecida e aceita
+    // já assumida para `pointsLog` acima (ver comentário logo abaixo).
+    // ------------------------------------------------------------------------
+    match /dracmaLog/{logId} {
       allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || isAdmin());
       allow update, delete: if false;

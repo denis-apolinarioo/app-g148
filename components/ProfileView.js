@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Music, Sparkles, UserX, UserCheck } from 'lucide-react';
+import Link from 'next/link';
+import { Music, Sparkles, UserX, UserCheck, Wallet } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import StreakBadge from '@/components/StreakBadge';
 import AchievementBadge from '@/components/AchievementBadge';
@@ -107,7 +108,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
         <div className="mt-4 flex items-center gap-3">
           <div className="rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-2.5 text-center shadow-card">
             <p className="font-destaque text-lg font-bold text-coffee-800">{usuario.pontos || 0}</p>
-            <p className="text-[11px] text-coffee-300">pontos</p>
+            <p className="text-[11px] text-coffee-300">Pontos de Comunhão</p>
           </div>
           {usuario.streakAtual > 0 && (
             <div className="rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-2.5 shadow-card">
@@ -115,6 +116,17 @@ export default function ProfileView({ usuario, usuarioAtual }) {
             </div>
           )}
         </div>
+
+        {/* PACOTE 2 — Carteira de Dracma: só a própria pessoa vê o atalho
+            para a própria carteira. */}
+        {usuarioAtual?.uid === usuario.uid && (
+          <Link
+            href="/carteira"
+            className="mt-3 flex items-center gap-1.5 rounded-full border border-coffee-200 px-3 py-1.5 text-xs font-medium text-coffee-500"
+          >
+            <Wallet size={13} /> Carteira
+          </Link>
+        )}
 
         {usuario.proposito && (
           <div className="mt-5 w-full max-w-xs rounded-xl2 border border-coffee-100 bg-cream-card p-4 text-left shadow-card">
