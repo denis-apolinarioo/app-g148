@@ -270,7 +270,7 @@ function LinhaMensagem({ msg, onVerFoto, onAbrirTelaCheia, onFechar }) {
             }}
             className="mt-2 block overflow-hidden rounded-lg"
           >
-            <FotoMensagemCacheada url={msg.fotoURL} />
+            <FotoMensagemCacheada url={msg.fotoURL} thumbUrl={msg.fotoThumbURL} />
           </button>
         )}
 
@@ -336,7 +336,7 @@ function MensagemTelaCheiaModal({ msg, onClose, onVerFoto }) {
             onClick={() => onVerFoto(msg.fotoURL)}
             className="mt-3 block overflow-hidden rounded-lg"
           >
-            <FotoMensagemCacheada url={msg.fotoURL} />
+            <FotoMensagemCacheada url={msg.fotoURL} thumbUrl={msg.fotoThumbURL} />
           </button>
         )}
 
@@ -351,19 +351,24 @@ function MensagemTelaCheiaModal({ msg, onClose, onVerFoto }) {
 // Miniatura da foto anexada, passando pelo cache persistente (mesmo padrão
 // do Avatar.js) — sem isso, toda vez que o Correio é aberto as fotos
 // anexadas baixariam de novo do Firebase Storage.
-function FotoMensagemCacheada({ url }) {
+function FotoMensagemCacheada({ url, thumbUrl }) {
   const [urlLocal, setUrlLocal] = useState('');
+  // CORREÇÃO (Relatório 1, item 2): fotoThumbURL já era gerada e enviada,
+  // mas nunca chegava a ser usada — a prévia sempre baixava a foto em
+  // tamanho cheio. Agora prefere a miniatura (cai pra `url` cheia se não
+  // existir, ex.: mensagens antigas).
+  const urlParaExibir = thumbUrl || url;
 
   useEffect(() => {
     let cancelado = false;
-    getCachedImageURL(url).then((resolvida) => {
+    getCachedImageURL(urlParaExibir).then((resolvida) => {
       if (!cancelado) setUrlLocal(resolvida);
     });
     return () => {
       cancelado = true;
     };
-  }, [url]);
+  }, [urlParaExibir]);
 
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={urlLocal || url} alt="Foto da mensagem" className="max-h-40 w-full object-cover" />;
+  return <img src={urlLocal || urlParaExibir} alt="Foto da mensagem" className="max-h-40 w-full object-cover" />;
 }

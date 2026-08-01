@@ -40,6 +40,14 @@ export default function PostCard({ post, usuarioAtual }) {
   // cache local resolver. Quando getCachedImageURL terminar, troca pela
   // versão local (blob:), sem nenhum espaço vazio no meio.
   const [midiaURL, setMidiaURL] = useState(post.midiaURL || '');
+  // CORREÇÃO (Relatório 1, item 2): a thumbnail (midiaThumbURL) já é gerada
+  // e sobe pro Storage há tempo, mas nenhuma tela chegava a exibi-la — o
+  // cartão do Feed sempre baixava a foto em tamanho cheio (~1MB), mesmo
+  // sendo só uma miniatura na lista. Agora o cartão mostra midiaThumbURL
+  // (cai pra midiaURL cheia se não existir — posts antigos, ou se o upload
+  // da thumbnail falhar) e só a tela cheia (ImageViewerModal, abaixo)
+  // continua usando a foto original.
+  const [midiaListaURL, setMidiaListaURL] = useState(post.midiaThumbURL || post.midiaURL || '');
   const [mostrarComentarios, setMostrarComentarios] = useState(false);
   const [imagemAberta, setImagemAberta] = useState(false);
   const [coracaoAnimado, setCoracaoAnimado] = useState(false);
@@ -89,6 +97,18 @@ export default function PostCard({ post, usuarioAtual }) {
       cancelado = true;
     };
   }, [post.midiaURL]);
+
+  useEffect(() => {
+    const urlThumb = post.midiaThumbURL || post.midiaURL;
+    if (!urlThumb) return undefined;
+    let cancelado = false;
+    getCachedImageURL(urlThumb).then((url) => {
+      if (!cancelado) setMidiaListaURL(url);
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [post.midiaThumbURL, post.midiaURL]);
 
   // Limpa timers pendentes se o card sair da tela no meio de um toque
   useEffect(() => {
@@ -441,7 +461,7 @@ export default function PostCard({ post, usuarioAtual }) {
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={midiaURL}
+            src={midiaListaURL}
             alt="Foto do post"
             className="w-full object-cover max-h-80"
           />
