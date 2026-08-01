@@ -2,7 +2,19 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Heart, MessageCircle, Trash2, Pencil, Check, X as XIcon, Flag } from 'lucide-react';
+import {
+  Heart,
+  MessageCircle,
+  Trash2,
+  Pencil,
+  Check,
+  X as XIcon,
+  Flag,
+  ChevronDown,
+  ChevronUp,
+  CheckCircle2,
+  Link2,
+} from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import CommentSection from '@/components/CommentSection';
 import TextoComLinks from '@/components/TextoComLinks';
@@ -37,6 +49,10 @@ export default function PostCard({ post, usuarioAtual }) {
   const [salvandoEdicao, setSalvandoEdicao] = useState(false);
   const [denunciando, setDenunciando] = useState(false);
   const [denunciado, setDenunciado] = useState(false);
+  // Hierarquia visual de post de missão (foto > áudio > demais campos, na
+  // ordem definida na missão) — só o primeiro item aparece de cara, o
+  // resto fica atrás de "Ver mais" pra não abarrotar o feed.
+  const [mostrarTudo, setMostrarTudo] = useState(false);
 
   const ultimoTapRef = useRef(0);
   const timeoutTapRef = useRef(null);
@@ -231,6 +247,94 @@ export default function PostCard({ post, usuarioAtual }) {
     }
   }
 
+  // Renderiza um item da hierarquia de um post de missão (foto, áudio, ou
+  // um campo de resposta). `comDuploToque` só é passado pro primeiro item
+  // visível — os que aparecem depois de "Ver mais" não disputam o gesto de
+  // duplo toque com o resto da tela.
+  function renderItemMissao(item, key, comDuploToque) {
+    if (item.tipo === 'foto') {
+      const url = item.url === post.midiaURL ? midiaURL : item.url;
+      return (
+        <button
+          key={key}
+          onClick={comDuploToque ? handleTapNaFoto : () => setImagemAberta(true)}
+          className="relative mb-2.5 block w-full overflow-hidden rounded-xl"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt="Foto da missão" className="w-full object-cover max-h-80" />
+          {comDuploToque && coracaoAnimado && (
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <Heart size={72} className="animate-curtidaPop text-white drop-shadow-lg" fill="currentColor" />
+            </span>
+          )}
+        </button>
+      );
+    }
+
+    if (item.tipo === 'audio') {
+      return (
+        <div
+          key={key}
+          onClick={comDuploToque ? handleTapNoTexto : undefined}
+          className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3 pb-3 pt-4"
+        >
+          {comDuploToque && (
+            <p className="pointer-events-none mb-2 text-center text-[11px] text-coffee-300">
+              toque duas vezes para curtir
+            </p>
+          )}
+          <div onClick={(e) => e.stopPropagation()}>
+            <audio controls src={item.url} className="w-full" />
+          </div>
+          {comDuploToque && coracaoAnimado && (
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <Heart size={56} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    if (item.tipo === 'check') {
+      return (
+        <div
+          key={key}
+          className="mb-2.5 flex items-center gap-2 rounded-xl bg-green-50 px-3.5 py-2.5 text-sm text-green-800"
+        >
+          <CheckCircle2 size={16} className="flex-shrink-0 text-green-600" />
+          <span>{item.label}</span>
+        </div>
+      );
+    }
+
+    if (item.tipo === 'link') {
+      return (
+        <a
+          key={key}
+          href={item.valor}
+          target="_blank"
+          rel="noreferrer"
+          className="mb-2.5 flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5 text-sm text-coffee-700"
+        >
+          <Link2 size={15} className="flex-shrink-0 text-coffee-400" />
+          <span className="truncate">{item.label || item.valor}</span>
+        </a>
+      );
+    }
+
+    // texto-curto / texto-longo
+    return (
+      <div key={key} className="mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5">
+        {item.label && <p className="mb-0.5 text-[11px] font-medium text-coffee-400">{item.label}</p>}
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-coffee-700">{item.valor}</p>
+      </div>
+    );
+  }
+
+  const itensMissao = Array.isArray(post.itens) ? post.itens : null;
+  const temMaisItens = itensMissao && itensMissao.length > 1;
+  const itensVisiveis = itensMissao ? (mostrarTudo ? itensMissao : itensMissao.slice(0, 1)) : null;
+
   return (
     <div className="rounded-2xl border border-coffee-100 bg-cream-card p-4">
       {/* Cabeçalho — nome e avatar levam ao perfil do autor */}
@@ -294,7 +398,7 @@ export default function PostCard({ post, usuarioAtual }) {
         </div>
       ) : (
         post.texto && (
-          <div onClick={handleTapNoTexto} className="relative">
+          <div onClick={itensMissao ? undefined : handleTapNoTexto} className="relative">
             <TextoComLinks
               texto={post.texto}
               className="mb-3 text-sm leading-relaxed text-coffee-700"
@@ -303,8 +407,34 @@ export default function PostCard({ post, usuarioAtual }) {
         )
       )}
 
-      {/* Foto — toque único abre em tela cheia, duplo toque curte (item 19) */}
-      {post.tipo === 'foto' && midiaURL && (
+      {/* Post de missão — hierarquia foto > áudio > demais campos, na ordem
+          definida na missão. Só o primeiro item some de cara, o resto fica
+          atrás de "Ver mais" pra não abarrotar o feed. */}
+      {itensVisiveis && (
+        <div className="mb-1">
+          {itensVisiveis.map((item, i) => renderItemMissao(item, i, i === 0))}
+
+          {temMaisItens && (
+            <button
+              onClick={() => setMostrarTudo((v) => !v)}
+              className="mb-2 flex items-center gap-1 text-xs font-semibold text-coffee-500"
+            >
+              {mostrarTudo ? (
+                <>
+                  Ver menos <ChevronUp size={14} />
+                </>
+              ) : (
+                <>
+                  Ver mais <ChevronDown size={14} />
+                </>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Post manual (fora do fluxo de missões) — foto/áudio simples, como antes */}
+      {!itensMissao && post.tipo === 'foto' && midiaURL && (
         <button
           onClick={handleTapNaFoto}
           className="relative mb-3 block w-full overflow-hidden rounded-xl"
@@ -323,12 +453,13 @@ export default function PostCard({ post, usuarioAtual }) {
         </button>
       )}
 
-      {/* Áudio — os controles nativos (play, barra) ocupam todo o espaço
-          clicável deles, então o duplo toque não pode ficar "em cima" do
-          áudio (senão nunca sobra clique pra reconhecer o gesto, e ainda
-          atrapalha o play/pause). Por isso criamos um cartão ao redor do
-          player, com uma faixa de toque própria (acima) livre pra curtir. */}
-      {post.tipo === 'audio' && post.midiaURL && (
+      {/* Áudio manual — os controles nativos (play, barra) ocupam todo o
+          espaço clicável deles, então o duplo toque não pode ficar "em
+          cima" do áudio (senão nunca sobra clique pra reconhecer o gesto,
+          e ainda atrapalha o play/pause). Por isso criamos um cartão ao
+          redor do player, com uma faixa de toque própria (acima) livre pra
+          curtir. */}
+      {!itensMissao && post.tipo === 'audio' && post.midiaURL && (
         <div
           onClick={handleTapNoTexto}
           className="relative mb-3 rounded-xl border border-coffee-100 bg-cream px-3 pb-3 pt-4"

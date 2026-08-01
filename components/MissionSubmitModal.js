@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { X, Loader2, Image as ImageIcon, PartyPopper } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
-import { submeterMissaoDiaria, submeterMissaoSemanal, concluirMissaoMensal } from '@/lib/points';
+import { submeterMissao } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
 import { vibrarMissaoConcluida } from '@/lib/haptics';
 import { uploadFoto, uploadAudio } from '@/lib/storage';
@@ -17,7 +17,7 @@ const PROPORCOES = [
   { label: '3:4', w: 3, h: 4 },
 ];
 
-export default function MissionSubmitModal({ missao, periodicidade, onFechar, onConcluida }) {
+export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
   const { perfil } = useAuth();
   const [resposta, setResposta] = useState({});
   const [arquivoFoto, setArquivoFoto] = useState(null);
@@ -51,13 +51,31 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
     setPreviewFoto(URL.createObjectURL(blob));
   }
 
-  const camposPreenchidos = (missao.campos || []).every((campo) => {
+  // Só os campos marcados como obrigatórios travam o envio — os opcionais
+  // podem ficar em branco (ver Admin > Missões > cada campo tem um toggle
+  // "obrigatório / opcional").
+  const camposObrigatoriosOk = (missao.campos || []).every((campo) => {
+    if (!campo.obrigatorio) return true;
     if (campo.tipo === 'check') return resposta[campo.chave] === true;
     return (resposta[campo.chave] || '').trim();
   });
+  const fotoOk = !missao.fotoObrigatoria || !!arquivoFoto;
+  const audioOk = !missao.audioObrigatoria || !!blobAudio;
+
+  // Proteção geral: mesmo quando nenhum campo é obrigatório (ex.: missão
+  // só com checks opcionais), não dá pra enviar completamente em branco —
+  // precisa ter marcado/preenchido pelo menos uma coisa.
+  const temAlgumConteudo =
+    (missao.campos || []).some((campo) =>
+      campo.tipo === 'check' ? resposta[campo.chave] === true : (resposta[campo.chave] || '').trim()
+    ) ||
+    (missao.permiteFoto && !!arquivoFoto) ||
+    (missao.permiteAudio && !!blobAudio);
+
+  const podeEnviar = camposObrigatoriosOk && fotoOk && audioOk && temAlgumConteudo;
 
   async function handleConfirmar() {
-    if (enviando) return;
+    if (enviando || !podeEnviar) return;
     setEnviando(true);
     setErro('');
 
@@ -72,18 +90,11 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
         audioURL = await uploadAudio(perfil.uid, blobAudio);
       }
 
-      if (periodicidade === 'diaria') {
-        await submeterMissaoDiaria(missao.id, perfil, resposta, fotoURL, audioURL);
-      } else if (periodicidade === 'semanal') {
-        await submeterMissaoSemanal(missao.id, perfil, resposta, fotoURL, audioURL);
-      } else if (periodicidade === 'mensal') {
-        await concluirMissaoMensal(missao.id, perfil, resposta, fotoURL, audioURL);
-      }
+      await submeterMissao(missao.id, perfil, resposta, fotoURL, audioURL);
 
       vibrarMissaoConcluida();
 
-      const contexto = periodicidade === 'mensal' ? 'leitura' : 'missao_diaria';
-      const novas = await verificarConquistas(perfil.uid, (perfil.streakAtual || 0) + 1, contexto);
+      const novas = await verificarConquistas(perfil.uid, (perfil.streakAtual || 0) + 1, 'missao_diaria');
       if (novas.length > 0) {
         setConquistaNova(CONQUISTAS.find((c) => c.id === novas[0]));
         setEnviando(false);
@@ -93,18 +104,14 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
       onConcluida?.();
       onFechar();
     } catch (err) {
-      if (
-        err.message === 'MISSAO_JA_ENVIADA_HOJE' ||
-        err.message === 'MISSAO_JA_ENVIADA_NESTA_SEMANA' ||
-        err.message === 'MISSAO_JA_CONCLUIDA_NESTE_MES'
-      ) {
-        setErro('Você já cumpriu essa missão neste período.');
+      if (err.message === 'MISSAO_LIMITE_ATINGIDO_NO_PERIODO') {
+        setErro('Você já atingiu o limite de vezes que pode cumprir essa missão neste período.');
         setTimeout(() => {
           onConcluida?.();
           onFechar();
         }, 1500);
-      } else if (err.message === 'MISSAO_LIMITE_ATINGIDO') {
-        setErro('Você já atingiu o limite de vezes que pode cumprir essa missão.');
+      } else if (err.message === 'MISSAO_FORA_DO_PERIODO') {
+        setErro('Essa missão não está disponível agora.');
         setTimeout(() => {
           onConcluida?.();
           onFechar();
@@ -195,12 +202,20 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
                       }
                       className="h-5 w-5 flex-shrink-0 rounded border-coffee-200 text-coffee-700"
                     />
-                    <span>{campo.label}</span>
+                    <span>
+                      {campo.label}
+                      {!campo.obrigatorio && (
+                        <span className="ml-1 text-[11px] text-coffee-300">(opcional)</span>
+                      )}
+                    </span>
                   </label>
                 ) : (
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-coffee-500">
                       {campo.label}
+                      {!campo.obrigatorio && (
+                        <span className="ml-1 text-[11px] font-normal text-coffee-300">(opcional)</span>
+                      )}
                     </label>
                     {campo.tipo === 'texto-longo' ? (
                       <textarea
@@ -231,7 +246,7 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
             {missao.permiteFoto && (
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-coffee-500">
-                  Foto (opcional)
+                  Foto {missao.fotoObrigatoria ? '' : '(opcional)'}
                 </label>
                 {previewFoto ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -264,7 +279,7 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
             {missao.permiteAudio && (
               <div>
                 <label className="mb-1.5 block text-xs font-medium text-coffee-500">
-                  Áudio (opcional)
+                  Áudio {missao.audioObrigatoria ? '' : '(opcional)'}
                 </label>
                 <AudioRecorderButton onGravado={setBlobAudio} onLimpar={() => setBlobAudio(null)} />
               </div>
@@ -275,7 +290,7 @@ export default function MissionSubmitModal({ missao, periodicidade, onFechar, on
 
           <button
             onClick={handleConfirmar}
-            disabled={!camposPreenchidos || enviando}
+            disabled={!podeEnviar || enviando}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-3.5 text-sm font-semibold text-cream disabled:opacity-40"
           >
             {enviando && <Loader2 size={16} className="animate-spin" />}

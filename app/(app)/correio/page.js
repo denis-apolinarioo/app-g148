@@ -136,8 +136,14 @@ export default function CorreioPage() {
 
 function LinhaMensagem({ msg, onVerFoto, onAbrirTelaCheia, onFechar }) {
   const router = useRouter();
-  const ehNotificacao = msg.tipo === 'curtida' || msg.tipo === 'comentario';
-  const Icone = msg.tipo === 'curtida' ? Heart : msg.tipo === 'comentario' ? MessageCircle : null;
+  const TIPOS_NOTIFICACAO = ['curtida', 'comentario', 'curtida_comentario', 'mencao'];
+  const ehNotificacao = TIPOS_NOTIFICACAO.includes(msg.tipo);
+  const Icone =
+    msg.tipo === 'curtida' || msg.tipo === 'curtida_comentario'
+      ? Heart
+      : msg.tipo === 'comentario' || msg.tipo === 'mencao'
+        ? MessageCircle
+        : null;
   // Item 15º — fixadas não podem ser fechadas/arrastadas.
   const podeFechar = !msg.fixada;
 

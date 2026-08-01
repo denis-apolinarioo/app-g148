@@ -20,14 +20,18 @@ import {
   trocarOrdem,
   migrarMissoesDoCodigoParaFirestore,
   migrarCamposDasMissoes,
+  migrarPeriodicidadeParaCiclos,
 } from '@/lib/missionsRepo';
+import { statusDaMissao } from '@/lib/missionCycles';
 import { getAllUsers } from '@/lib/firestore-helpers';
+import { todayBrasilia } from '@/lib/dateUtils';
+import { slugify } from '@/lib/slug';
 import Avatar from '@/components/Avatar';
+import IconGalleryPicker from '@/components/IconGalleryPicker';
 
-const PERIODICIDADES = [
-  { valor: 'diaria', label: 'Diária' },
-  { valor: 'semanal', label: 'Semanal' },
-  { valor: 'mensal', label: 'Mensal' },
+const CATEGORIAS = [
+  { valor: 'exclusiva', label: 'Missões Exclusivas', legenda: 'Só quem for marcado em "Destinatários" vê' },
+  { valor: 'geral', label: 'Missões Gerais', legenda: 'Aparece pra todo mundo (a menos que restrinja por destinatários)' },
 ];
 
 const TIPO_CAMPO_OPCOES = [
@@ -37,6 +41,11 @@ const TIPO_CAMPO_OPCOES = [
   { valor: 'check', label: 'Confirmação (check)' },
 ];
 
+const ROTULO_STATUS = {
+  nao_iniciada: 'ainda não começou',
+  encerrada: 'encerrada',
+};
+
 // Contador simples pra gerar ids estáveis pros campos de resposta do form
 // (antes usava o índice do array como key — funcionava, mas ao remover um
 // campo do meio da lista o React podia reciclar o DOM node errado entre
@@ -45,15 +54,25 @@ let proximoIdCampo = 1;
 
 // A missão não tem mais um `tipo` fixo (isso foi removido na migração pro
 // formato de campos livres — ver migrarCamposDasMissoes). Esse resumo troca
-// aquele campo antigo, que ficava em branco pra missão já migrada/nova, por
-// uma descrição baseada no que a missão realmente tem hoje.
+// aquele campo antigo por uma descrição baseada no que a missão realmente
+// tem hoje: quantos campos, se permite foto/áudio, qual o período e quantas
+// vezes dá pra cumprir dentro dele.
 function descreverMissao(missao) {
   const partes = [];
   const qtdCampos = (missao.campos || []).length;
   if (qtdCampos > 0) partes.push(`${qtdCampos} campo${qtdCampos > 1 ? 's' : ''}`);
   if (missao.permiteFoto) partes.push('foto');
   if (missao.permiteAudio) partes.push('áudio');
-  return partes.length > 0 ? partes.join(' · ') : 'Sem campos de resposta';
+  const resposta = partes.length > 0 ? partes.join(' · ') : 'sem campos de resposta';
+
+  let periodo = 'período não definido';
+  if (missao.duracaoDias) {
+    const dias = `a cada ${missao.duracaoDias} dia${missao.duracaoDias > 1 ? 's' : ''}`;
+    periodo = missao.repeteAutomaticamente ? dias : `${dias} (não repete)`;
+  }
+  const vezes = missao.vezesPorPeriodo > 1 ? ` · ${missao.vezesPorPeriodo}x por período` : '';
+
+  return `${resposta} · ${periodo}${vezes}`;
 }
 
 export default function AbaMissoes() {
@@ -62,8 +81,10 @@ export default function AbaMissoes() {
   const [resultadoMigracao, setResultadoMigracao] = useState(null);
   const [corrigindoCampos, setCorrigindoCampos] = useState(false);
   const [resultadoCorrecaoCampos, setResultadoCorrecaoCampos] = useState(null);
+  const [corrigindoPeriodo, setCorrigindoPeriodo] = useState(false);
+  const [resultadoCorrecaoPeriodo, setResultadoCorrecaoPeriodo] = useState(null);
   const [missaoEditando, setMissaoEditando] = useState(null); // objeto = editar, 'nova' = criar
-  const [periodicidadeNova, setPeriodicidadeNova] = useState('diaria');
+  const [categoriaNova, setCategoriaNova] = useState('geral');
   const [apagando, setApagando] = useState(null);
 
   const carregar = useCallback(() => {
@@ -114,6 +135,26 @@ export default function AbaMissoes() {
     }
   }
 
+  async function handleCorrigirPeriodo() {
+    if (corrigindoPeriodo) return;
+    setCorrigindoPeriodo(true);
+    setResultadoCorrecaoPeriodo(null);
+    try {
+      const migradas = await migrarPeriodicidadeParaCiclos();
+      setResultadoCorrecaoPeriodo(
+        migradas > 0
+          ? `${migradas} missão(ões) convertida(s) pro novo período.`
+          : 'Nada pra converter — todas as missões já estão no formato novo de período.'
+      );
+      carregar();
+    } catch (err) {
+      console.error('Erro ao converter período das missões:', err);
+      setResultadoCorrecaoPeriodo('Não foi possível converter agora. Tente de novo em instantes.');
+    } finally {
+      setCorrigindoPeriodo(false);
+    }
+  }
+
   async function handleApagar(missao) {
     if (!confirm(`Apagar a missão "${missao.titulo}"? Isso não afeta o histórico já registrado.`))
       return;
@@ -141,9 +182,9 @@ export default function AbaMissoes() {
 
   if (!missoes) return <div className="h-40 animate-pulse rounded-xl2 bg-coffee-100/60" />;
 
-  const grupos = PERIODICIDADES.map((p) => ({
-    ...p,
-    lista: missoes.filter((m) => m.periodicidade === p.valor),
+  const grupos = CATEGORIAS.map((c) => ({
+    ...c,
+    lista: missoes.filter((m) => (m.categoria || 'geral') === c.valor),
   }));
 
   return (
@@ -181,15 +222,31 @@ export default function AbaMissoes() {
         {resultadoCorrecaoCampos && (
           <p className="mt-2 text-center text-xs text-coffee-500">{resultadoCorrecaoCampos}</p>
         )}
+
+        <button
+          onClick={handleCorrigirPeriodo}
+          disabled={corrigindoPeriodo}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-coffee-200 py-2.5 text-sm font-semibold text-coffee-700 disabled:opacity-40"
+        >
+          {corrigindoPeriodo ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <UploadCloud size={14} />
+          )}
+          Converter período (diária/semanal/mensal → dias)
+        </button>
+        {resultadoCorrecaoPeriodo && (
+          <p className="mt-2 text-center text-xs text-coffee-500">{resultadoCorrecaoPeriodo}</p>
+        )}
       </div>
 
       {grupos.map((grupo) => (
         <div key={grupo.valor}>
-          <div className="mb-2 flex items-center justify-between">
+          <div className="mb-1 flex items-center justify-between">
             <h3 className="font-destaque text-sm font-semibold text-coffee-700">{grupo.label}</h3>
             <button
               onClick={() => {
-                setPeriodicidadeNova(grupo.valor);
+                setCategoriaNova(grupo.valor);
                 setMissaoEditando('nova');
               }}
               className="flex items-center gap-1 text-xs font-semibold text-coffee-600"
@@ -197,65 +254,74 @@ export default function AbaMissoes() {
               <Plus size={13} /> Nova
             </button>
           </div>
+          <p className="mb-2 text-[11px] text-coffee-300">{grupo.legenda}</p>
 
           {grupo.lista.length === 0 && (
-            <p className="text-xs text-coffee-300">Nenhuma missão {grupo.label.toLowerCase()} ainda.</p>
+            <p className="text-xs text-coffee-300">Nenhuma missão aqui ainda.</p>
           )}
 
           <div className="space-y-2">
-            {grupo.lista.map((missao, index) => (
-              <div
-                key={missao.id}
-                className={`flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream-card px-3.5 py-2.5 ${
-                  missao.ativa === false ? 'opacity-50' : ''
-                }`}
-              >
-                <div className="flex flex-shrink-0 flex-col">
+            {grupo.lista.map((missao, index) => {
+              const status = statusDaMissao(missao);
+              return (
+                <div
+                  key={missao.id}
+                  className={`flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream-card px-3.5 py-2.5 ${
+                    missao.ativa === false ? 'opacity-50' : ''
+                  }`}
+                >
+                  <div className="flex flex-shrink-0 flex-col">
+                    <button
+                      onClick={() => handleMover(grupo.lista, index, -1)}
+                      disabled={index === 0}
+                      className="text-coffee-300 disabled:opacity-20"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleMover(grupo.lista, index, 1)}
+                      disabled={index === grupo.lista.length - 1}
+                      className="text-coffee-300 disabled:opacity-20"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-coffee-800">
+                      {missao.titulo}
+                      {missao.ativa === false && (
+                        <span className="ml-1.5 text-[10px] font-medium text-coffee-400">(inativa)</span>
+                      )}
+                      {missao.ativa !== false && ROTULO_STATUS[status] && (
+                        <span className="ml-1.5 text-[10px] font-medium text-coffee-400">
+                          ({ROTULO_STATUS[status]})
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-coffee-400">
+                      {descreverMissao(missao)} · +{missao.pontos} pontos
+                    </p>
+                  </div>
                   <button
-                    onClick={() => handleMover(grupo.lista, index, -1)}
-                    disabled={index === 0}
-                    className="text-coffee-300 disabled:opacity-20"
+                    onClick={() => setMissaoEditando(missao)}
+                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-coffee-200 text-coffee-600"
                   >
-                    <ChevronUp size={14} />
+                    <Pencil size={13} />
                   </button>
                   <button
-                    onClick={() => handleMover(grupo.lista, index, 1)}
-                    disabled={index === grupo.lista.length - 1}
-                    className="text-coffee-300 disabled:opacity-20"
+                    onClick={() => handleApagar(missao)}
+                    disabled={apagando === missao.id}
+                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-coffee-200 text-red-600 disabled:opacity-40"
                   >
-                    <ChevronDown size={14} />
-                  </button>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-coffee-800">
-                    {missao.titulo}
-                    {missao.ativa === false && (
-                      <span className="ml-1.5 text-[10px] font-medium text-coffee-400">(inativa)</span>
+                    {apagando === missao.id ? (
+                      <Loader2 size={13} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={13} />
                     )}
-                  </p>
-                  <p className="text-xs text-coffee-400">
-                    {descreverMissao(missao)} · +{missao.pontos} pontos
-                  </p>
+                  </button>
                 </div>
-                <button
-                  onClick={() => setMissaoEditando(missao)}
-                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-coffee-200 text-coffee-600"
-                >
-                  <Pencil size={13} />
-                </button>
-                <button
-                  onClick={() => handleApagar(missao)}
-                  disabled={apagando === missao.id}
-                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-coffee-200 text-red-600 disabled:opacity-40"
-                >
-                  {apagando === missao.id ? (
-                    <Loader2 size={13} className="animate-spin" />
-                  ) : (
-                    <Trash2 size={13} />
-                  )}
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
@@ -263,7 +329,7 @@ export default function AbaMissoes() {
       {missaoEditando && (
         <MissaoFormModal
           missaoInicial={missaoEditando === 'nova' ? null : missaoEditando}
-          periodicidadePadrao={periodicidadeNova}
+          categoriaPadrao={categoriaNova}
           onFechar={() => setMissaoEditando(null)}
           onSalvo={() => {
             setMissaoEditando(null);
@@ -275,12 +341,10 @@ export default function AbaMissoes() {
   );
 }
 
-function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo }) {
+function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) {
   const editando = !!missaoInicial;
   const [titulo, setTitulo] = useState(missaoInicial?.titulo || '');
-  const [periodicidade, setPeriodicidade] = useState(
-    missaoInicial?.periodicidade || periodicidadePadrao || 'diaria'
-  );
+  const [categoria, setCategoria] = useState(missaoInicial?.categoria || categoriaPadrao || 'geral');
   const [icone, setIcone] = useState(missaoInicial?.icone || '');
   const [pontos, setPontos] = useState(missaoInicial?.pontos ?? 10);
   const [postaNoFeed, setPostaNoFeed] = useState(missaoInicial?.postaNoFeed ?? false);
@@ -291,11 +355,22 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
     missaoInicial?.exigeAprovacaoAdmin ?? false
   );
   const [permiteFoto, setPermiteFoto] = useState(missaoInicial?.permiteFoto ?? false);
+  const [fotoObrigatoria, setFotoObrigatoria] = useState(missaoInicial?.fotoObrigatoria ?? false);
   const [permiteAudio, setPermiteAudio] = useState(missaoInicial?.permiteAudio ?? false);
+  const [audioObrigatoria, setAudioObrigatoria] = useState(missaoInicial?.audioObrigatoria ?? false);
   const [campos, setCampos] = useState(
-    (missaoInicial?.campos || []).map((c) => ({ ...c, _id: proximoIdCampo++ }))
+    (missaoInicial?.campos || []).map((c) => ({ ...c, obrigatorio: c.obrigatorio ?? true, _id: proximoIdCampo++ }))
   );
-  const [limiteRepeticoes, setLimiteRepeticoes] = useState(missaoInicial?.limiteRepeticoes ?? '');
+
+  // Novo modelo de período: início + duração (dias) + repete ou não +
+  // quantas vezes dá pra cumprir dentro de cada ciclo (ver lib/missionCycles.js).
+  const [dataInicio, setDataInicio] = useState(missaoInicial?.dataInicio || todayBrasilia());
+  const [duracaoDias, setDuracaoDias] = useState(missaoInicial?.duracaoDias ?? 1);
+  const [repeteAutomaticamente, setRepeteAutomaticamente] = useState(
+    missaoInicial?.repeteAutomaticamente ?? true
+  );
+  const [vezesPorPeriodo, setVezesPorPeriodo] = useState(missaoInicial?.vezesPorPeriodo ?? 1);
+
   const [destinatarios, setDestinatarios] = useState(missaoInicial?.destinatarios || null);
   const [usuarios, setUsuarios] = useState([]);
   const [salvando, setSalvando] = useState(false);
@@ -320,8 +395,28 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
   }
 
   function adicionarCampo() {
-    setCampos((c) => [...c, { _id: proximoIdCampo++, chave: '', label: '', tipo: 'texto-curto' }]);
+    setCampos((c) => [...c, { _id: proximoIdCampo++, chave: '', label: '', tipo: 'texto-curto', obrigatorio: true }]);
   }
+
+  // A "chave interna" não é mais digitada à mão pelo Admin — era ali que
+  // ficava o bug de "não aparece nada pro usuário" (alguém preenchia só a
+  // chave e esquecia o texto da pergunta, que é o único campo realmente
+  // mostrado na tela de resposta). Agora ela é gerada sozinha a partir da
+  // pergunta, e nunca fica vazia.
+  function atualizarLabelDoCampo(id, novoLabel) {
+    setCampos((c) => {
+      const chavesDosOutros = c.filter((x) => x._id !== id).map((x) => x.chave);
+      const base = slugify(novoLabel) || 'campo';
+      let chave = base;
+      let n = 2;
+      while (chavesDosOutros.includes(chave)) {
+        chave = `${base}_${n}`;
+        n += 1;
+      }
+      return c.map((campo) => (campo._id === id ? { ...campo, label: novoLabel, chave } : campo));
+    });
+  }
+
   function atualizarCampo(id, dados) {
     setCampos((c) => c.map((campo) => (campo._id === id ? { ...campo, ...dados } : campo)));
   }
@@ -339,6 +434,10 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
       setErro('Adicione pelo menos um campo, ou permita foto/áudio, pra essa missão ter como ser respondida.');
       return;
     }
+    if (!dataInicio) {
+      setErro('Escolha a data de início da missão.');
+      return;
+    }
 
     setSalvando(true);
     setErro('');
@@ -347,22 +446,34 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
     // não mais um `tipo` fixo — o mesmo formato de `dados` vale pra qualquer missão.
     const dados = {
       titulo: titulo.trim(),
-      periodicidade,
+      categoria,
       icone: icone.trim(),
       pontos: Number(pontos) || 0,
       postaNoFeed,
       ativa,
       campos: campos
-        .filter((c) => c.chave.trim() && c.label.trim())
-        .map((c) => ({ chave: c.chave.trim(), label: c.label.trim(), tipo: c.tipo })),
+        .filter((c) => c.label.trim())
+        .map((c) => ({
+          chave: c.chave || slugify(c.label),
+          label: c.label.trim(),
+          tipo: c.tipo,
+          obrigatorio: !!c.obrigatorio,
+        })),
       permiteFoto,
+      fotoObrigatoria: permiteFoto ? fotoObrigatoria : false,
       permiteAudio,
+      audioObrigatoria: permiteAudio ? audioObrigatoria : false,
       instrucoes: instrucoes.trim(),
       linkDrive: linkDrive.trim(),
       exigeAprovacaoAdmin,
+      dataInicio,
+      duracaoDias: Math.max(1, Number(duracaoDias) || 1),
+      repeteAutomaticamente,
+      // Sempre tem limite — mínimo 1, nunca "ilimitado" (decisão combinada:
+      // toda missão precisa de um teto de quantas vezes cabe no período).
+      vezesPorPeriodo: Math.max(1, Number(vezesPorPeriodo) || 1),
     };
 
-    dados.limiteRepeticoes = limiteRepeticoes === '' ? null : Number(limiteRepeticoes);
     dados.destinatarios = destinatarios && destinatarios.length > 0 ? destinatarios : null;
 
     try {
@@ -407,38 +518,93 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
             />
           </Campo>
 
-          <Campo label="Periodicidade">
-            <select
-              value={periodicidade}
-              onChange={(e) => setPeriodicidade(e.target.value)}
-              className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
-            >
-              {PERIODICIDADES.map((p) => (
-                <option key={p.valor} value={p.valor}>
-                  {p.label}
-                </option>
+          <div>
+            <span className="mb-1.5 block text-xs font-medium text-coffee-500">Categoria</span>
+            <div className="flex gap-2">
+              {CATEGORIAS.map((c) => (
+                <button
+                  key={c.valor}
+                  type="button"
+                  onClick={() => setCategoria(c.valor)}
+                  className={`flex-1 rounded-lg border py-2 text-xs font-semibold ${
+                    categoria === c.valor
+                      ? 'border-coffee-700 bg-coffee-700 text-cream'
+                      : 'border-coffee-200 text-coffee-600'
+                  }`}
+                >
+                  {c.valor === 'exclusiva' ? 'Exclusiva' : 'Geral'}
+                </button>
               ))}
-            </select>
+            </div>
+          </div>
+
+          <Campo label="Ícone">
+            <IconGalleryPicker value={icone} onChange={setIcone} />
           </Campo>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Campo label="Ícone (lucide-react, ex: sunrise)">
+          <Campo label="Pontos">
+            <input
+              type="number"
+              min={0}
+              value={pontos}
+              onChange={(e) => setPontos(e.target.value)}
+              className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+            />
+          </Campo>
+
+          <div className="rounded-xl border border-coffee-100 bg-cream-card p-3.5">
+            <p className="mb-3 text-xs font-semibold text-coffee-600">Período</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Campo label="Início">
+                <input
+                  type="date"
+                  value={dataInicio}
+                  onChange={(e) => setDataInicio(e.target.value)}
+                  className="w-full rounded-lg border border-coffee-100 bg-cream px-3 py-2.5 text-sm text-coffee-800"
+                />
+              </Campo>
+              <Campo label="Duração (dias)">
+                <input
+                  type="number"
+                  min={1}
+                  value={duracaoDias}
+                  onChange={(e) => setDuracaoDias(e.target.value)}
+                  className="w-full rounded-lg border border-coffee-100 bg-cream px-3 py-2.5 text-sm text-coffee-800"
+                />
+              </Campo>
+            </div>
+
+            <label className="mt-3 flex items-center gap-2 text-xs text-coffee-500">
               <input
-                value={icone}
-                onChange={(e) => setIcone(e.target.value)}
-                placeholder="sunrise"
-                className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+                type="checkbox"
+                checked={repeteAutomaticamente}
+                onChange={(e) => setRepeteAutomaticamente(e.target.checked)}
               />
-            </Campo>
-            <Campo label="Pontos">
-              <input
-                type="number"
-                min={0}
-                value={pontos}
-                onChange={(e) => setPontos(e.target.value)}
-                className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
-              />
-            </Campo>
+              Repete automaticamente (um novo ciclo começa no dia seguinte ao fim do último)
+            </label>
+            {!repeteAutomaticamente && (
+              <p className="mt-1 text-[11px] text-coffee-300">
+                Sem repetição: a missão fica disponível só nesse período e some sozinha da lista
+                de quem usa o app quando ele terminar.
+              </p>
+            )}
+
+            <div className="mt-3">
+              <Campo label="Vezes que dá pra cumprir por período">
+                <input
+                  type="number"
+                  min={1}
+                  value={vezesPorPeriodo}
+                  onChange={(e) => setVezesPorPeriodo(e.target.value)}
+                  className="w-full rounded-lg border border-coffee-100 bg-cream px-3 py-2.5 text-sm text-coffee-800"
+                />
+              </Campo>
+              <p className="mt-1 text-[11px] text-coffee-300">
+                Mínimo 1. Ex.: missão diária com 3 aqui permite responder até 3x no mesmo dia
+                antes de travar até o próximo ciclo.
+              </p>
+            </div>
           </div>
 
           <Campo label="Instruções (opcional)">
@@ -460,23 +626,47 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
             />
           </Campo>
 
-          <label className="flex items-center gap-2 text-xs text-coffee-500">
-            <input
-              type="checkbox"
-              checked={permiteFoto}
-              onChange={(e) => setPermiteFoto(e.target.checked)}
-            />
-            Permite foto
-          </label>
+          <div>
+            <label className="flex items-center gap-2 text-xs text-coffee-500">
+              <input
+                type="checkbox"
+                checked={permiteFoto}
+                onChange={(e) => setPermiteFoto(e.target.checked)}
+              />
+              Permite foto
+            </label>
+            {permiteFoto && (
+              <label className="mt-1.5 flex items-center gap-2 pl-6 text-xs text-coffee-500">
+                <input
+                  type="checkbox"
+                  checked={fotoObrigatoria}
+                  onChange={(e) => setFotoObrigatoria(e.target.checked)}
+                />
+                Foto obrigatória
+              </label>
+            )}
+          </div>
 
-          <label className="flex items-center gap-2 text-xs text-coffee-500">
-            <input
-              type="checkbox"
-              checked={permiteAudio}
-              onChange={(e) => setPermiteAudio(e.target.checked)}
-            />
-            Permite áudio
-          </label>
+          <div>
+            <label className="flex items-center gap-2 text-xs text-coffee-500">
+              <input
+                type="checkbox"
+                checked={permiteAudio}
+                onChange={(e) => setPermiteAudio(e.target.checked)}
+              />
+              Permite áudio
+            </label>
+            {permiteAudio && (
+              <label className="mt-1.5 flex items-center gap-2 pl-6 text-xs text-coffee-500">
+                <input
+                  type="checkbox"
+                  checked={audioObrigatoria}
+                  onChange={(e) => setAudioObrigatoria(e.target.checked)}
+                />
+                Áudio obrigatório
+              </label>
+            )}
+          </div>
 
           <label className="flex items-center gap-2 text-xs text-coffee-500">
             <input
@@ -510,21 +700,15 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
                   </div>
                   <input
                     value={campo.label}
-                    onChange={(e) => atualizarCampo(campo._id, { label: e.target.value })}
-                    placeholder="Texto da pergunta"
+                    onChange={(e) => atualizarLabelDoCampo(campo._id, e.target.value)}
+                    placeholder="Texto da pergunta (o que o usuário vê)"
                     className="mb-1.5 w-full rounded border border-coffee-100 bg-cream px-2 py-1.5 text-xs text-coffee-800"
                   />
-                  <div className="flex gap-1.5">
-                    <input
-                      value={campo.chave}
-                      onChange={(e) => atualizarCampo(campo._id, { chave: e.target.value })}
-                      placeholder="chave_interna"
-                      className="flex-1 rounded border border-coffee-100 bg-cream px-2 py-1.5 text-xs text-coffee-800"
-                    />
+                  <div className="flex items-center gap-1.5">
                     <select
                       value={campo.tipo}
                       onChange={(e) => atualizarCampo(campo._id, { tipo: e.target.value })}
-                      className="rounded border border-coffee-100 bg-cream px-2 py-1.5 text-xs text-coffee-800"
+                      className="flex-1 rounded border border-coffee-100 bg-cream px-2 py-1.5 text-xs text-coffee-800"
                     >
                       {TIPO_CAMPO_OPCOES.map((op) => (
                         <option key={op.valor} value={op.valor}>
@@ -532,6 +716,14 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
                         </option>
                       ))}
                     </select>
+                    <label className="flex flex-shrink-0 items-center gap-1 text-[11px] text-coffee-500">
+                      <input
+                        type="checkbox"
+                        checked={!!campo.obrigatorio}
+                        onChange={(e) => atualizarCampo(campo._id, { obrigatorio: e.target.checked })}
+                      />
+                      Obrigatório
+                    </label>
                   </div>
                 </div>
               ))}
@@ -554,20 +746,6 @@ function MissaoFormModal({ missaoInicial, periodicidadePadrao, onFechar, onSalvo
             <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} />
             Ativa (aparece pra quem usa o app)
           </label>
-
-          <Campo label="Limite de repetições (opcional)">
-            <input
-              type="number"
-              min={1}
-              value={limiteRepeticoes}
-              onChange={(e) => setLimiteRepeticoes(e.target.value)}
-              placeholder="Sem limite"
-              className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
-            />
-            <p className="mt-1 text-[11px] text-coffee-300">
-              Quantas vezes, no total, cada pessoa pode cumprir essa missão. Deixe vazio pra sem limite.
-            </p>
-          </Campo>
 
           <div>
             <span className="mb-1.5 block text-xs font-medium text-coffee-500">

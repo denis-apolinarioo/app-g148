@@ -3,12 +3,18 @@
 import * as Icons from 'lucide-react';
 import { Check } from 'lucide-react';
 import BowArrowIcon from '@/components/BowArrowIcon';
+import { iconePascalCase } from '@/lib/missionIcons';
 
-export default function MissionCard({ missao, concluida, onClick, bloqueada }) {
+export default function MissionCard({ missao, concluida, onClick, bloqueada, progresso }) {
   // Ícone padrão trocado de estrela genérica para arco-e-flecha (temática de
   // "missão"/"alvo"), usado sempre que a missão não tem um ícone específico
   // mapeado na biblioteca lucide-react.
   const IconeLucide = Icons[iconePascalCase(missao.icone)];
+
+  // `progresso` = { usadas, limite } — só mostra "2/5" quando a missão pode
+  // ser cumprida mais de uma vez por período; com limite 1 fica redundante
+  // com o próprio estado "concluída".
+  const mostrarProgresso = progresso && progresso.limite > 1;
 
   return (
     <button
@@ -41,15 +47,11 @@ export default function MissionCard({ missao, concluida, onClick, bloqueada }) {
         >
           {missao.titulo}
         </span>
-        <span className="block text-xs text-coffee-400">+{missao.pontos} pontos</span>
+        <span className="block text-xs text-coffee-400">
+          +{missao.pontos} pontos
+          {mostrarProgresso && ` · ${progresso.usadas}/${progresso.limite} no período`}
+        </span>
       </span>
     </button>
   );
-}
-
-function iconePascalCase(nomeKebab) {
-  return nomeKebab
-    .split('-')
-    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
-    .join('');
 }

@@ -55,10 +55,15 @@ function LinhaComentario({ postId, comentario, uidAtual, reportador, podeExcluir
             commentId: comentario.id,
             uid: uidAtual,
             jaCurtiu,
+            comentarioAutorId: comentario.autorId,
+            remetente: reportador,
           });
           return;
         }
-        await toggleCommentLike(postId, comentario.id, uidAtual, jaCurtiu);
+        await toggleCommentLike(postId, comentario.id, uidAtual, jaCurtiu, {
+          remetente: reportador,
+          comentarioAutorId: comentario.autorId,
+        });
       });
     } catch (err) {
       // Se a regra do Firestore publicada no Console estiver desatualizada

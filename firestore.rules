@@ -251,7 +251,8 @@ service cloud.firestore {
         (resource.data.destinatarioId == request.auth.uid || resource.data.remetenteId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && request.resource.data.remetenteId == request.auth.uid && (
         (isAdmin() && request.resource.data.tipo == 'mensagem') ||
-        (!usuarioTravado() && request.resource.data.tipo in ['curtida', 'comentario'] &&
+        (!usuarioTravado() &&
+          request.resource.data.tipo in ['curtida', 'comentario', 'curtida_comentario', 'mencao'] &&
           request.resource.data.destinatarioId != request.auth.uid)
       );
       allow update: if isSignedIn() && (

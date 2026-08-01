@@ -30,8 +30,10 @@ const messaging = admin.messaging();
 const FUSO = 'America/Sao_Paulo';
 
 const TITULOS_POR_TIPO = {
-  curtida: 'Nova curtida no Mural',
-  comentario: 'Novo comentário no Mural',
+  curtida: 'Nova curtida em posts',
+  comentario: 'Novo comentário em posts',
+  curtida_comentario: 'Nova curtida em comentário',
+  mencao: 'Você foi mencionado',
   mensagem: 'Nova mensagem da G148',
 };
 
@@ -41,7 +43,22 @@ const TITULOS_POR_TIPO = {
 const TAG_POR_TIPO = {
   curtida: 'g148-social',
   comentario: 'g148-social',
+  curtida_comentario: 'g148-social',
+  mencao: 'g148-social',
   mensagem: 'g148-mensagens',
+};
+
+// curtida_comentario e mencao são "subtipos" que ainda não têm um toggle
+// próprio na tela de preferências (item 23) — pra não precisar de UI nova,
+// eles respeitam o toggle da categoria mais parecida: curtida em comentário
+// segue o mesmo toggle de "curtida", menção segue o mesmo toggle de
+// "comentario" (é dentro de um comentário que ela acontece).
+const CATEGORIA_DE_PREFERENCIA_POR_TIPO = {
+  curtida: 'curtida',
+  curtida_comentario: 'curtida',
+  comentario: 'comentario',
+  mencao: 'comentario',
+  mensagem: 'mensagem',
 };
 
 /**
@@ -85,7 +102,7 @@ exports.enviarPushMailbox = functions
 
     if (!destinatarioId || destinatarioId === msg.remetenteId) return null;
 
-    const tipo = ['curtida', 'comentario', 'mensagem'].includes(msg.tipo) ? msg.tipo : 'mensagem';
+    const tipo = Object.keys(TITULOS_POR_TIPO).includes(msg.tipo) ? msg.tipo : 'mensagem';
 
     const usuarioSnap = await db.collection('users').doc(destinatarioId).get();
     if (!usuarioSnap.exists) return null;
@@ -94,7 +111,8 @@ exports.enviarPushMailbox = functions
     // Item 23 — preferência por categoria (padrão: tudo ligado, só desliga
     // se a pessoa explicitamente marcou false).
     const prefs = usuario.notifPrefs || {};
-    if (prefs[tipo] === false) return null;
+    const categoriaPref = CATEGORIA_DE_PREFERENCIA_POR_TIPO[tipo] || tipo;
+    if (prefs[categoriaPref] === false) return null;
 
     // Item 26 — horário de silêncio. O Correio continua recebendo a
     // mensagem normalmente (já foi criada); só o push fica de fora.
@@ -131,7 +149,7 @@ exports.enviarPushMailbox = functions
       webpush: {
         notification: {
           icon: '/icons/icon-192.png',
-          badge: '/icons/icon-192.png',
+          badge: '/icons/icon-badge-monochrome.png',
           tag: TAG_POR_TIPO[tipo] || 'g148-geral',
           renotify: true,
         },

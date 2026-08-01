@@ -1,53 +1,42 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Sunrise, CalendarDays, Flag } from 'lucide-react';
+import { Sparkles, ListChecks } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import TopBar from '@/components/TopBar';
 import MissionCard from '@/components/MissionCard';
 import MissionSubmitModal from '@/components/MissionSubmitModal';
 import StreakBadge from '@/components/StreakBadge';
 import EmptyState from '@/components/EmptyState';
-import { getMissoesPorPeriodicidade } from '@/lib/missionsRepo';
-import { getStatusMissoesDiariasHoje } from '@/lib/points';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { currentWeekId, currentMonthId } from '@/lib/dateUtils';
+import { getMissoesPorCategoria } from '@/lib/missionsRepo';
+import { calcularCicloAtual, getStatusMissoesNoCiclo } from '@/lib/missionCycles';
 
 export default function MissoesPage() {
   const { perfil } = useAuth();
   const [carregandoMissoes, setCarregandoMissoes] = useState(true);
-  const [missoesDiarias, setMissoesDiarias] = useState([]);
-  const [missoesSemanais, setMissoesSemanais] = useState([]);
-  const [missoesMensais, setMissoesMensais] = useState([]);
-  const [statusDiarias, setStatusDiarias] = useState({});
-  const [statusSemanais, setStatusSemanais] = useState({});
-  const [statusMensais, setStatusMensais] = useState({});
+  const [missoesExclusivas, setMissoesExclusivas] = useState([]);
+  const [missoesGerais, setMissoesGerais] = useState([]);
+  const [status, setStatus] = useState({});
   const [missaoAtiva, setMissaoAtiva] = useState(null);
-  const [periodicidadeAtiva, setPeriodicidadeAtiva] = useState(null);
 
   // Busca as missões (agora vêm do Firestore, coleção "missoes" — o Admin
-  // pode criar/editar/apagar pelo próprio painel, sem precisar de deploy)
-  // O layout já garante que `perfil` está carregado antes desta página
-  // renderizar (ver app/(app)/layout.js), então dá pra ler o uid aqui sem
-  // precisar re-executar a busca das missões toda vez que `perfil` mudar
-  // (ex.: quando os pontos são atualizados depois de submeter uma missão).
+  // pode criar/editar/apagar pelo próprio painel, sem precisar de deploy).
+  // Só entram na lista as que já começaram e ainda não encerraram (ver
+  // calcularCicloAtual) — uma missão sem repetição automática cujo período
+  // já passou some sozinha daqui, sem o Admin precisar desativar à mão.
   useEffect(() => {
     Promise.all([
-      getMissoesPorPeriodicidade('diaria'),
-      getMissoesPorPeriodicidade('semanal'),
-      getMissoesPorPeriodicidade('mensal'),
-    ]).then(([diarias, semanais, mensais]) => {
-      // Uma missão só é restrita quando `destinatarios` é um array não-vazio;
-      // nesse caso, só aparece pra quem estiver na lista.
+      getMissoesPorCategoria('exclusiva'),
+      getMissoesPorCategoria('geral'),
+    ]).then(([exclusivas, gerais]) => {
       const visivelPara = (missao) =>
-        !Array.isArray(missao.destinatarios) ||
-        missao.destinatarios.length === 0 ||
-        missao.destinatarios.includes(perfil.uid);
+        calcularCicloAtual(missao) !== null &&
+        (!Array.isArray(missao.destinatarios) ||
+          missao.destinatarios.length === 0 ||
+          missao.destinatarios.includes(perfil.uid));
 
-      setMissoesDiarias(diarias.filter(visivelPara));
-      setMissoesSemanais(semanais.filter(visivelPara));
-      setMissoesMensais(mensais.filter(visivelPara));
+      setMissoesExclusivas(exclusivas.filter(visivelPara));
+      setMissoesGerais(gerais.filter(visivelPara));
       setCarregandoMissoes(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -55,41 +44,21 @@ export default function MissoesPage() {
 
   const carregarStatus = useCallback(async () => {
     if (!perfil) return;
-
-    const diarias = await getStatusMissoesDiariasHoje(perfil.uid);
-    setStatusDiarias(diarias);
-
-    const semana = currentWeekId();
-    const semanais = {};
-    await Promise.all(
-      missoesSemanais.map(async (m) => {
-        const snap = await getDoc(doc(db, 'missionSubmissions', `${perfil.uid}_${m.id}_${semana}`));
-        semanais[m.id] = snap.exists();
-      })
-    );
-    setStatusSemanais(semanais);
-
-    const mes = currentMonthId();
-    const mensais = {};
-    await Promise.all(
-      missoesMensais.map(async (m) => {
-        const snap = await getDoc(doc(db, 'missionSubmissions', `${perfil.uid}_${m.id}_${mes}`));
-        mensais[m.id] = snap.exists();
-      })
-    );
-    setStatusMensais(mensais);
-  }, [perfil, missoesSemanais, missoesMensais]);
+    const todas = [...missoesExclusivas, ...missoesGerais];
+    const novoStatus = await getStatusMissoesNoCiclo(perfil.uid, todas);
+    setStatus(novoStatus);
+  }, [perfil, missoesExclusivas, missoesGerais]);
 
   useEffect(() => {
     if (!carregandoMissoes) carregarStatus();
   }, [carregandoMissoes, carregarStatus]);
 
-  function abrirMissao(missao, periodicidade) {
+  function abrirMissao(missao) {
     setMissaoAtiva(missao);
-    setPeriodicidadeAtiva(periodicidade);
   }
 
-  const totalHoje = missoesDiarias.filter((m) => statusDiarias[m.id]).length;
+  const todasVisiveis = [...missoesExclusivas, ...missoesGerais];
+  const cumpridas = todasVisiveis.filter((m) => status[m.id]?.esgotada).length;
 
   return (
     <div className="mx-auto max-w-md">
@@ -98,9 +67,9 @@ export default function MissoesPage() {
       <div className="space-y-6 px-4 py-4">
         <div className="flex items-center justify-between rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-3.5 shadow-card">
           <div>
-            <p className="text-xs font-medium text-coffee-400">Hoje</p>
+            <p className="text-xs font-medium text-coffee-400">Progresso</p>
             <p className="font-destaque text-lg font-semibold text-coffee-800">
-              {totalHoje} de {missoesDiarias.length} cumpridas
+              {cumpridas} de {todasVisiveis.length} cumpridas
             </p>
           </div>
           <StreakBadge dias={perfil?.streakAtual || 0} tamanho="lg" />
@@ -110,46 +79,33 @@ export default function MissoesPage() {
           <div className="h-40 animate-pulse rounded-xl2 bg-coffee-100/60" />
         ) : (
           <>
-            <Secao titulo="Missões Diárias" subtitulo="Renovam à meia-noite">
-              {missoesDiarias.length === 0 ? (
-                <EmptyState icone={Sunrise} titulo="Nenhuma missão diária hoje" />
+            <Secao titulo="Missões Exclusivas" subtitulo="Só pra quem foi convidado" icone={Sparkles}>
+              {missoesExclusivas.length === 0 ? (
+                <EmptyState icone={Sparkles} titulo="Nenhuma missão exclusiva por enquanto" />
               ) : (
-                missoesDiarias.map((missao) => (
+                missoesExclusivas.map((missao) => (
                   <MissionCard
                     key={missao.id}
                     missao={missao}
-                    concluida={!!statusDiarias[missao.id]}
-                    onClick={(m) => abrirMissao(m, 'diaria')}
+                    concluida={!!status[missao.id]?.esgotada}
+                    progresso={status[missao.id]}
+                    onClick={abrirMissao}
                   />
                 ))
               )}
             </Secao>
 
-            <Secao titulo="Missões Semanais" subtitulo="Renovam toda semana">
-              {missoesSemanais.length === 0 ? (
-                <EmptyState icone={CalendarDays} titulo="Nenhuma missão semanal por enquanto" />
+            <Secao titulo="Missões Gerais" subtitulo="Pra todo mundo" icone={ListChecks}>
+              {missoesGerais.length === 0 ? (
+                <EmptyState icone={ListChecks} titulo="Nenhuma missão geral por enquanto" />
               ) : (
-                missoesSemanais.map((missao) => (
+                missoesGerais.map((missao) => (
                   <MissionCard
                     key={missao.id}
                     missao={missao}
-                    concluida={!!statusSemanais[missao.id]}
-                    onClick={(m) => abrirMissao(m, 'semanal')}
-                  />
-                ))
-              )}
-            </Secao>
-
-            <Secao titulo="Missões do Mês" subtitulo="Desafios de mais fôlego">
-              {missoesMensais.length === 0 ? (
-                <EmptyState icone={Flag} titulo="Nenhuma missão do mês por enquanto" />
-              ) : (
-                missoesMensais.map((missao) => (
-                  <MissionCard
-                    key={missao.id}
-                    missao={missao}
-                    concluida={!!statusMensais[missao.id]}
-                    onClick={(m) => abrirMissao(m, 'mensal')}
+                    concluida={!!status[missao.id]?.esgotada}
+                    progresso={status[missao.id]}
+                    onClick={abrirMissao}
                   />
                 ))
               )}
@@ -161,7 +117,6 @@ export default function MissoesPage() {
       {missaoAtiva && (
         <MissionSubmitModal
           missao={missaoAtiva}
-          periodicidade={periodicidadeAtiva}
           onFechar={() => setMissaoAtiva(null)}
           onConcluida={carregarStatus}
         />
