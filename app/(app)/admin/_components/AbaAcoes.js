@@ -3,8 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Check, Loader2, Save } from 'lucide-react';
 import { getPontosEfetivos, salvarPontosDaMissao } from '@/lib/missionOverrides';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function AbaAcoes() {
+  const { perfil } = useAuth();
   const [mapaPontos, setMapaPontos] = useState(null);
   const [salvandoId, setSalvandoId] = useState(null);
   const [salvoId, setSalvoId] = useState(null);
@@ -22,7 +24,7 @@ export default function AbaAcoes() {
     if (Number.isNaN(numero) || numero < 0) return;
     setSalvandoId(missaoId);
     try {
-      await salvarPontosDaMissao(missaoId, numero);
+      await salvarPontosDaMissao(missaoId, numero, perfil);
       setMapaPontos((m) => ({ ...m, [missaoId]: numero }));
       setSalvoId(missaoId);
       setTimeout(() => setSalvoId(null), 1500);

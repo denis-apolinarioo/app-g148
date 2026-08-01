@@ -8,12 +8,14 @@ import EmptyState from '@/components/EmptyState';
 import { subscribeToReports, marcarDenunciaResolvida, getAllUsers } from '@/lib/firestore-helpers';
 import { combinaComBusca } from '@/lib/searchUtils';
 import { formatDateTimeBR } from '@/lib/dateUtils';
+import { useAuth } from '@/components/AuthProvider';
 
 // Item 17 — Aba de moderação: só junta as denúncias de post/comentário pra
 // decisão manual do Admin. Nenhuma ação automática (a exclusão do conteúdo
 // denunciado, se for o caso, continua sendo feita à mão no Feed, como já
 // acontece hoje pra qualquer post/comentário).
 export default function AbaDenuncias() {
+  const { perfil } = useAuth();
   const [denuncias, setDenuncias] = useState(null);
   const [usuarios, setUsuarios] = useState({});
   const [mostrarResolvidas, setMostrarResolvidas] = useState(false);
@@ -38,7 +40,9 @@ export default function AbaDenuncias() {
   async function handleAlternarResolvida(denuncia) {
     setResolvendoId(denuncia.id);
     try {
-      await marcarDenunciaResolvida(denuncia.id, denuncia.status !== 'resolvida');
+      const autor = usuarios[denuncia.conteudoAutorId];
+      const contexto = `${denuncia.tipo === 'post' ? 'Post' : 'Comentário'} de ${autor?.nome || 'alguém'}`;
+      await marcarDenunciaResolvida(denuncia.id, denuncia.status !== 'resolvida', perfil, contexto);
     } catch (err) {
       console.error('Erro ao atualizar denúncia:', err);
     } finally {

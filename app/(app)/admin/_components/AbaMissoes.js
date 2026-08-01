@@ -26,6 +26,7 @@ import { statusDaMissao } from '@/lib/missionCycles';
 import { getAllUsers } from '@/lib/firestore-helpers';
 import { todayBrasilia } from '@/lib/dateUtils';
 import { slugify } from '@/lib/slug';
+import { useAuth } from '@/components/AuthProvider';
 import Avatar from '@/components/Avatar';
 import IconGalleryPicker from '@/components/IconGalleryPicker';
 
@@ -76,6 +77,7 @@ function descreverMissao(missao) {
 }
 
 export default function AbaMissoes() {
+  const { perfil } = useAuth();
   const [missoes, setMissoes] = useState(null);
   const [migrando, setMigrando] = useState(false);
   const [resultadoMigracao, setResultadoMigracao] = useState(null);
@@ -160,7 +162,7 @@ export default function AbaMissoes() {
       return;
     setApagando(missao.id);
     try {
-      await apagarMissao(missao.id);
+      await apagarMissao(missao.id, perfil, missao.titulo);
       carregar();
     } catch (err) {
       console.error('Erro ao apagar missão:', err);
@@ -342,6 +344,7 @@ export default function AbaMissoes() {
 }
 
 function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) {
+  const { perfil } = useAuth();
   const editando = !!missaoInicial;
   const [titulo, setTitulo] = useState(missaoInicial?.titulo || '');
   const [categoria, setCategoria] = useState(missaoInicial?.categoria || categoriaPadrao || 'geral');
@@ -478,9 +481,9 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
 
     try {
       if (editando) {
-        await atualizarMissao(missaoInicial.id, dados);
+        await atualizarMissao(missaoInicial.id, dados, perfil);
       } else {
-        await criarMissao(dados);
+        await criarMissao(dados, undefined, perfil);
       }
       onSalvo?.();
     } catch (err) {
