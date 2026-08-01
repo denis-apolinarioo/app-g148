@@ -15,7 +15,24 @@ import { formatDateTimeBR } from '@/lib/dateUtils';
 // registrarAcaoAdmin() já aparece aqui de graça).
 const ROTULOS_ACAO = {
   ajustar_pontos: 'Ajuste manual de pontos',
+  editar_configuracoes_app: 'Configuração alterada',
 };
+
+// Deixa qualquer valor seguro pra exibir como texto — nunca renderiza um
+// objeto direto (isso é o que quebrava a tela quando um registro antigo
+// tinha valorAntes/valorDepois salvos como objeto; ver BUGFIX em
+// lib/appConfig.js -> salvarConfiguracoesApp).
+function formatarValor(v) {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'object') {
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return String(v);
+    }
+  }
+  return String(v);
+}
 
 const PAGINA = 15;
 
@@ -286,7 +303,8 @@ function LinhaRegistro({ registro, ocultarAlvo = false }) {
 
       {temValores && (
         <p className="mt-1 text-xs text-coffee-500">
-          {registro.valorAntes} → <span className="font-semibold text-coffee-700">{registro.valorDepois}</span>
+          {formatarValor(registro.valorAntes)} →{' '}
+          <span className="font-semibold text-coffee-700">{formatarValor(registro.valorDepois)}</span>
         </p>
       )}
 
