@@ -226,18 +226,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // ------------------------------------------------------------------------
-    // DESAFIOS INDIVIDUAIS (criados pelo admin)
-    // ------------------------------------------------------------------------
-    match /challenges/{challengeId} {
-      allow read: if isSignedIn() && (resource.data.destinatarioId == request.auth.uid || isAdmin());
-      allow create: if isAdmin();
-      allow update: if isSignedIn() && (
-        isAdmin() ||
-        (resource.data.destinatarioId == request.auth.uid && !usuarioTravado() && apenasEstesCamposMudaram(['status']))
-      );
-      allow delete: if isAdmin();
-    }
+    // (regra da coleção "challenges" removida — aba Desafios descontinuada)
 
     // ------------------------------------------------------------------------
     // CORREIO — admin envia mensagens (tipo 'mensagem'); qualquer pessoa

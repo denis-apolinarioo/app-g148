@@ -11,13 +11,12 @@ import AdminLoginGate from './_components/AdminLoginGate';
 import AbaAcoes from './_components/AbaAcoes';
 import AbaMissoes from './_components/AbaMissoes';
 import AbaUsuarios from './_components/AbaUsuarios';
-import AbaDesafios from './_components/AbaDesafios';
 import AbaCorreio from './_components/AbaCorreio';
 import AbaDenuncias from './_components/AbaDenuncias';
 import AbaConfiguracoes from './_components/AbaConfiguracoes';
 import AbaHistorico from './_components/AbaHistorico';
 
-const ABAS = ['Ações', 'Missões', 'Usuários', 'Desafios', 'Correio', 'Denúncias', 'Histórico', 'Config'];
+const ABAS = ['Ações', 'Missões', 'Usuários', 'Correio', 'Denúncias', 'Histórico', 'Config'];
 
 export default function AdminPage() {
   const { usuarioAuth, perfil } = useAuth();
@@ -76,7 +75,6 @@ export default function AdminPage() {
         {aba === 'Ações' && <AbaAcoes />}
         {aba === 'Missões' && <AbaMissoes />}
         {aba === 'Usuários' && <AbaUsuarios />}
-        {aba === 'Desafios' && <AbaDesafios />}
         {aba === 'Correio' && <AbaCorreio />}
         {aba === 'Denúncias' && <AbaDenuncias />}
         {aba === 'Histórico' && <AbaHistorico />}
