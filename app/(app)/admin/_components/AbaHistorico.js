@@ -1,38 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { History, Search } from 'lucide-react';
+import Avatar from '@/components/Avatar';
 import EmptyState from '@/components/EmptyState';
 import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
 import { subscribeToAcoesAdmin, buscarAcoesAdminPorUsuario } from '@/lib/adminLog';
 import { getAllUsers } from '@/lib/firestore-helpers';
+import { combinaComBusca } from '@/lib/searchUtils';
 import { formatDateTimeBR } from '@/lib/dateUtils';
+import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
 
 // Item 9º do Bloco 3 — tela de histórico das ações do admin (por enquanto,
-// só o ajuste manual de pontos usa isso — ver AbaUsuarios.js / lib/points.js
-// -> ajustarPontosManualmente — mas qualquer ação futura que chamar
-// registrarAcaoAdmin() já aparece aqui de graça).
+// ajuste manual de pontos e o toggle de bloqueio de usuário usam isso — mas
+// qualquer ação futura que chamar registrarAcaoAdmin() já aparece aqui de
+// graça).
 const ROTULOS_ACAO = {
   ajustar_pontos: 'Ajuste manual de pontos',
   editar_configuracoes_app: 'Configuração alterada',
 };
-
-// Deixa qualquer valor seguro pra exibir como texto — nunca renderiza um
-// objeto direto (isso é o que quebrava a tela quando um registro antigo
-// tinha valorAntes/valorDepois salvos como objeto; ver BUGFIX em
-// lib/appConfig.js -> salvarConfiguracoesApp).
-function formatarValor(v) {
-  if (v === null || v === undefined) return '—';
-  if (typeof v === 'object') {
-    try {
-      return JSON.stringify(v);
-    } catch {
-      return String(v);
-    }
-  }
-  return String(v);
-}
 
 const PAGINA = 15;
 
@@ -129,8 +116,10 @@ function HistoricoRecentes() {
 }
 
 // ----------------------------------------------------------------------------
-// Aba "Buscar por pessoa" — digita um nome, escolhe a pessoa, vê só os
-// ajustes de pontos feitos nela.
+// Aba "Buscar por pessoa" — mesmo sistema de busca por nome/@username do
+// Feed e do Correio (lib/searchUtils.js -> combinaComBusca): digita, aparece
+// a lista com foto + nome + @username, escolhe a pessoa, vê só os ajustes
+// feitos nela.
 // ----------------------------------------------------------------------------
 function HistoricoPorUsuario() {
   const [busca, setBusca] = useState('');
@@ -161,6 +150,11 @@ function HistoricoPorUsuario() {
       });
   }, [selecionado]);
 
+  const usuariosFiltrados = useMemo(() => {
+    if (!usuarios || !busca.trim()) return [];
+    return usuarios.filter((u) => combinaComBusca(u.nome, busca) || combinaComBusca(u.username, busca));
+  }, [usuarios, busca]);
+
   if (selecionado) {
     return (
       <div className="space-y-3">
@@ -174,7 +168,15 @@ function HistoricoPorUsuario() {
           ← Voltar pra busca
         </button>
 
-        <p className="text-sm font-semibold text-coffee-800">{selecionado.nome}</p>
+        <div className="flex items-center gap-2.5">
+          <Avatar src={selecionado.fotoURL} nome={selecionado.nome} tamanho="sm" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-coffee-800">{selecionado.nome}</p>
+            {selecionado.username && (
+              <p className="truncate text-xs text-coffee-400">@{selecionado.username}</p>
+            )}
+          </div>
+        </div>
 
         {registros === null && (
           <div className="space-y-2">
@@ -207,42 +209,46 @@ function HistoricoPorUsuario() {
     );
   }
 
-  const termoBusca = busca.trim().toLowerCase();
-  const usuariosFiltrados =
-    termoBusca === '' ? [] : (usuarios || []).filter((u) => u.nome?.toLowerCase().includes(termoBusca));
-
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream-card px-3 py-2.5">
-        <Search size={15} className="flex-shrink-0 text-coffee-300" />
+      <div className="relative">
+        <Search
+          size={15}
+          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-coffee-300"
+        />
         <input
+          type="text"
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar pelo nome..."
-          className="w-full bg-transparent text-sm text-coffee-800 outline-none placeholder:text-coffee-300"
+          placeholder="Buscar por nome ou @username..."
+          className="w-full rounded-lg border border-coffee-100 bg-cream-card py-2 pl-8 pr-3 text-sm text-coffee-800"
         />
       </div>
 
       {usuarios === null && <div className="h-16 animate-pulse rounded-xl2 bg-coffee-100/60" />}
 
-      {usuarios !== null && termoBusca === '' && (
+      {usuarios !== null && !busca.trim() && (
         <p className="px-1 text-xs text-coffee-300">
-          Digite um nome pra ver o histórico de pontos dessa pessoa.
+          Digite um nome ou @username pra ver o histórico de pontos dessa pessoa.
         </p>
       )}
 
-      {termoBusca !== '' && (
-        <div className="space-y-1.5">
+      {busca.trim() !== '' && (
+        <div className="overflow-hidden rounded-xl border border-coffee-100 bg-cream-card">
           {usuariosFiltrados.length === 0 && (
-            <p className="px-1 text-xs text-coffee-300">Nenhum usuário encontrado.</p>
+            <p className="px-3.5 py-3 text-center text-xs text-coffee-400">Ninguém encontrado.</p>
           )}
           {usuariosFiltrados.map((u) => (
             <button
               key={u.id}
               onClick={() => setSelecionado(u)}
-              className="w-full rounded-xl border border-coffee-100 bg-cream-card px-3.5 py-2.5 text-left text-sm font-medium text-coffee-800"
+              className="flex w-full items-center gap-2.5 border-b border-coffee-50 px-3.5 py-2.5 text-left last:border-b-0"
             >
-              {u.nome}
+              <Avatar src={u.fotoURL} nome={u.nome} tamanho="sm" />
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-coffee-800">{u.nome}</p>
+                {u.username && <p className="truncate text-xs text-coffee-400">@{u.username}</p>}
+              </div>
             </button>
           ))}
         </div>
@@ -253,13 +259,8 @@ function HistoricoPorUsuario() {
 
 // ----------------------------------------------------------------------------
 // Uma linha de registro. `ocultarAlvo` é usado na aba "Buscar por pessoa"
-// (já mostramos o nome dela no topo, então não repete "em Fulano" em cada
+// (já mostramos a pessoa no topo, então não repete "em Fulano" em cada
 // linha).
-//
-// Blindagens adicionadas aqui (causa provável do erro de tela em branco ao
-// abrir "Histórico"): `registro.createdAt` sendo tratado com segurança em
-// todos os pontos (nunca passado direto pra formatação sem checar), e os
-// campos numéricos/opcionais nunca presumidos como presentes.
 // ----------------------------------------------------------------------------
 function LinhaRegistro({ registro, ocultarAlvo = false }) {
   const mostrarAlvo = !ocultarAlvo && registro.alvoTipo === 'users' && Boolean(registro.alvoId);
@@ -275,6 +276,10 @@ function LinhaRegistro({ registro, ocultarAlvo = false }) {
   }
 
   const temValores = registro.valorAntes !== undefined && registro.valorDepois !== undefined;
+  // O toggle de "ativar/desativar o recurso de bloquear usuário" (aba Config)
+  // vira um registro com valorDepois true/false — mostrar "Bloqueou"/
+  // "Desbloqueou" em vez de "true"/"false" cru.
+  const ehToggleBloqueio = registro.alvoId === CHAVE_BLOQUEIO_USUARIO_ATIVO;
 
   return (
     <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-3.5">
@@ -302,9 +307,15 @@ function LinhaRegistro({ registro, ocultarAlvo = false }) {
       </p>
 
       {temValores && (
-        <p className="mt-1 text-xs text-coffee-500">
-          {formatarValor(registro.valorAntes)} →{' '}
-          <span className="font-semibold text-coffee-700">{formatarValor(registro.valorDepois)}</span>
+        <p className="mt-1 text-xs font-semibold text-coffee-700">
+          {ehToggleBloqueio ? (
+            registro.valorDepois ? 'Bloqueou' : 'Desbloqueou'
+          ) : (
+            <>
+              <span className="font-normal text-coffee-500">{formatarValor(registro.valorAntes)} → </span>
+              {formatarValor(registro.valorDepois)}
+            </>
+          )}
         </p>
       )}
 
@@ -313,4 +324,20 @@ function LinhaRegistro({ registro, ocultarAlvo = false }) {
       )}
     </div>
   );
+}
+
+// Deixa qualquer valor seguro pra exibir como texto — nunca renderiza um
+// objeto direto (isso é o que quebrava a tela quando um registro antigo
+// tinha valorAntes/valorDepois salvos como objeto; ver BUGFIX em
+// lib/appConfig.js -> salvarConfiguracoesApp).
+function formatarValor(v) {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'object') {
+    try {
+      return JSON.stringify(v);
+    } catch {
+      return String(v);
+    }
+  }
+  return String(v);
 }

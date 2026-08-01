@@ -1,15 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Lock, Unlock, Loader2, SlidersHorizontal } from 'lucide-react';
+import { Lock, Unlock, Loader2, SlidersHorizontal, Search } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/components/AuthProvider';
 import { getAllUsers, toggleTravarUsuario } from '@/lib/firestore-helpers';
 import { ajustarPontosManualmente } from '@/lib/points';
+import { combinaComBusca } from '@/lib/searchUtils';
 
 export default function AbaUsuarios() {
   const { perfil } = useAuth();
   const [usuarios, setUsuarios] = useState(null);
+  const [busca, setBusca] = useState('');
   const [travandoId, setTravandoId] = useState(null);
   const [ajustandoUid, setAjustandoUid] = useState(null);
   const [valorAjuste, setValorAjuste] = useState('');
@@ -75,10 +77,33 @@ export default function AbaUsuarios() {
 
   if (!usuarios) return <div className="h-40 animate-pulse rounded-xl2 bg-coffee-100/60" />;
 
+  const usuariosFiltrados = busca.trim()
+    ? usuarios.filter((u) => combinaComBusca(u.nome, busca) || combinaComBusca(u.username, busca))
+    : usuarios;
+
   return (
     <div className="space-y-2">
-      <p className="mb-2 text-xs text-coffee-400">{usuarios.length} pessoas na comunidade</p>
-      {usuarios.map((u) => (
+      <div className="relative">
+        <Search
+          size={15}
+          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-coffee-300"
+        />
+        <input
+          type="text"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+          placeholder="Buscar por nome ou @username..."
+          className="w-full rounded-lg border border-coffee-100 bg-cream-card py-2 pl-8 pr-3 text-sm text-coffee-800"
+        />
+      </div>
+
+      <p className="mb-2 text-xs text-coffee-400">
+        {busca.trim() ? `${usuariosFiltrados.length} encontrado(s)` : `${usuarios.length} pessoas na comunidade`}
+      </p>
+      {busca.trim() && usuariosFiltrados.length === 0 && (
+        <p className="px-1 text-xs text-coffee-300">Ninguém encontrado com esse nome ou @username.</p>
+      )}
+      {usuariosFiltrados.map((u) => (
         <div
           key={u.id}
           className="rounded-xl2 border border-coffee-100 bg-cream-card px-3.5 py-2.5"
