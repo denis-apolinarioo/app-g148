@@ -15,6 +15,7 @@ import AbaCorreio from './_components/AbaCorreio';
 import AbaDenuncias from './_components/AbaDenuncias';
 import AbaConfiguracoes from './_components/AbaConfiguracoes';
 import AbaHistorico from './_components/AbaHistorico';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const ABAS = ['Ações', 'Missões', 'Usuários', 'Correio', 'Denúncias', 'Histórico', 'Config'];
 
@@ -72,13 +73,15 @@ export default function AdminPage() {
       </div>
 
       <div className="px-4 py-4">
-        {aba === 'Ações' && <AbaAcoes />}
-        {aba === 'Missões' && <AbaMissoes />}
-        {aba === 'Usuários' && <AbaUsuarios />}
-        {aba === 'Correio' && <AbaCorreio />}
-        {aba === 'Denúncias' && <AbaDenuncias />}
-        {aba === 'Histórico' && <AbaHistorico />}
-        {aba === 'Config' && <AbaConfiguracoes />}
+        <ErrorBoundary key={aba}>
+          {aba === 'Ações' && <AbaAcoes />}
+          {aba === 'Missões' && <AbaMissoes />}
+          {aba === 'Usuários' && <AbaUsuarios />}
+          {aba === 'Correio' && <AbaCorreio />}
+          {aba === 'Denúncias' && <AbaDenuncias />}
+          {aba === 'Histórico' && <AbaHistorico />}
+          {aba === 'Config' && <AbaConfiguracoes />}
+        </ErrorBoundary>
       </div>
     </div>
   );
