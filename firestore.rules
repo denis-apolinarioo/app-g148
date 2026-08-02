@@ -102,7 +102,17 @@ service cloud.firestore {
         // travar/destravar acesso — lib/firestore-helpers.js ->
         // toggleTravarUsuario). PACOTE 2: adicionado `dracmas` a esta lista
         // (antes só `pontos`/`travado` estavam liberados aqui).
-        (isAdmin() && (apenasEstesCamposMudaram(['pontos']) || apenasEstesCamposMudaram(['dracmas']) || apenasEstesCamposMudaram(['travado'])))
+        (isAdmin() && (apenasEstesCamposMudaram(['pontos']) || apenasEstesCamposMudaram(['dracmas']) || apenasEstesCamposMudaram(['travado']))) ||
+        // PACOTE 3 — Transferência de Dracma entre usuários: permite que
+        // QUALQUER pessoa logada e não travada credite Dracma em OUTRO
+        // usuário (o destinatário da transferência que ela mesma iniciou),
+        // mexendo só no campo `dracmas`. Mesma limitação já aceita pra
+        // `pontos`/`dracmas` no topo deste arquivo (comunidade pequena e de
+        // confiança) — sem Cloud Functions não dá pra validar aqui, na
+        // regra, se essa alteração corresponde de fato a uma transferência
+        // legítima (isso é validado no app: chave de recebimento + PIN,
+        // antes de chamar transferirDracma() em lib/dracma.js).
+        (!usuarioTravado() && apenasEstesCamposMudaram(['dracmas']))
       );
       allow delete: if false;
     }
@@ -206,13 +216,28 @@ service cloud.firestore {
 
     // ------------------------------------------------------------------------
     // PACOTE 2 — Histórico auditável de cada transação de Dracma (ganho por
-    // missão/ação, ajuste manual do admin — e no futuro, transferências).
-    // Nunca editável depois de criado. Mesma limitação conhecida e aceita
-    // já assumida para `pointsLog` acima (ver comentário logo abaixo).
+    // missão/ação, ajuste manual do admin — e, a partir do PACOTE 3,
+    // transferências). Nunca editável depois de criado. Mesma limitação
+    // conhecida e aceita já assumida para `pointsLog` acima.
     // ------------------------------------------------------------------------
+    // PACOTE 3: uma entrada de transferência não tem campo `uid` — tem
+    // `origem` (quem mandou) e `destino` (quem recebeu). Os `.get(campo,
+    // null)` abaixo leem esses campos com segurança mesmo quando não
+    // existem no documento (leitura direta, sem `.get()`, de um campo
+    // ausente lança erro na regra — mesmo motivo já documentado em
+    // apenasProprioCurtiuMudou() lá em cima).
     match /dracmaLog/{logId} {
-      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || isAdmin());
+      allow read: if isSignedIn() && (
+        resource.data.get('uid', null) == request.auth.uid ||
+        resource.data.get('origem', null) == request.auth.uid ||
+        resource.data.get('destino', null) == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isSignedIn() && (
+        request.resource.data.get('uid', null) == request.auth.uid ||
+        request.resource.data.get('origem', null) == request.auth.uid ||
+        isAdmin()
+      );
       allow update, delete: if false;
     }
 

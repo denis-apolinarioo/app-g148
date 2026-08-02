@@ -1,25 +1,30 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Coins, Copy, Check, KeyRound, Loader2, Lock, Mail, RefreshCw } from 'lucide-react';
+import { Coins, Copy, Check, KeyRound, Loader2, Lock, Mail, RefreshCw, Send, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebase';
 import TopBar from '@/components/TopBar';
 import LoadingScreen from '@/components/LoadingScreen';
 import EmptyState from '@/components/EmptyState';
 import { formatDateTimeBR } from '@/lib/dateUtils';
+import { useAppConfig } from '@/lib/useAppConfig';
+import { CHAVE_TRANSFERENCIA_DRACMA_ATIVA } from '@/lib/appConfig';
 import {
   subscribeToDracmaLog,
   pinConfigurado,
   configurarPin,
   solicitarRecuperacaoPin,
   confirmarRecuperacaoPin,
+  montarChaveRecebimento,
+  transferirDracma,
 } from '@/lib/dracma';
 
 // Rótulos amigáveis por tipo de lançamento no histórico — qualquer tipo não
 // mapeado aqui cai no rótulo genérico "Movimentação", pra nunca quebrar a
-// tela mesmo que um tipo novo seja adicionado depois (ex.: transferências,
-// no Pacote 3).
+// tela mesmo que um tipo novo seja adicionado depois. PACOTE 3: tipo
+// 'transferencia' não usa este mapa direto (é bidirecional — ver
+// rotuloTransacao() abaixo, que decide o texto conforme quem está vendo).
 const ROTULO_TIPO = {
   missao: 'Missão cumprida',
   oracao: 'Orou por um pedido',
@@ -29,11 +34,15 @@ const ROTULO_TIPO = {
 
 export default function CarteiraPage() {
   const { perfil, usuarioAuth } = useAuth();
+  const config = useAppConfig();
   const [historico, setHistorico] = useState(null);
   const [copiado, setCopiado] = useState(false);
 
-  // 'criar_pin' | 'carteira' | 'alterar_pin' | 'recuperar_solicitar' | 'recuperar_confirmar'
+  // 'criar_pin' | 'carteira' | 'alterar_pin' | 'recuperar_solicitar' | 'recuperar_confirmar' | 'enviar_dracma'
   const [modo, setModo] = useState(null);
+
+  const transferenciaAtiva = config?.[CHAVE_TRANSFERENCIA_DRACMA_ATIVA] !== false;
+  const chaveRecebimento = montarChaveRecebimento(perfil);
 
   useEffect(() => {
     if (!perfil) return;
@@ -49,7 +58,7 @@ export default function CarteiraPage() {
   if (!perfil || !modo) return <LoadingScreen />;
 
   function handleCopiarChave() {
-    navigator.clipboard.writeText(`@${perfil.username}`).then(() => {
+    navigator.clipboard.writeText(chaveRecebimento).then(() => {
       setCopiado(true);
       setTimeout(() => setCopiado(false), 1500);
     });
@@ -100,6 +109,14 @@ export default function CarteiraPage() {
           />
         )}
 
+        {modo === 'enviar_dracma' && (
+          <FormularioTransferencia
+            perfil={perfil}
+            onVoltar={() => setModo('carteira')}
+            onEnviado={() => setModo('carteira')}
+          />
+        )}
+
         {modo === 'carteira' && (
           <>
             <div className="rounded-2xl border border-coffee-100 bg-cream-card p-5 text-center shadow-card">
@@ -112,24 +129,35 @@ export default function CarteiraPage() {
               <p className="text-xs text-coffee-400">Dracmas</p>
             </div>
 
+            {transferenciaAtiva && (
+              <button
+                onClick={() => setModo('enviar_dracma')}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-coffee-700 py-3.5 text-sm font-semibold text-cream"
+              >
+                <Send size={16} />
+                Enviar Dracma
+              </button>
+            )}
+
             <div className="rounded-2xl border border-coffee-100 bg-cream-card p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-coffee-400">
                 Sua chave de recebimento
               </p>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <span className="font-destaque text-sm font-semibold text-coffee-800">
-                  @{perfil.username}
+                  {chaveRecebimento}
                 </span>
                 <button
                   onClick={handleCopiarChave}
-                  className="flex items-center gap-1.5 rounded-lg border border-coffee-100 px-2.5 py-1.5 text-xs font-medium text-coffee-600"
+                  className="flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-coffee-100 px-2.5 py-1.5 text-xs font-medium text-coffee-600"
                 >
                   {copiado ? <Check size={13} className="text-green-600" /> : <Copy size={13} />}
                   {copiado ? 'Copiado' : 'Copiar'}
                 </button>
               </div>
               <p className="mt-2 text-xs text-coffee-400">
-                Compartilhe essa chave com quem for te enviar Dracma.
+                Seu @usuário + data de nascimento, tudo junto. Compartilhe essa chave com quem for
+                te enviar Dracma.
               </p>
             </div>
 
@@ -157,29 +185,33 @@ export default function CarteiraPage() {
                 {historico?.length === 0 && (
                   <EmptyState icone={Coins} titulo="Nenhuma transação ainda" />
                 )}
-                {historico?.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between rounded-xl2 border border-coffee-100 bg-cream-card px-3.5 py-2.5"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-coffee-700">
-                        {ROTULO_TIPO[item.tipo] || 'Movimentação'}
-                      </p>
-                      <p className="text-xs text-coffee-300">
-                        {item.createdAt ? formatDateTimeBR(item.createdAt) : '...'}
-                      </p>
-                    </div>
-                    <span
-                      className={`font-destaque text-sm font-bold ${
-                        item.valor >= 0 ? 'text-green-700' : 'text-red-600'
-                      }`}
+                {historico?.map((item) => {
+                  const { rotulo, valorExibido, Icone } = descreverTransacao(item, perfil.uid);
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between rounded-xl2 border border-coffee-100 bg-cream-card px-3.5 py-2.5"
                     >
-                      {item.valor >= 0 ? '+' : ''}
-                      {item.valor}
-                    </span>
-                  </div>
-                ))}
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        {Icone && <Icone size={14} className="flex-shrink-0 text-coffee-300" />}
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-coffee-700">{rotulo}</p>
+                          <p className="text-xs text-coffee-300">
+                            {item.createdAt ? formatDateTimeBR(item.createdAt) : '...'}
+                          </p>
+                        </div>
+                      </div>
+                      <span
+                        className={`flex-shrink-0 font-destaque text-sm font-bold ${
+                          valorExibido >= 0 ? 'text-green-700' : 'text-red-600'
+                        }`}
+                      >
+                        {valorExibido >= 0 ? '+' : ''}
+                        {valorExibido}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </>
@@ -187,6 +219,29 @@ export default function CarteiraPage() {
       </div>
     </div>
   );
+}
+
+// ----------------------------------------------------------------------------
+// PACOTE 3 — decide o rótulo/valor/ícone de uma entrada do histórico do
+// PONTO DE VISTA de quem está olhando (`uidAtual`). Toda entrada que não for
+// 'transferencia' segue o mapa fixo ROTULO_TIPO de sempre; 'transferencia' é
+// bidirecional (mesma entrada aparece pra quem mandou E pra quem recebeu),
+// então o texto e o sinal do valor mudam conforme o lado.
+// ----------------------------------------------------------------------------
+function descreverTransacao(item, uidAtual) {
+  if (item.tipo === 'transferencia') {
+    const enviou = item.origem === uidAtual;
+    return {
+      rotulo: enviou ? 'Dracma enviado' : 'Dracma recebido',
+      valorExibido: enviou ? -item.valor : item.valor,
+      Icone: enviou ? ArrowUpRight : ArrowDownLeft,
+    };
+  }
+  return {
+    rotulo: ROTULO_TIPO[item.tipo] || 'Movimentação',
+    valorExibido: item.valor,
+    Icone: null,
+  };
 }
 
 // ----------------------------------------------------------------------------
@@ -381,6 +436,131 @@ function RecuperarConfirmar({ uid, onConfirmado, onVoltar }) {
         {confirmando && <Loader2 size={15} className="animate-spin" />}
         Confirmar código
       </button>
+      <button onClick={onVoltar} className="mt-2 w-full text-center text-xs text-coffee-400">
+        Cancelar
+      </button>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// PACOTE 3, item 3.1 — envio de Dracma: chave de recebimento + valor + PIN.
+// ----------------------------------------------------------------------------
+function FormularioTransferencia({ perfil, onVoltar, onEnviado }) {
+  const [chave, setChave] = useState('');
+  const [valor, setValor] = useState('');
+  const [pin, setPin] = useState('');
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState('');
+  const [sucesso, setSucesso] = useState('');
+
+  const mensagensErro = {
+    PIN_NAO_CONFIGURADO: 'Sua Carteira ainda não tem um PIN configurado.',
+    PIN_BLOQUEADO: 'PIN bloqueado por várias tentativas erradas. Tente de novo mais tarde.',
+    PIN_INCORRETO: 'PIN incorreto.',
+    TRANSFERENCIAS_DESATIVADAS: 'O administrador desativou as transferências de Dracma no momento.',
+    VALOR_INVALIDO: 'Digite um valor válido, maior que zero.',
+    DESTINO_NAO_ENCONTRADO: 'Não achamos ninguém com essa chave de recebimento. Confira e tente de novo.',
+    DESTINO_INVALIDO: 'Você não pode enviar Dracma pra você mesmo.',
+    SALDO_INSUFICIENTE: 'Você não tem Dracma suficiente pra essa transferência.',
+  };
+
+  async function handleEnviar() {
+    if (enviando) return;
+    setErro('');
+    setSucesso('');
+
+    if (!chave.trim()) {
+      setErro('Digite a chave de recebimento de quem vai receber.');
+      return;
+    }
+    if (!/^\d{4}$/.test(pin)) {
+      setErro('Digite o PIN de 4 dígitos da sua Carteira.');
+      return;
+    }
+
+    setEnviando(true);
+    try {
+      const destino = await transferirDracma(perfil, chave.trim(), valor, pin);
+      setSucesso(`Dracma enviado pra ${destino.nome}!`);
+      setChave('');
+      setValor('');
+      setPin('');
+      setTimeout(() => onEnviado(), 1200);
+    } catch (err) {
+      console.error('Erro ao transferir Dracma:', err);
+      setErro(mensagensErro[err.message] || 'Não foi possível concluir a transferência. Tente de novo.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-coffee-100 bg-cream-card p-5">
+      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-coffee-50">
+        <Send size={20} className="text-coffee-600" />
+      </div>
+      <p className="mt-3 text-center font-destaque text-base font-semibold text-coffee-800">
+        Enviar Dracma
+      </p>
+      <p className="mt-1 text-center text-sm text-coffee-400">
+        Você tem <strong>{perfil.dracmas || 0}</strong> Dracma disponível.
+      </p>
+
+      <div className="mt-4 space-y-2.5">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-coffee-500">
+            Chave de recebimento de quem vai receber
+          </label>
+          <input
+            type="text"
+            value={chave}
+            onChange={(e) => setChave(e.target.value)}
+            placeholder="username_1990_05_20"
+            autoCapitalize="none"
+            className="w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-sm text-coffee-800 placeholder:text-coffee-300"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-coffee-500">Valor</label>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            value={valor}
+            onChange={(e) => setValor(e.target.value)}
+            placeholder="0"
+            className="w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-sm text-coffee-800 placeholder:text-coffee-300"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium text-coffee-500">PIN da Carteira</label>
+          <input
+            type="password"
+            inputMode="numeric"
+            maxLength={4}
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+            placeholder="••••"
+            className="w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-center text-lg tracking-[0.4em] text-coffee-800"
+          />
+        </div>
+      </div>
+
+      {erro && <p className="mt-2 text-center text-xs text-red-600">{erro}</p>}
+      {sucesso && <p className="mt-2 text-center text-xs font-semibold text-green-700">{sucesso}</p>}
+
+      <button
+        onClick={handleEnviar}
+        disabled={enviando}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-2.5 text-sm font-semibold text-cream disabled:opacity-50"
+      >
+        {enviando && <Loader2 size={15} className="animate-spin" />}
+        Enviar
+      </button>
+
       <button onClick={onVoltar} className="mt-2 w-full text-center text-xs text-coffee-400">
         Cancelar
       </button>
