@@ -177,8 +177,11 @@ export default function EditarPerfilPage() {
           Salvar alterações
         </button>
 
+        {/* CORREÇÃO: alterar o PIN agora só é possível pelo fluxo "Esqueci
+            meu PIN" (código por e-mail) — este link não pula mais direto
+            pra trocar o PIN sem confirmação nenhuma. */}
         <Link
-          href="/carteira?modo=alterar_pin"
+          href="/carteira?modo=recuperar_solicitar"
           className="flex items-center gap-3 rounded-xl border border-coffee-100 px-4 py-3 text-sm font-medium text-coffee-600"
         >
           <KeyRound size={16} className="text-coffee-500" />

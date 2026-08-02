@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Copy, Check, Loader2, Lock, Mail, RefreshCw, Send, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Copy, Check, Loader2, Lock, Mail, RefreshCw, Send, ArrowUpRight, ArrowDownLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebase';
 import TopBar from '@/components/TopBar';
@@ -17,10 +17,12 @@ import {
   subscribeToDracmaLog,
   pinConfigurado,
   configurarPin,
+  validarPin,
   solicitarRecuperacaoPin,
   confirmarRecuperacaoPin,
   montarChaveRecebimento,
   transferirDracma,
+  formatarDracma,
 } from '@/lib/dracma';
 
 // Rótulos amigáveis por tipo de lançamento no histórico — qualquer tipo não
@@ -35,10 +37,10 @@ const ROTULO_TIPO = {
   ajuste_admin: 'Ajuste do administrador',
 };
 
-// CORREÇÃO: useSearchParams() (usado pra ler ?modo=alterar_pin, vindo do
-// link em Configurações) exige um limite de Suspense em volta — sem isso o
-// build de produção (next build) falha. O componente de verdade fica em
-// CarteiraPageInterna; isto aqui só entrega o Suspense.
+// CORREÇÃO: useSearchParams() (usado pra ler ?modo=recuperar_solicitar,
+// vindo do link em Configurações) exige um limite de Suspense em volta —
+// sem isso o build de produção (next build) falha. O componente de verdade
+// fica em CarteiraPageInterna; isto aqui só entrega o Suspense.
 export default function CarteiraPage() {
   return (
     <Suspense fallback={<LoadingScreen />}>
@@ -54,22 +56,35 @@ function CarteiraPageInterna() {
   const [historico, setHistorico] = useState(null);
   const [copiado, setCopiado] = useState(false);
 
-  // 'criar_pin' | 'carteira' | 'alterar_pin' | 'recuperar_solicitar' | 'recuperar_confirmar' | 'enviar_dracma'
+  // 'criar_pin' | 'carteira' | 'confirmar_entrada' | 'alterar_pin' |
+  // 'recuperar_solicitar' | 'recuperar_confirmar' | 'enviar_dracma'
   const [modo, setModo] = useState(null);
+  // Item pedido: esconder/mostrar o saldo (só o valor, não os outros dados).
+  const [saldoOculto, setSaldoOculto] = useState(false);
 
   const transferenciaAtiva = config?.[CHAVE_TRANSFERENCIA_DRACMA_ATIVA] !== false;
   const chaveRecebimento = montarChaveRecebimento(perfil);
 
-  // O botão "Alterar PIN" agora fica em Configurações (perfil/editar), não
-  // mais aqui na Carteira — ele leva pra /carteira?modo=alterar_pin, e é só
-  // aqui que a gente lê esse parâmetro pra já abrir direto nesse modo.
+  // CORREÇÃO: alterar o PIN agora só é possível pelo fluxo "Esqueci meu
+  // PIN" (código por e-mail) — não existe mais um jeito de pular direto
+  // pra 'alterar_pin' sem passar por essa confirmação. O link "Alterar PIN
+  // da Carteira" em Configurações (perfil/editar) agora leva pra
+  // /carteira?modo=recuperar_solicitar, e é só esse valor de URL que a
+  // gente aceita aqui — 'alterar_pin' só é alcançado depois que
+  // RecuperarConfirmar confirma o código (mais abaixo neste arquivo).
+  //
+  // Além disso, quem já tem PIN configurado agora precisa digitar o PIN
+  // pra ENTRAR na Carteira (modo 'confirmar_entrada'), não só pra
+  // transferir — item pedido.
   useEffect(() => {
     if (!perfil) return;
     const modoPedido = searchParams.get('modo');
-    if (modoPedido === 'alterar_pin' && pinConfigurado(perfil)) {
-      setModo('alterar_pin');
+    if (modoPedido === 'recuperar_solicitar' && pinConfigurado(perfil)) {
+      setModo('recuperar_solicitar');
+    } else if (pinConfigurado(perfil)) {
+      setModo('confirmar_entrada');
     } else {
-      setModo(pinConfigurado(perfil) ? 'carteira' : 'criar_pin');
+      setModo('criar_pin');
     }
   }, [perfil?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -104,6 +119,15 @@ function CarteiraPageInterna() {
           />
         )}
 
+        {modo === 'confirmar_entrada' && (
+          <ConfirmarEntradaCarteira
+            uid={perfil.uid}
+            onConfirmado={() => setModo('carteira')}
+            onEsqueciPin={() => setModo('recuperar_solicitar')}
+            onSemPin={() => setModo('criar_pin')}
+          />
+        )}
+
         {modo === 'alterar_pin' && (
           <FormularioPin
             titulo="Criar novo PIN"
@@ -112,7 +136,7 @@ function CarteiraPageInterna() {
               await configurarPin(perfil.uid, pin);
               setModo('carteira');
             }}
-            onVoltar={() => setModo('carteira')}
+            onVoltar={() => setModo('confirmar_entrada')}
           />
         )}
 
@@ -121,7 +145,7 @@ function CarteiraPageInterna() {
             perfil={perfil}
             email={usuarioAuth?.email || auth.currentUser?.email}
             onEnviado={() => setModo('recuperar_confirmar')}
-            onVoltar={() => setModo('carteira')}
+            onVoltar={() => setModo('confirmar_entrada')}
           />
         )}
 
@@ -129,7 +153,7 @@ function CarteiraPageInterna() {
           <RecuperarConfirmar
             uid={perfil.uid}
             onConfirmado={() => setModo('alterar_pin')}
-            onVoltar={() => setModo('carteira')}
+            onVoltar={() => setModo('confirmar_entrada')}
           />
         )}
 
@@ -148,10 +172,24 @@ function CarteiraPageInterna() {
               <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gold/15">
                 <DracmaIcon size={22} className="text-gold" />
               </div>
-              <p className="mt-3 font-destaque text-3xl font-bold text-coffee-800">
-                D$ {perfil.dracmas || 0}{' '}
-                <span className="text-base font-semibold text-coffee-400">dracmas</span>
-              </p>
+              <div className="mt-3 flex items-center justify-center gap-2">
+                <p className="font-destaque text-3xl font-bold text-coffee-800">
+                  {saldoOculto ? (
+                    <span className="tracking-widest">••••</span>
+                  ) : (
+                    <>D$ {formatarDracma(perfil.dracmas || 0)}</>
+                  )}{' '}
+                  {!saldoOculto && <span className="text-base font-semibold text-coffee-400">dracmas</span>}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSaldoOculto((atual) => !atual)}
+                  aria-label={saldoOculto ? 'Mostrar saldo' : 'Esconder saldo'}
+                  className="flex-shrink-0 rounded-full p-1.5 text-coffee-400"
+                >
+                  {saldoOculto ? <Eye size={18} /> : <EyeOff size={18} />}
+                </button>
+              </div>
             </div>
 
             {transferenciaAtiva && (
@@ -246,8 +284,8 @@ function LinhaHistoricoTransacao({ item, uidAtual }) {
           valorExibido >= 0 ? 'text-green-700' : 'text-red-600'
         }`}
       >
-        {valorExibido >= 0 ? '+' : ''}
-        {valorExibido}
+        {valorExibido >= 0 ? '+' : '-'}
+        {formatarDracma(Math.abs(valorExibido))}
       </span>
     </div>
   );
@@ -334,6 +372,87 @@ function FormularioPin({ titulo, descricao, onConfirmar, onVoltar }) {
           Cancelar
         </button>
       )}
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Item pedido: pedir o PIN pra ENTRAR na Carteira (não só pra transferir).
+// Usa a mesma validarPin (com o mesmo bloqueio por tentativas erradas) já
+// usada na transferência. Se a pessoa não tiver PIN configurado (ex.: acabou
+// de confirmar a recuperação e ainda não criou um novo), avisa via
+// onSemPin em vez de mostrar erro.
+// ----------------------------------------------------------------------------
+function ConfirmarEntradaCarteira({ uid, onConfirmado, onEsqueciPin, onSemPin }) {
+  const [pin, setPin] = useState('');
+  const [confirmando, setConfirmando] = useState(false);
+  const [erro, setErro] = useState('');
+
+  async function handleConfirmar() {
+    if (!/^\d{4}$/.test(pin)) {
+      setErro('Digite o PIN de 4 dígitos da sua Carteira.');
+      return;
+    }
+    setConfirmando(true);
+    setErro('');
+    try {
+      await validarPin(uid, pin);
+      onConfirmado();
+    } catch (err) {
+      if (err.message === 'PIN_NAO_CONFIGURADO') {
+        onSemPin();
+        return;
+      }
+      const mensagens = {
+        PIN_BLOQUEADO: 'PIN bloqueado por várias tentativas erradas. Tente de novo mais tarde.',
+        PIN_INCORRETO: 'PIN incorreto.',
+      };
+      setErro(mensagens[err.message] || 'Não foi possível confirmar o PIN.');
+    } finally {
+      setConfirmando(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-coffee-100 bg-cream-card p-5 text-center">
+      <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-coffee-50">
+        <Lock size={20} className="text-coffee-600" />
+      </div>
+      <p className="mt-3 font-destaque text-base font-semibold text-coffee-800">
+        Digite o PIN da Carteira
+      </p>
+      <p className="mt-1 text-sm text-coffee-400">Confirme seu PIN pra entrar.</p>
+
+      <input
+        type="password"
+        inputMode="numeric"
+        maxLength={4}
+        value={pin}
+        onChange={(e) => {
+          setPin(e.target.value.replace(/\D/g, ''));
+          setErro('');
+        }}
+        placeholder="••••"
+        autoFocus
+        className="mt-4 w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-center text-lg tracking-[0.4em] text-coffee-800"
+      />
+
+      {erro && <p className="mt-2 text-xs text-red-600">{erro}</p>}
+
+      <button
+        onClick={handleConfirmar}
+        disabled={confirmando}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-2.5 text-sm font-semibold text-cream disabled:opacity-50"
+      >
+        {confirmando && <Loader2 size={15} className="animate-spin" />}
+        Entrar
+      </button>
+      <button
+        onClick={onEsqueciPin}
+        className="mt-2 w-full text-center text-xs text-coffee-500 underline underline-offset-2"
+      >
+        Esqueci meu PIN
+      </button>
     </div>
   );
 }
@@ -513,7 +632,7 @@ function FormularioTransferencia({ perfil, onVoltar, onEnviado, onEsqueciPin }) 
         Enviar Dracma
       </p>
       <p className="mt-1 text-center text-sm text-coffee-400">
-        Você tem <strong>{perfil.dracmas || 0}</strong> Dracma disponível.
+        Você tem <strong>{formatarDracma(perfil.dracmas || 0)}</strong> Dracma disponível.
       </p>
 
       <div className="mt-4 space-y-2.5">
@@ -535,13 +654,18 @@ function FormularioTransferencia({ perfil, onVoltar, onEnviado, onEsqueciPin }) 
           <label className="mb-1 block text-xs font-medium text-coffee-500">Valor</label>
           <input
             type="number"
-            min={1}
-            step={1}
+            inputMode="decimal"
+            min="0.01"
+            step="0.01"
             value={valor}
             onChange={(e) => setValor(e.target.value)}
-            placeholder="0"
+            placeholder="0,00"
             className="w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-sm text-coffee-800 placeholder:text-coffee-300"
           />
+          {/* Item pedido: valor pode ser quebrado, limitado a 2 casas
+              decimais (ex.: 5,00 / 5,01 / 5,99) — validação de verdade fica
+              em transferirDracma (lib/dracma.js), este input só ajuda a
+              pessoa a digitar certo. */}
         </div>
 
         <div>

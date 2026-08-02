@@ -7,7 +7,7 @@ import Avatar from '@/components/Avatar';
 import { useAuth } from '@/components/AuthProvider';
 import { getAllUsers, toggleTravarUsuario, migrarDracmasDosUsuarios } from '@/lib/firestore-helpers';
 import { ajustarPontosManualmente } from '@/lib/points';
-import { ajustarDracmaManualmente } from '@/lib/dracma';
+import { ajustarDracmaManualmente, formatarDracma } from '@/lib/dracma';
 import { combinaComBusca } from '@/lib/searchUtils';
 
 export default function AbaUsuarios() {
@@ -204,7 +204,7 @@ export default function AbaUsuarios() {
             </div>
             <span className="font-destaque text-sm font-bold text-coffee-600">{u.pontos || 0}</span>
             <span className="flex items-center gap-1 font-destaque text-sm font-bold text-gold">
-              <DracmaIcon size={13} /> {u.dracmas || 0}
+              <DracmaIcon size={13} /> {formatarDracma(u.dracmas || 0)}
             </span>
             {u.isAdmin && (
               <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold">
