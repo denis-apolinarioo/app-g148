@@ -10,6 +10,19 @@
 
 * {
   -webkit-tap-highlight-color: transparent;
+  /* Toque em texto não deve selecionar (comportamento de app nativo, não de
+     página web comum) — mas continua liberado em campos de digitação
+     (input/textarea) logo abaixo, senão ninguém consegue nem selecionar
+     o que já digitou pra corrigir/apagar. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 html,
