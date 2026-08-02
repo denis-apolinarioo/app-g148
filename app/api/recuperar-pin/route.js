@@ -4,18 +4,17 @@
 // Rota própria do Next.js (App Router) — deploya sozinha no mesmo
 // `git push`/arraste do zip, sem nenhuma configuração extra no Firebase.
 //
-// PRECISA DE UMA VARIÁVEL DE AMBIENTE NA VERCEL (ação manual — ver aviso no
-// início da resposta): RESEND_API_KEY, com a chave de API do
-// https://resend.com (tem plano grátis). Sem essa variável, esta rota
-// responde 500 e a tela de recuperação mostra "não foi possível enviar".
+// Envio feito via Gmail (SMTP), usando lib/mailer.js. PRECISA DE DUAS
+// VARIÁVEIS DE AMBIENTE NA VERCEL (ação manual — ver aviso no início da
+// resposta): GMAIL_USER e GMAIL_APP_PASSWORD. Sem elas, esta rota responde
+// 500 e a tela de recuperação mostra "não foi possível enviar".
 //
 // O código em si é gerado no aparelho da pessoa (lib/dracma.js) — esta rota
 // só recebe o e-mail de destino, o nome e o código já prontos, e manda o
 // e-mail. Nunca fica salvo em nenhum log do servidor.
 // ============================================================================
 import { NextResponse } from 'next/server';
-
-const REMETENTE_PADRAO = 'G148 <onboarding@resend.dev>';
+import { getTransporter, remetentePadrao } from '@/lib/mailer';
 
 export async function POST(request) {
   let body;
@@ -30,45 +29,32 @@ export async function POST(request) {
     return NextResponse.json({ erro: 'DADOS_INVALIDOS' }, { status: 400 });
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.error('[recuperar-pin] RESEND_API_KEY não configurada nas variáveis de ambiente.');
+  const transporter = getTransporter();
+  if (!transporter) {
+    console.error('[recuperar-pin] GMAIL_USER/GMAIL_APP_PASSWORD não configuradas nas variáveis de ambiente.');
     return NextResponse.json({ erro: 'SERVICO_NAO_CONFIGURADO' }, { status: 500 });
   }
 
   const primeiroNome = (nome || '').trim().split(' ')[0] || 'você';
 
   try {
-    const resposta = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: process.env.RESEND_FROM_EMAIL || REMETENTE_PADRAO,
-        to: [email],
-        subject: 'Seu código para recuperar o PIN da Carteira — G148',
-        html: `
-          <div style="font-family: sans-serif; max-width: 420px; margin: 0 auto;">
-            <p>Oi, ${primeiroNome}!</p>
-            <p>Alguém (esperamos que você) pediu pra recuperar o PIN da sua Carteira no app G148.</p>
-            <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px; margin: 24px 0;">${codigo}</p>
-            <p>Esse código vale por 10 minutos. Se você não pediu essa recuperação, pode ignorar este e-mail.</p>
-          </div>
-        `,
-      }),
+    await transporter.sendMail({
+      from: remetentePadrao(),
+      to: email,
+      subject: 'Seu código para recuperar o PIN da Carteira — G148',
+      html: `
+        <div style="font-family: sans-serif; max-width: 420px; margin: 0 auto;">
+          <p>Oi, ${primeiroNome}!</p>
+          <p>Alguém (esperamos que você) pediu pra recuperar o PIN da sua Carteira no app G148.</p>
+          <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px; margin: 24px 0;">${codigo}</p>
+          <p>Esse código vale por 10 minutos. Se você não pediu essa recuperação, pode ignorar este e-mail.</p>
+        </div>
+      `,
     });
-
-    if (!resposta.ok) {
-      const detalhe = await resposta.text().catch(() => '');
-      console.error('[recuperar-pin] Resend retornou erro:', resposta.status, detalhe);
-      return NextResponse.json({ erro: 'FALHA_ENVIO' }, { status: 502 });
-    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error('[recuperar-pin] Erro ao chamar a API de e-mail:', err);
+    console.error('[recuperar-pin] Erro ao enviar e-mail via Gmail:', err);
     return NextResponse.json({ erro: 'FALHA_ENVIO' }, { status: 502 });
   }
 }
