@@ -309,8 +309,13 @@ service cloud.firestore {
       // Item 14º — admin pode apagar qualquer mensagem do histórico.
       // Item 15º — quem recebeu pode fechar (apagar) suas próprias
       // mensagens/notificações não fixadas (fixada nunca pode ser fechada).
+      // CORREÇÃO: notificações automáticas (curtida/comentário/menção) nunca
+      // gravam o campo `fixada` — só as mensagens do Admin gravam. Acessar
+      // um campo que não existe no documento (resource.data.fixada) faz a
+      // regra inteira dar erro e negar a exclusão. Troca por .get(..., false)
+      // com valor padrão, que nunca falha mesmo quando o campo não existe.
       allow delete: if isAdmin() || (isSignedIn() &&
-        resource.data.destinatarioId == request.auth.uid && resource.data.fixada != true);
+        resource.data.destinatarioId == request.auth.uid && resource.data.get('fixada', false) != true);
     }
 
     // ------------------------------------------------------------------------
