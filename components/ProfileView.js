@@ -216,7 +216,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
         )}
 
         {aba === 'conquistas' && (
-          <div className="grid grid-cols-4 gap-3 pt-1">
+          <div className="grid grid-cols-5 gap-2.5 pt-1">
             {conquistas.length === 0 && <div className="h-24 animate-pulse rounded-xl2 bg-coffee-100/60" />}
             {conquistas.map((c) => (
               <AchievementBadge key={c.id} conquista={c} onAberta={handleAbrirConquista} />

@@ -1,17 +1,20 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { doc, updateDoc } from 'firebase/firestore';
 import { X, Image as ImageIcon, Mic as MicIcon, Type, Loader2, Camera } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
+import { db } from '@/lib/firebase';
 import { createPost } from '@/lib/firestore-helpers';
 import { pontuarPostFeed } from '@/lib/points';
+import { registrarAcaoCategoria } from '@/lib/acoesLog';
+import { getTodasAsCategoriasAcao } from '@/lib/categoriasAcaoRepo';
 import { verificarConquistas } from '@/lib/achievements';
 import { uploadFotoComThumb, uploadAudio } from '@/lib/storage';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
 import ImageCropper from '@/components/ImageCropper';
 import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
 
-const CATEGORIAS = [null, 'Relato', 'Oração'];
 const PROPORCOES = [
   { label: '1:1', w: 1, h: 1 },
   { label: '4:5', w: 4, h: 5 },
@@ -22,6 +25,10 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   const { perfil } = useAuth();
   const [aba, setAba] = useState('texto');
   const [texto, setTexto] = useState('');
+  // FASE 3 — categoria escolhida entre as configuráveis pelo Admin (aba
+  // Categorias). `null` = "Nenhuma", mesmo comportamento de antes (pontua o
+  // valor padrão de post no Feed, editável em Admin > Ações).
+  const [categoriasDisponiveis, setCategoriasDisponiveis] = useState([]);
   const [categoria, setCategoria] = useState(null);
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
@@ -68,6 +75,15 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
     };
   }, [previewFoto]);
 
+  // FASE 3 — carrega as categorias ativas cadastradas pelo Admin (aba
+  // Categorias). Se nenhuma foi criada ainda, o seletor mostra só "Nenhuma"
+  // — mesmo visual de antes da Fase 3.
+  useEffect(() => {
+    getTodasAsCategoriasAcao().then((todas) => {
+      setCategoriasDisponiveis(todas.filter((c) => c.ativa !== false));
+    });
+  }, []);
+
   const podePublicar =
     (aba === 'texto' && texto.trim()) ||
     (aba === 'foto' && arquivoFoto) ||
@@ -98,10 +114,25 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
         texto: texto.trim(),
         midiaURL,
         midiaThumbURL,
-        categoria,
+        categoria: categoria?.nome || null,
+        categoriaAcaoId: categoria?.id || null,
       });
 
-      await pontuarPostFeed(perfil.uid, postId);
+      // FASE 3 — com categoria escolhida, a pontuação/Dracma seguem o que o
+      // Admin configurou pra ela (aba Categorias); sem categoria, mantém o
+      // comportamento de sempre (pontos fixos de "Post no Feed", editável em
+      // Admin > Ações).
+      if (categoria?.id) {
+        const resultado = await registrarAcaoCategoria(perfil.uid, categoria.id, 'post', postId);
+        if (resultado.pontosGanhos > 0 || resultado.dracmaGanho > 0) {
+          await updateDoc(doc(db, 'posts', postId), {
+            pontosGanhos: resultado.pontosGanhos,
+            dracmaGanho: resultado.dracmaGanho,
+          });
+        }
+      } else {
+        await pontuarPostFeed(perfil.uid, postId);
+      }
       await verificarConquistas(perfil.uid, perfil.streakAtual || 0, 'post');
 
       onPublicado?.();
@@ -219,17 +250,27 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
           <div className="mt-4">
             <p className="mb-2 text-xs font-medium text-coffee-500">Categoria (opcional)</p>
             <div className="flex flex-wrap gap-2">
-              {CATEGORIAS.map((c) => (
+              <button
+                onClick={() => setCategoria(null)}
+                className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${
+                  !categoria
+                    ? 'border-coffee-700 bg-coffee-700 text-cream'
+                    : 'border-coffee-200 text-coffee-500'
+                }`}
+              >
+                Nenhuma
+              </button>
+              {categoriasDisponiveis.map((c) => (
                 <button
-                  key={c || 'nenhuma'}
+                  key={c.id}
                   onClick={() => setCategoria(c)}
                   className={`rounded-full border px-3.5 py-1.5 text-xs font-medium ${
-                    categoria === c
+                    categoria?.id === c.id
                       ? 'border-coffee-700 bg-coffee-700 text-cream'
                       : 'border-coffee-200 text-coffee-500'
                   }`}
                 >
-                  {c || 'Nenhuma'}
+                  {c.nome}
                 </button>
               ))}
             </div>

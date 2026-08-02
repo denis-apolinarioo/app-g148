@@ -3,13 +3,7 @@
 import { useState } from 'react';
 import * as Icons from 'lucide-react';
 import { X, Check } from 'lucide-react';
-
-function iconePascalCase(nomeKebab) {
-  return nomeKebab
-    .split('-')
-    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
-    .join('');
-}
+import { iconePascalCase } from '@/lib/missionIcons';
 
 const MAXIMO = 3;
 
@@ -78,7 +72,11 @@ export default function VitrineConquistasModal({ desbloqueadas, selecaoAtual, on
                 } ${travadaPeloLimite ? 'opacity-40' : ''}`}
               >
                 <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-gold to-coffee-600">
-                  <Icone size={20} strokeWidth={1.8} className="text-cream" />
+                  {c.imagemURL ? (
+                    <img src={c.imagemURL} alt="" className="h-full w-full rounded-full object-cover" />
+                  ) : (
+                    <Icone size={20} strokeWidth={1.8} className="text-cream" />
+                  )}
                   {marcada && (
                     <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gold ring-2 ring-cream">
                       <Check size={11} className="text-coffee-900" strokeWidth={3} />

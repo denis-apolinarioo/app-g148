@@ -23,6 +23,7 @@ import LikesListModal from '@/components/LikesListModal';
 import EditarPostModal from '@/components/EditarPostModal';
 import { toggleLike, deletePost, createReport, alternarOcultarPost } from '@/lib/firestore-helpers';
 import { removerPontosPost } from '@/lib/points';
+import { removerDracmaPost } from '@/lib/dracma';
 import { getUsuarioCache } from '@/lib/usersCache';
 import { getCachedImageURL } from '@/lib/imageCache';
 import { formatDateTimeBR, postAindaEditavel } from '@/lib/dateUtils';
@@ -222,6 +223,15 @@ export default function PostCard({ post, usuarioAtual }) {
         await removerPontosPost(post.autorId, post.id, post.pontosGanhos);
       } catch (err) {
         console.error('Erro ao remover pontos do post apagado:', err);
+      }
+    }
+    // FASE 3 — remove o Dracma ganho por este post (se a categoria dava
+    // Dracma e o limite não tinha sido atingido na hora de publicar).
+    if (post.dracmaGanho) {
+      try {
+        await removerDracmaPost(post.autorId, post.id, post.dracmaGanho);
+      } catch (err) {
+        console.error('Erro ao remover Dracma do post apagado:', err);
       }
     }
   }

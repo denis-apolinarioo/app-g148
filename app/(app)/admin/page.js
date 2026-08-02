@@ -9,7 +9,9 @@ import EmptyState from '@/components/EmptyState';
 import { ShieldAlert } from 'lucide-react';
 import AdminLoginGate from './_components/AdminLoginGate';
 import AbaAcoes from './_components/AbaAcoes';
+import AbaCategoriasAcao from './_components/AbaCategoriasAcao';
 import AbaMissoes from './_components/AbaMissoes';
+import AbaConquistas from './_components/AbaConquistas';
 import AbaUsuarios from './_components/AbaUsuarios';
 import AbaCorreio from './_components/AbaCorreio';
 import AbaDenuncias from './_components/AbaDenuncias';
@@ -17,7 +19,7 @@ import AbaConfiguracoes from './_components/AbaConfiguracoes';
 import AbaHistorico from './_components/AbaHistorico';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-const ABAS = ['Ações', 'Missões', 'Usuários', 'Correio', 'Denúncias', 'Histórico', 'Config'];
+const ABAS = ['Ações', 'Categorias', 'Missões', 'Conquistas', 'Usuários', 'Correio', 'Denúncias', 'Histórico', 'Config'];
 
 export default function AdminPage() {
   const { usuarioAuth, perfil } = useAuth();
@@ -75,7 +77,9 @@ export default function AdminPage() {
       <div className="px-4 py-4">
         <ErrorBoundary key={aba}>
           {aba === 'Ações' && <AbaAcoes />}
+          {aba === 'Categorias' && <AbaCategoriasAcao />}
           {aba === 'Missões' && <AbaMissoes />}
+          {aba === 'Conquistas' && <AbaConquistas />}
           {aba === 'Usuários' && <AbaUsuarios />}
           {aba === 'Correio' && <AbaCorreio />}
           {aba === 'Denúncias' && <AbaDenuncias />}

@@ -207,6 +207,44 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------------
+    // CONQUISTAS (catálogo) — mesmo padrão de "missoes": o Admin cria/edita/
+    // apaga pelo painel (app/(app)/admin/_components/AbaConquistas.js).
+    // Leitura liberada pra qualquer pessoa logada, porque a aba de
+    // conquistas do perfil precisa ler o catálogo inteiro pra montar a lista
+    // (bloqueadas + desbloqueadas).
+    // ------------------------------------------------------------------------
+    match /conquistas/{conquistaId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // FASE 2 — CATEGORIAS DE AÇÃO (catálogo) — mesmo padrão de "conquistas":
+    // o Admin cria/edita/apaga pelo painel (aba Categorias). Leitura
+    // liberada pra qualquer pessoa logada, porque o seletor de categoria ao
+    // postar no Feed precisa ler o catálogo inteiro.
+    // ------------------------------------------------------------------------
+    match /categoriasAcao/{categoriaId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // FASE 2 — LOG CENTRAL DE AÇÕES — histórico auditável de cada ação
+    // registrada por uma categoria configurável (ver lib/acoesLog.js). Nunca
+    // editável depois de criado. Mesma limitação conhecida e aceita já
+    // assumida para `pointsLog`/`dracmaLog` (ver comentários abaixo): o
+    // create permite que o próprio usuário insira uma entrada em seu nome,
+    // mas isso não altera pontos/Dracma de verdade (que só mudam via
+    // runTransaction/creditarDracma) — só poderia poluir esse histórico.
+    // ------------------------------------------------------------------------
+    match /acoesLog/{logId} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || isAdmin());
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
     // MISSÕES — o ID do documento já é "{uid}_{missaoId}_{periodo}", o que
     // torna duplicidade fisicamente impossível (não dá pra criar 2x o
     // mesmo documento). A regra abaixo reforça isso e garante que uma

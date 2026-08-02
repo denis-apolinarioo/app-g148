@@ -7,7 +7,6 @@ import { submeterMissao } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
 import { vibrarMissaoConcluida } from '@/lib/haptics';
 import { uploadFoto, uploadAudio } from '@/lib/storage';
-import { CONQUISTAS } from '@/lib/constants';
 import ImageCropper from '@/components/ImageCropper';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
 
@@ -105,7 +104,7 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
 
       const novas = await verificarConquistas(perfil.uid, (perfil.streakAtual || 0) + 1, 'missao_diaria');
       if (novas.length > 0) {
-        setConquistaNova(CONQUISTAS.find((c) => c.id === novas[0]));
+        setConquistaNova(novas[0]);
         setEnviando(false);
         return; // mostra a tela de conquista antes de fechar
       }
@@ -138,7 +137,15 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-coffee-900/50 px-6">
         <div className="w-full max-w-xs rounded-2xl bg-cream-card p-6 text-center shadow-soft">
-          <PartyPopper size={36} className="mx-auto text-gold" />
+          {conquistaNova.imagemURL ? (
+            <img
+              src={conquistaNova.imagemURL}
+              alt=""
+              className="mx-auto h-16 w-16 rounded-full object-cover"
+            />
+          ) : (
+            <PartyPopper size={36} className="mx-auto text-gold" />
+          )}
           <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-gold">
             Nova conquista!
           </p>

@@ -4,13 +4,7 @@ import { useState } from 'react';
 import * as Icons from 'lucide-react';
 import { Plus } from 'lucide-react';
 import VitrineConquistasModal from '@/components/VitrineConquistasModal';
-
-function iconePascalCase(nomeKebab) {
-  return nomeKebab
-    .split('-')
-    .map((parte) => parte.charAt(0).toUpperCase() + parte.slice(1))
-    .join('');
-}
+import { iconePascalCase } from '@/lib/missionIcons';
 
 /**
  * Vitrine de conquistas em destaque, no topo do perfil (3 "medalhas").
@@ -51,7 +45,11 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
             } ${souDono ? 'active:scale-95' : ''}`}
           >
             {conquista ? (
-              <Icone size={20} strokeWidth={1.8} className="text-cream" />
+              conquista.imagemURL ? (
+                <img src={conquista.imagemURL} alt="" className="h-full w-full rounded-full object-cover" />
+              ) : (
+                <Icone size={20} strokeWidth={1.8} className="text-cream" />
+              )
             ) : (
               <Plus size={16} className="text-coffee-300" />
             )}
