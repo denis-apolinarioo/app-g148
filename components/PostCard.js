@@ -7,24 +7,25 @@ import {
   MessageCircle,
   Trash2,
   Pencil,
-  Check,
-  X as XIcon,
   Flag,
   ChevronDown,
   ChevronUp,
   CheckCircle2,
   Link2,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import CommentSection from '@/components/CommentSection';
 import TextoComLinks from '@/components/TextoComLinks';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import LikesListModal from '@/components/LikesListModal';
-import { toggleLike, deletePost, updatePost, createReport } from '@/lib/firestore-helpers';
+import EditarPostModal from '@/components/EditarPostModal';
+import { toggleLike, deletePost, createReport, alternarOcultarPost } from '@/lib/firestore-helpers';
 import { removerPontosPost } from '@/lib/points';
 import { getUsuarioCache } from '@/lib/usersCache';
 import { getCachedImageURL } from '@/lib/imageCache';
-import { formatDateTimeBR } from '@/lib/dateUtils';
+import { formatDateTimeBR, postAindaEditavel } from '@/lib/dateUtils';
 import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
 import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
 import { estaOffline } from '@/lib/connectivity';
@@ -52,9 +53,8 @@ export default function PostCard({ post, usuarioAtual }) {
   const [imagemAberta, setImagemAberta] = useState(false);
   const [coracaoAnimado, setCoracaoAnimado] = useState(false);
   const [mostrarCurtidas, setMostrarCurtidas] = useState(false);
-  const [editando, setEditando] = useState(false);
-  const [textoEdit, setTextoEdit] = useState(post.texto || '');
-  const [salvandoEdicao, setSalvandoEdicao] = useState(false);
+  const [editandoAberto, setEditandoAberto] = useState(false);
+  const [alternandoOculto, setAlternandoOculto] = useState(false);
   const [denunciando, setDenunciando] = useState(false);
   const [denunciado, setDenunciado] = useState(false);
   // Hierarquia visual de post de missão (foto > áudio > demais campos, na
@@ -226,21 +226,27 @@ export default function PostCard({ post, usuarioAtual }) {
     }
   }
 
-  // Item 15 — Editar post (só o texto/legenda; a mídia não muda)
+  // Correção: editar deixou de mexer só em `texto` direto aqui (o que
+  // permitia editar o TÍTULO da missão por engano — ver comentário no topo
+  // de EditarPostModal.js) e virou um modal à parte, que edita tudo que é
+  // do post (foto, áudio, texto, checks), menos o título da missão.
+  const podeEditarPost = ehDono && postAindaEditavel(post.createdAt);
   function handleAbrirEdicao() {
-    setTextoEdit(post.texto || '');
-    setEditando(true);
+    if (!podeEditarPost) return;
+    setEditandoAberto(true);
   }
-  async function handleSalvarEdicao() {
-    if (salvandoEdicao) return;
-    setSalvandoEdicao(true);
+
+  // Botão "Ocultar"/"Reexibir" — o dono só ocultar os próprios posts; o
+  // Admin pode ocultar qualquer post. Sem limite de 24h (ver firestore.rules).
+  async function handleAlternarOcultar() {
+    if (alternandoOculto || !usuarioAtual) return;
+    setAlternandoOculto(true);
     try {
-      await updatePost(post.id, { texto: textoEdit.trim() });
-      setEditando(false);
+      await alternarOcultarPost(post.id, !post.oculto, usuarioAtual.uid);
     } catch (err) {
-      console.error('Erro ao editar post:', err);
+      console.error('Erro ao ocultar/reexibir post:', err);
     } finally {
-      setSalvandoEdicao(false);
+      setAlternandoOculto(false);
     }
   }
 
@@ -352,8 +358,32 @@ export default function PostCard({ post, usuarioAtual }) {
   }
 
   const itensMissao = Array.isArray(post.itens) ? post.itens : null;
+  const ehPostDeMissao = !!post.origemMissaoId;
   const temMaisItens = itensMissao && itensMissao.length > 1;
   const itensVisiveis = itensMissao ? (mostrarTudo ? itensMissao : itensMissao.slice(0, 1)) : null;
+
+  // Botão "Ocultar" — o dono só oculta os próprios posts; o Admin oculta
+  // qualquer post, mas nunca fica oculto PRA ELE MESMO (sempre vê o
+  // conteúdo completo). Pra quem não é dono nem Admin, o post nem chega a
+  // aparecer no Feed/Perfil (filtrado antes, ver app/(app)/feed/page.js e
+  // ProfileView.js) — este placeholder só cobre o caso de alguém abrir um
+  // link direto pra um post oculto de outra pessoa.
+  if (post.oculto && !ehAdmin) {
+    return (
+      <div className="rounded-2xl border border-coffee-100 bg-cream-card p-4">
+        <p className="text-sm italic text-coffee-400">Esse post foi ocultado</p>
+        {ehDono && (
+          <button
+            onClick={handleAlternarOcultar}
+            disabled={alternandoOculto}
+            className="mt-3 flex items-center gap-1.5 rounded-full border border-coffee-200 px-3 py-1.5 text-xs font-medium text-coffee-600 disabled:opacity-50"
+          >
+            <Eye size={13} /> Reexibir
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-coffee-100 bg-cream-card p-4">
@@ -379,7 +409,22 @@ export default function PostCard({ post, usuarioAtual }) {
             {post.categoria}
           </span>
         )}
-        {ehDono && !editando && (
+        {post.oculto && ehAdmin && (
+          <span className="rounded-full bg-red-50 px-2.5 py-0.5 text-[10px] font-medium text-red-600">
+            Oculto
+          </span>
+        )}
+        {(ehDono || ehAdmin) && (
+          <button
+            onClick={handleAlternarOcultar}
+            disabled={alternandoOculto}
+            className="text-coffee-200 hover:text-coffee-600 disabled:opacity-50"
+            aria-label={post.oculto ? 'Reexibir post' : 'Ocultar post'}
+          >
+            {post.oculto ? <Eye size={15} /> : <EyeOff size={15} />}
+          </button>
+        )}
+        {podeEditarPost && (
           <button onClick={handleAbrirEdicao} className="text-coffee-200 hover:text-coffee-600" aria-label="Editar post">
             <Pencil size={15} />
           </button>
@@ -391,40 +436,21 @@ export default function PostCard({ post, usuarioAtual }) {
         )}
       </div>
 
-      {/* Texto — modo normal ou modo edição */}
-      {editando ? (
-        <div className="mb-3">
-          <textarea
-            value={textoEdit}
-            onChange={(e) => setTextoEdit(e.target.value)}
-            rows={3}
-            className="w-full resize-none rounded-xl border border-coffee-100 bg-cream p-3 text-sm text-coffee-800"
-          />
-          <div className="mt-2 flex justify-end gap-2">
-            <button
-              onClick={() => setEditando(false)}
-              className="flex items-center gap-1 rounded-full border border-coffee-200 px-3 py-1.5 text-xs font-medium text-coffee-500"
-            >
-              <XIcon size={13} /> Cancelar
-            </button>
-            <button
-              onClick={handleSalvarEdicao}
-              disabled={salvandoEdicao}
-              className="flex items-center gap-1 rounded-full bg-coffee-700 px-3 py-1.5 text-xs font-semibold text-cream disabled:opacity-50"
-            >
-              <Check size={13} /> Salvar
-            </button>
-          </div>
-        </div>
-      ) : (
-        post.texto && (
-          <div onClick={itensMissao ? undefined : handleTapNoTexto} className="relative">
+      {/* Texto — post manual mostra a legenda normal; post de missão mostra
+          o TÍTULO da missão, sempre travado (nunca editável, ver
+          EditarPostModal.js) e com mais contraste/destaque que o resto do
+          post, já que é o título, não um item de resposta qualquer. */}
+      {post.texto && (
+        <div onClick={itensMissao ? undefined : handleTapNoTexto} className="relative">
+          {ehPostDeMissao ? (
+            <p className="mb-3 font-destaque text-base font-bold text-coffee-900">{post.texto}</p>
+          ) : (
             <TextoComLinks
               texto={post.texto}
               className="mb-3 text-sm leading-relaxed text-coffee-700"
             />
-          </div>
-        )
+          )}
+        </div>
       )}
 
       {/* Post de missão — hierarquia foto > áudio > demais campos, na ordem
@@ -554,6 +580,8 @@ export default function PostCard({ post, usuarioAtual }) {
       {mostrarCurtidas && (
         <LikesListModal uids={post.curtidas || []} onClose={() => setMostrarCurtidas(false)} />
       )}
+
+      {editandoAberto && <EditarPostModal post={post} onFechar={() => setEditandoAberto(false)} />}
     </div>
   );
 }

@@ -165,9 +165,14 @@ export default function ProfileView({ usuario, usuarioAtual }) {
           <div className="space-y-4">
             {posts === null && <div className="h-24 animate-pulse rounded-xl2 bg-coffee-100/60" />}
             {posts?.length === 0 && <EmptyState titulo="Nenhum post ainda" />}
-            {posts?.map((post) => (
-              <PostCard key={post.id} post={post} usuarioAtual={usuarioAtual} />
-            ))}
+            {/* Botão "Ocultar" (novo) — post oculto some do perfil de todo
+                mundo, exceto do próprio dono (placeholder, ver PostCard.js)
+                e do Admin (sempre vê tudo). */}
+            {posts
+              ?.filter((post) => !post.oculto || usuario.uid === usuarioAtual?.uid || usuarioAtual?.isAdmin)
+              .map((post) => (
+                <PostCard key={post.id} post={post} usuarioAtual={usuarioAtual} />
+              ))}
           </div>
         )}
 

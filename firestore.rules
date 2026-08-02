@@ -84,6 +84,15 @@ service cloud.firestore {
          request.resource.data.comentariosCount == resource.data.comentariosCount - 1);
     }
 
+    // Botão "Editar" do post (components/EditarPostModal.js): só o próprio
+    // dono, e só até 24h depois da criação — depois disso, nenhuma edição
+    // de conteúdo é aceita, mesmo tentando direto pelo Firestore (a tela já
+    // esconde o botão, mas isso reforça no servidor).
+    function podeEditarConteudoDoPost() {
+      return resource.data.createdAt is timestamp &&
+        request.time < resource.data.createdAt + duration.value(24, 'h');
+    }
+
     // ------------------------------------------------------------------------
     // USUÁRIOS
     // ------------------------------------------------------------------------
@@ -131,10 +140,21 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && !usuarioTravado() && request.resource.data.autorId == request.auth.uid;
       allow update: if isSignedIn() && (
-        (resource.data.autorId == request.auth.uid && !usuarioTravado()) ||
         isAdmin() ||
         apenasProprioCurtiuMudou() ||
-        comentariosCountMudouEmUm()
+        comentariosCountMudouEmUm() ||
+        (resource.data.autorId == request.auth.uid && !usuarioTravado() && (
+          // Botão "Ocultar"/"Reexibir" (item novo) — sempre permitido pro
+          // dono, sem limite de 24h, e só mexe nesses 3 campos.
+          apenasEstesCamposMudaram(['oculto', 'ocultoPor', 'ocultoEm']) ||
+          // Botão "Editar" — só dentro da janela de 24h, e nunca alterando
+          // `texto` quando o post veio de uma missão (nesse caso `texto` é
+          // o título da missão, e o título nunca é editável).
+          (podeEditarConteudoDoPost() && (
+            resource.data.origemMissaoId == null ||
+            resource.data.texto == request.resource.data.texto
+          ))
+        ))
       );
       allow delete: if isSignedIn() && (resource.data.autorId == request.auth.uid || isAdmin());
 

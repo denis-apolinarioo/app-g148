@@ -44,8 +44,15 @@ export default function BuscarPage() {
   const postsFiltrados = useMemo(() => {
     if (!posts) return null;
     if (!termo.trim()) return [];
-    return posts.filter((p) => combinaComBusca(p.texto, termo));
-  }, [posts, termo]);
+    // Botão "Ocultar" (novo) — post oculto não aparece na busca de ninguém,
+    // exceto do próprio dono (placeholder, ver PostCard.js) e do Admin
+    // (sempre vê tudo).
+    return posts.filter(
+      (p) =>
+        combinaComBusca(p.texto, termo) &&
+        (!p.oculto || p.autorId === perfil?.uid || perfil?.isAdmin)
+    );
+  }, [posts, termo, perfil]);
 
   return (
     <div className="mx-auto max-w-md">

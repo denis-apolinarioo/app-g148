@@ -3,13 +3,18 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mailbox, Circle, Heart, MessageCircle, Pin, X } from 'lucide-react';
+import { Mailbox, Circle, Heart, MessageCircle, Pin, X, Trash2 } from 'lucide-react';
 import TopBar from '@/components/TopBar';
 import EmptyState from '@/components/EmptyState';
 import Avatar from '@/components/Avatar';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import { useAuth } from '@/components/AuthProvider';
-import { subscribeToMailbox, markMailAsRead, deleteMailMessage } from '@/lib/firestore-helpers';
+import {
+  subscribeToMailbox,
+  markMailAsRead,
+  deleteMailMessage,
+  limparMailboxNaoFixadas,
+} from '@/lib/firestore-helpers';
 import { getCachedImageURL } from '@/lib/imageCache';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
@@ -29,6 +34,8 @@ export default function CorreioPage() {
   // Item 15º — fechar some da tela na hora, mesmo antes do Firestore
   // confirmar a exclusão (mesma base otimista já usada no resto do Correio).
   const [escondidos, setEscondidos] = useState(() => new Set());
+  // Botão "Limpar tudo" — apaga todas as mensagens não fixadas de uma vez.
+  const [limpando, setLimpando] = useState(false);
 
   useEffect(() => {
     if (!perfil) return undefined;
@@ -60,6 +67,35 @@ export default function CorreioPage() {
   const normais = todasNormais.slice(0, qtdVisivel);
   const temMaisNormais = todasNormais.length > qtdVisivel;
 
+  // "Limpar tudo" — some da tela na hora (mesma base otimista do resto do
+  // Correio) e apaga em lote no Firestore. As fixadas nunca entram na lista
+  // (só saem quando o Admin apaga, via histórico do Correio no Admin).
+  async function limparTudo() {
+    if (limpando || todasNormais.length === 0) return;
+    if (!confirm('Apagar todas as mensagens do Correio? As mensagens fixadas não serão apagadas.')) {
+      return;
+    }
+    const ids = todasNormais.map((m) => m.id);
+    setLimpando(true);
+    setEscondidos((atual) => {
+      const novo = new Set(atual);
+      ids.forEach((id) => novo.add(id));
+      return novo;
+    });
+    try {
+      await limparMailboxNaoFixadas(ids);
+    } catch (err) {
+      console.error('Erro ao limpar o Correio:', err);
+      setEscondidos((atual) => {
+        const novo = new Set(atual);
+        ids.forEach((id) => novo.delete(id));
+        return novo;
+      });
+    } finally {
+      setLimpando(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-md">
       <TopBar titulo="Correio" voltarPara="/feed" />
@@ -79,6 +115,19 @@ export default function CorreioPage() {
             titulo="Caixa vazia"
             descricao="Mensagens e notificações aparecem aqui."
           />
+        )}
+
+        {todasNormais.length > 0 && (
+          <div className="mb-3 flex justify-end">
+            <button
+              type="button"
+              onClick={limparTudo}
+              disabled={limpando}
+              className="flex items-center gap-1.5 rounded-full border border-coffee-200 px-3 py-1.5 text-xs font-medium text-coffee-500 disabled:opacity-50"
+            >
+              <Trash2 size={13} /> Limpar tudo
+            </button>
+          </div>
         )}
 
         {/* Item 34 — mensagens do Admin fixadas no topo, com destaque visual */}

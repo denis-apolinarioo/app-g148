@@ -49,9 +49,14 @@ export default function FeedPage() {
 
   // Item 18 — oculta, só pra quem bloqueou, os posts de quem foi bloqueado
   // (o bloqueio é local ao perfil de quem bloqueia, filtrado aqui no cliente)
-  const postsVisiveis = bloqueioAtivo && perfil?.bloqueados?.length
-    ? posts?.filter((p) => !perfil.bloqueados.includes(p.autorId))
-    : posts;
+  // Botão "Ocultar" (novo) — post oculto some do Feed de todo mundo, exceto
+  // do próprio dono (que vê um placeholder, ver PostCard.js) e do Admin
+  // (que sempre vê tudo, normalmente).
+  const postsVisiveis = (
+    bloqueioAtivo && perfil?.bloqueados?.length
+      ? posts?.filter((p) => !perfil.bloqueados.includes(p.autorId))
+      : posts
+  )?.filter((p) => !p.oculto || p.autorId === perfil?.uid || perfil?.isAdmin);
 
   return (
     <div className="mx-auto max-w-md">
