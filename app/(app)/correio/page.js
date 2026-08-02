@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mailbox, Circle, Heart, MessageCircle, Pin, X, Trash2 } from 'lucide-react';
+import { Mailbox, Circle, Heart, MessageCircle, Pin, X, Trash2, Loader2 } from 'lucide-react';
 import TopBar from '@/components/TopBar';
 import EmptyState from '@/components/EmptyState';
 import Avatar from '@/components/Avatar';
@@ -36,6 +36,12 @@ export default function CorreioPage() {
   const [escondidos, setEscondidos] = useState(() => new Set());
   // Botão "Limpar tudo" — apaga todas as mensagens não fixadas de uma vez.
   const [limpando, setLimpando] = useState(false);
+  // CORREÇÃO: antes usava window.confirm(), que em alguns navegadores/PWA
+  // instalado na tela inicial não abre diálogo nenhum (o clique parecia não
+  // fazer nada). Agora usa um modal de confirmação próprio do app, igual ao
+  // resto da interface, e sempre visível.
+  const [confirmandoLimpeza, setConfirmandoLimpeza] = useState(false);
+  const [erroLimpeza, setErroLimpeza] = useState('');
 
   useEffect(() => {
     if (!perfil) return undefined;
@@ -72,11 +78,9 @@ export default function CorreioPage() {
   // (só saem quando o Admin apaga, via histórico do Correio no Admin).
   async function limparTudo() {
     if (limpando || todasNormais.length === 0) return;
-    if (!confirm('Apagar todas as mensagens do Correio? As mensagens fixadas não serão apagadas.')) {
-      return;
-    }
     const ids = todasNormais.map((m) => m.id);
     setLimpando(true);
+    setErroLimpeza('');
     setEscondidos((atual) => {
       const novo = new Set(atual);
       ids.forEach((id) => novo.add(id));
@@ -84,6 +88,7 @@ export default function CorreioPage() {
     });
     try {
       await limparMailboxNaoFixadas(ids);
+      setConfirmandoLimpeza(false);
     } catch (err) {
       console.error('Erro ao limpar o Correio:', err);
       setEscondidos((atual) => {
@@ -91,6 +96,10 @@ export default function CorreioPage() {
         ids.forEach((id) => novo.delete(id));
         return novo;
       });
+      // CORREÇÃO: antes o erro só ia pro console — a pessoa via o botão
+      // "não fazer nada" sem entender por quê. Agora mostra a mensagem
+      // dentro do próprio modal de confirmação.
+      setErroLimpeza('Não foi possível limpar o Correio agora. Confira sua internet e tente de novo.');
     } finally {
       setLimpando(false);
     }
@@ -98,7 +107,25 @@ export default function CorreioPage() {
 
   return (
     <div className="mx-auto max-w-md">
-      <TopBar titulo="Correio" voltarPara="/feed" />
+      <TopBar
+        titulo="Correio"
+        voltarPara="/feed"
+        acao={
+          todasNormais.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setErroLimpeza('');
+                setConfirmandoLimpeza(true);
+              }}
+              aria-label="Limpar tudo"
+              className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-coffee-200 px-2.5 py-1.5 text-xs font-medium text-coffee-500"
+            >
+              <Trash2 size={13} /> Limpar tudo
+            </button>
+          )
+        }
+      />
 
       <div className="px-4 py-4">
         {mensagens === null && (
@@ -115,19 +142,6 @@ export default function CorreioPage() {
             titulo="Caixa vazia"
             descricao="Mensagens e notificações aparecem aqui."
           />
-        )}
-
-        {todasNormais.length > 0 && (
-          <div className="mb-3 flex justify-end">
-            <button
-              type="button"
-              onClick={limparTudo}
-              disabled={limpando}
-              className="flex items-center gap-1.5 rounded-full border border-coffee-200 px-3 py-1.5 text-xs font-medium text-coffee-500 disabled:opacity-50"
-            >
-              <Trash2 size={13} /> Limpar tudo
-            </button>
-          </div>
         )}
 
         {/* Item 34 — mensagens do Admin fixadas no topo, com destaque visual */}
@@ -179,6 +193,70 @@ export default function CorreioPage() {
           onVerFoto={setFotoAberta}
         />
       )}
+
+      {confirmandoLimpeza && (
+        <ConfirmarLimparTudoModal
+          quantidade={todasNormais.length}
+          limpando={limpando}
+          erro={erroLimpeza}
+          onCancelar={() => {
+            if (limpando) return;
+            setConfirmandoLimpeza(false);
+            setErroLimpeza('');
+          }}
+          onConfirmar={limparTudo}
+        />
+      )}
+    </div>
+  );
+}
+
+// Modal de confirmação do "Limpar tudo" — substitui o window.confirm() de
+// antes (não confiável em todo navegador/PWA instalado) por um componente
+// próprio, no mesmo padrão visual dos outros modais do app.
+function ConfirmarLimparTudoModal({ quantidade, limpando, erro, onCancelar, onConfirmar }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
+      onClick={onCancelar}
+    >
+      <div
+        className="w-full max-w-md rounded-t-2xl bg-cream-card p-5 sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-red-50">
+          <Trash2 size={20} className="text-red-600" />
+        </div>
+        <p className="mt-3 text-center font-destaque text-base font-semibold text-coffee-800">
+          Limpar o Correio?
+        </p>
+        <p className="mt-1 text-center text-sm text-coffee-400">
+          {quantidade === 1
+            ? '1 mensagem será apagada.'
+            : `${quantidade} mensagens serão apagadas.`}{' '}
+          As mensagens fixadas não serão apagadas.
+        </p>
+
+        {erro && <p className="mt-3 text-center text-xs text-red-600">{erro}</p>}
+
+        <button
+          type="button"
+          onClick={onConfirmar}
+          disabled={limpando}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 py-2.5 text-sm font-semibold text-cream disabled:opacity-60"
+        >
+          {limpando && <Loader2 size={15} className="animate-spin" />}
+          {limpando ? 'Apagando...' : 'Apagar tudo'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancelar}
+          disabled={limpando}
+          className="mt-2 w-full text-center text-xs text-coffee-400 disabled:opacity-60"
+        >
+          Cancelar
+        </button>
+      </div>
     </div>
   );
 }

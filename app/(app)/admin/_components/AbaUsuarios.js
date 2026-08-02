@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Lock, Unlock, Loader2, SlidersHorizontal, Search, UploadCloud, Coins } from 'lucide-react';
+import { Lock, Unlock, Loader2, SlidersHorizontal, Search, UploadCloud } from 'lucide-react';
+import DracmaIcon from '@/components/DracmaIcon';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/components/AuthProvider';
 import { getAllUsers, toggleTravarUsuario, migrarDracmasDosUsuarios } from '@/lib/firestore-helpers';
@@ -203,7 +204,7 @@ export default function AbaUsuarios() {
             </div>
             <span className="font-destaque text-sm font-bold text-coffee-600">{u.pontos || 0}</span>
             <span className="flex items-center gap-1 font-destaque text-sm font-bold text-gold">
-              <Coins size={13} /> {u.dracmas || 0}
+              <DracmaIcon size={13} /> {u.dracmas || 0}
             </span>
             {u.isAdmin && (
               <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold">
@@ -231,7 +232,7 @@ export default function AbaUsuarios() {
                 ajustandoDracmaUid === u.id ? 'bg-gold text-cream' : 'text-coffee-300 hover:text-gold'
               }`}
             >
-              <Coins size={14} />
+              <DracmaIcon size={14} />
             </button>
             <button
               onClick={() => handleAlternarTravamento(u)}

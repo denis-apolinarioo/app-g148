@@ -12,7 +12,7 @@ import { updateUserProfile } from '@/lib/firestore-helpers';
 import { atualizarUsuarioCache } from '@/lib/usersCache';
 import { uploadFotoPerfil } from '@/lib/storage';
 import { TAGS_FUNCAO } from '@/lib/constants';
-import { Camera, Loader2 } from 'lucide-react';
+import { Camera, KeyRound, Loader2 } from 'lucide-react';
 
 export default function EditarPerfilPage() {
   const router = useRouter();
@@ -176,6 +176,14 @@ export default function EditarPerfilPage() {
           {salvando && <Loader2 size={16} className="animate-spin" />}
           Salvar alterações
         </button>
+
+        <Link
+          href="/carteira?modo=alterar_pin"
+          className="flex items-center gap-3 rounded-xl border border-coffee-100 px-4 py-3 text-sm font-medium text-coffee-600"
+        >
+          <KeyRound size={16} className="text-coffee-500" />
+          Alterar PIN da Carteira
+        </Link>
 
         <Link
           href="/perfil/notificacoes"

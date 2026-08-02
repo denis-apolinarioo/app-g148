@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { History, Search, Coins, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { History, Search, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import DracmaIcon from '@/components/DracmaIcon';
 import Avatar from '@/components/Avatar';
 import EmptyState from '@/components/EmptyState';
 import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
@@ -20,9 +21,17 @@ import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
 const ROTULOS_ACAO = {
   ajustar_pontos: 'Ajuste manual de pontos',
   ajustar_dracma: 'Ajuste manual de Dracma',
+  ajustar_pontos_acao: 'Pontuação de uma ação ajustada',
   editar_configuracoes_app: 'Configuração alterada',
   resetar_pontos_todos: 'Reset em massa — Pontos de Comunhão',
   resetar_dracmas_todos: 'Reset em massa — Dracma',
+  criar_missao: 'Missão criada',
+  editar_missao: 'Missão editada',
+  excluir_missao: 'Missão excluída',
+  travar_usuario: 'Usuário travado',
+  destravar_usuario: 'Usuário destravado',
+  resolver_denuncia: 'Denúncia resolvida',
+  reabrir_denuncia: 'Denúncia reaberta',
 };
 
 // Rótulos por tipo de lançamento de dracmaLog, usados na sub-aba "Dracma"
@@ -451,7 +460,7 @@ function HistoricoDracma() {
 
       {registrosFiltrados?.length === 0 && (
         <EmptyState
-          icone={Coins}
+          icone={DracmaIcon}
           titulo="Nenhum lançamento encontrado"
           descricao="Ganhos, ajustes do admin e transferências de Dracma aparecem aqui."
         />
@@ -503,7 +512,7 @@ function LinhaRegistroDracma({ registro }) {
           {ehTransferencia ? (
             <ArrowUpRight size={14} className="text-coffee-400" />
           ) : (
-            <Coins size={14} className="text-coffee-400" />
+            <DracmaIcon size={14} className="text-coffee-400" />
           )}
           {ROTULO_TIPO_DRACMA[registro.tipo] || 'Movimentação'}
         </p>

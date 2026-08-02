@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Coins, Copy, Check, KeyRound, Loader2, Lock, Mail, RefreshCw, Send, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Copy, Check, Loader2, Lock, Mail, RefreshCw, Send, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebase';
 import TopBar from '@/components/TopBar';
 import LoadingScreen from '@/components/LoadingScreen';
 import EmptyState from '@/components/EmptyState';
+import DracmaIcon from '@/components/DracmaIcon';
+import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { useAppConfig } from '@/lib/useAppConfig';
 import { CHAVE_TRANSFERENCIA_DRACMA_ATIVA } from '@/lib/appConfig';
@@ -32,9 +35,22 @@ const ROTULO_TIPO = {
   ajuste_admin: 'Ajuste do administrador',
 };
 
+// CORREÇÃO: useSearchParams() (usado pra ler ?modo=alterar_pin, vindo do
+// link em Configurações) exige um limite de Suspense em volta — sem isso o
+// build de produção (next build) falha. O componente de verdade fica em
+// CarteiraPageInterna; isto aqui só entrega o Suspense.
 export default function CarteiraPage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <CarteiraPageInterna />
+    </Suspense>
+  );
+}
+
+function CarteiraPageInterna() {
   const { perfil, usuarioAuth } = useAuth();
   const config = useAppConfig();
+  const searchParams = useSearchParams();
   const [historico, setHistorico] = useState(null);
   const [copiado, setCopiado] = useState(false);
 
@@ -44,9 +60,17 @@ export default function CarteiraPage() {
   const transferenciaAtiva = config?.[CHAVE_TRANSFERENCIA_DRACMA_ATIVA] !== false;
   const chaveRecebimento = montarChaveRecebimento(perfil);
 
+  // O botão "Alterar PIN" agora fica em Configurações (perfil/editar), não
+  // mais aqui na Carteira — ele leva pra /carteira?modo=alterar_pin, e é só
+  // aqui que a gente lê esse parâmetro pra já abrir direto nesse modo.
   useEffect(() => {
     if (!perfil) return;
-    setModo(pinConfigurado(perfil) ? 'carteira' : 'criar_pin');
+    const modoPedido = searchParams.get('modo');
+    if (modoPedido === 'alterar_pin' && pinConfigurado(perfil)) {
+      setModo('alterar_pin');
+    } else {
+      setModo(pinConfigurado(perfil) ? 'carteira' : 'criar_pin');
+    }
   }, [perfil?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -114,6 +138,7 @@ export default function CarteiraPage() {
             perfil={perfil}
             onVoltar={() => setModo('carteira')}
             onEnviado={() => setModo('carteira')}
+            onEsqueciPin={() => setModo('recuperar_solicitar')}
           />
         )}
 
@@ -121,12 +146,12 @@ export default function CarteiraPage() {
           <>
             <div className="rounded-2xl border border-coffee-100 bg-cream-card p-5 text-center shadow-card">
               <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gold/15">
-                <Coins size={22} className="text-gold" />
+                <DracmaIcon size={22} className="text-gold" />
               </div>
               <p className="mt-3 font-destaque text-3xl font-bold text-coffee-800">
-                {perfil.dracmas || 0}
+                D$ {perfil.dracmas || 0}{' '}
+                <span className="text-base font-semibold text-coffee-400">dracmas</span>
               </p>
-              <p className="text-xs text-coffee-400">Dracmas</p>
             </div>
 
             {transferenciaAtiva && (
@@ -161,19 +186,6 @@ export default function CarteiraPage() {
               </p>
             </div>
 
-            <button
-              onClick={() => setModo('alterar_pin')}
-              className="flex w-full items-center gap-3 rounded-2xl border border-coffee-100 bg-cream-card p-4 text-left"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-coffee-50">
-                <KeyRound size={18} className="text-coffee-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-coffee-800">Alterar PIN</p>
-                <p className="text-xs text-coffee-400">Trocar o PIN de 4 dígitos da carteira</p>
-              </div>
-            </button>
-
             <div>
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-coffee-400">
                 Histórico de transações
@@ -183,35 +195,11 @@ export default function CarteiraPage() {
                   <div className="h-16 animate-pulse rounded-xl2 bg-coffee-100/60" />
                 )}
                 {historico?.length === 0 && (
-                  <EmptyState icone={Coins} titulo="Nenhuma transação ainda" />
+                  <EmptyState icone={DracmaIcon} titulo="Nenhuma transação ainda" />
                 )}
-                {historico?.map((item) => {
-                  const { rotulo, valorExibido, Icone } = descreverTransacao(item, perfil.uid);
-                  return (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between rounded-xl2 border border-coffee-100 bg-cream-card px-3.5 py-2.5"
-                    >
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        {Icone && <Icone size={14} className="flex-shrink-0 text-coffee-300" />}
-                        <div className="min-w-0">
-                          <p className="truncate text-sm text-coffee-700">{rotulo}</p>
-                          <p className="text-xs text-coffee-300">
-                            {item.createdAt ? formatDateTimeBR(item.createdAt) : '...'}
-                          </p>
-                        </div>
-                      </div>
-                      <span
-                        className={`flex-shrink-0 font-destaque text-sm font-bold ${
-                          valorExibido >= 0 ? 'text-green-700' : 'text-red-600'
-                        }`}
-                      >
-                        {valorExibido >= 0 ? '+' : ''}
-                        {valorExibido}
-                      </span>
-                    </div>
-                  );
-                })}
+                {historico?.map((item) => (
+                  <LinhaHistoricoTransacao key={item.id} item={item} uidAtual={perfil.uid} />
+                ))}
               </div>
             </div>
           </>
@@ -222,26 +210,47 @@ export default function CarteiraPage() {
 }
 
 // ----------------------------------------------------------------------------
-// PACOTE 3 — decide o rótulo/valor/ícone de uma entrada do histórico do
-// PONTO DE VISTA de quem está olhando (`uidAtual`). Toda entrada que não for
-// 'transferencia' segue o mapa fixo ROTULO_TIPO de sempre; 'transferencia' é
-// bidirecional (mesma entrada aparece pra quem mandou E pra quem recebeu),
-// então o texto e o sinal do valor mudam conforme o lado.
+// Uma linha do histórico de transações da Carteira. Igual a descreverTransacao
+// de antes, mas agora resolvendo e mostrando o NOME REAL de quem mandou/
+// recebeu (via useUsuarioAtual, mesmo padrão do histórico do Admin em
+// AbaHistorico.js) — antes só dizia "Dracma enviado"/"Dracma recebido" sem
+// dizer pra quem/de quem.
 // ----------------------------------------------------------------------------
-function descreverTransacao(item, uidAtual) {
-  if (item.tipo === 'transferencia') {
-    const enviou = item.origem === uidAtual;
-    return {
-      rotulo: enviou ? 'Dracma enviado' : 'Dracma recebido',
-      valorExibido: enviou ? -item.valor : item.valor,
-      Icone: enviou ? ArrowUpRight : ArrowDownLeft,
-    };
-  }
-  return {
-    rotulo: ROTULO_TIPO[item.tipo] || 'Movimentação',
-    valorExibido: item.valor,
-    Icone: null,
-  };
+function LinhaHistoricoTransacao({ item, uidAtual }) {
+  const ehTransferencia = item.tipo === 'transferencia';
+  const enviou = ehTransferencia && item.origem === uidAtual;
+  const outroUid = ehTransferencia ? (enviou ? item.destino : item.origem) : null;
+  const outraPessoa = useUsuarioAtual(outroUid);
+
+  const rotulo = ehTransferencia
+    ? enviou
+      ? `Dracma enviado para ${outraPessoa.nome}`
+      : `Dracma recebido de ${outraPessoa.nome}`
+    : ROTULO_TIPO[item.tipo] || 'Movimentação';
+  const valorExibido = ehTransferencia ? (enviou ? -item.valor : item.valor) : item.valor;
+  const Icone = ehTransferencia ? (enviou ? ArrowUpRight : ArrowDownLeft) : null;
+
+  return (
+    <div className="flex items-center justify-between rounded-xl2 border border-coffee-100 bg-cream-card px-3.5 py-2.5">
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        {Icone && <Icone size={14} className="flex-shrink-0 text-coffee-300" />}
+        <div className="min-w-0">
+          <p className="truncate text-sm text-coffee-700">{rotulo}</p>
+          <p className="text-xs text-coffee-300">
+            {item.createdAt ? formatDateTimeBR(item.createdAt) : '...'}
+          </p>
+        </div>
+      </div>
+      <span
+        className={`flex-shrink-0 font-destaque text-sm font-bold ${
+          valorExibido >= 0 ? 'text-green-700' : 'text-red-600'
+        }`}
+      >
+        {valorExibido >= 0 ? '+' : ''}
+        {valorExibido}
+      </span>
+    </div>
+  );
 }
 
 // ----------------------------------------------------------------------------
@@ -446,7 +455,7 @@ function RecuperarConfirmar({ uid, onConfirmado, onVoltar }) {
 // ----------------------------------------------------------------------------
 // PACOTE 3, item 3.1 — envio de Dracma: chave de recebimento + valor + PIN.
 // ----------------------------------------------------------------------------
-function FormularioTransferencia({ perfil, onVoltar, onEnviado }) {
+function FormularioTransferencia({ perfil, onVoltar, onEnviado, onEsqueciPin }) {
   const [chave, setChave] = useState('');
   const [valor, setValor] = useState('');
   const [pin, setPin] = useState('');
@@ -546,6 +555,19 @@ function FormularioTransferencia({ perfil, onVoltar, onEnviado }) {
             placeholder="••••"
             className="w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-center text-lg tracking-[0.4em] text-coffee-800"
           />
+          {/* CORREÇÃO: esse link não existia em lugar nenhum da tela — o
+              fluxo de recuperação por e-mail (RecuperarSolicitar/
+              RecuperarConfirmar, mais abaixo neste arquivo) já estava
+              pronto, mas não tinha como chegar nele. */}
+          {onEsqueciPin && (
+            <button
+              type="button"
+              onClick={onEsqueciPin}
+              className="mt-1.5 text-xs font-medium text-coffee-500 underline underline-offset-2"
+            >
+              Esqueci meu PIN
+            </button>
+          )}
         </div>
       </div>
 

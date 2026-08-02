@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
-import StreakBadge from '@/components/StreakBadge';
 
 const MEDALHAS = ['🥇', '🥈', '🥉'];
 
@@ -24,7 +23,7 @@ export default function RankingRow({ posicao, usuario, souEu }) {
         </p>
         <p className="text-xs text-coffee-300">@{usuario.username}</p>
       </div>
-      {usuario.streakAtual > 0 && <StreakBadge dias={usuario.streakAtual} />}
+      {/* Streak de constância só aparece no Perfil, não no Ranking. */}
       <span className="flex-shrink-0 font-destaque text-base font-bold text-coffee-700">
         {usuario.pontos || 0}
       </span>

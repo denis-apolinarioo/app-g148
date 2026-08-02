@@ -4,7 +4,8 @@
 // (1ª configuração de verdade: liga/desliga a função de bloquear usuário).
 
 import { useState } from 'react';
-import { Loader2, ShieldOff, Send, Coins, Award, AlertTriangle } from 'lucide-react';
+import { Loader2, ShieldOff, Send, Award, AlertTriangle } from 'lucide-react';
+import DracmaIcon from '@/components/DracmaIcon';
 import { useAuth } from '@/components/AuthProvider';
 import { useAppConfig } from '@/lib/useAppConfig';
 import {
@@ -167,7 +168,7 @@ function ZonaDePerigo({ admin }) {
         disabled={executando}
       />
       <BotaoReset
-        icone={Coins}
+        icone={DracmaIcon}
         titulo="Zerar Dracmas de todos"
         onClick={() => handleAbrirConfirmacao('dracmas')}
         disabled={executando}
