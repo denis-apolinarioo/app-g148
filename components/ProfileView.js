@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Music, Sparkles, UserX, UserCheck, Wallet } from 'lucide-react';
 import Avatar from '@/components/Avatar';
-import StreakBadge from '@/components/StreakBadge';
+import StreakFogueira from '@/components/StreakFogueira';
 import AchievementBadge from '@/components/AchievementBadge';
 import VitrineConquistas from '@/components/VitrineConquistas';
 import PostCard from '@/components/PostCard';
@@ -94,24 +94,51 @@ export default function ProfileView({ usuario, usuarioAtual }) {
   return (
     <div className="px-4 pb-8 pt-5">
       <div className="flex flex-col items-center text-center">
-        {/* FIX: foto de perfil clicável abre em tela cheia */}
-        <button onClick={() => usuario.fotoURL && setFotoAberta(true)} className="rounded-full">
-          <Avatar src={usuario.fotoURL} nome={usuario.nome} tamanho="xl" />
-        </button>
-        <h1 className="mt-3 font-destaque text-xl font-semibold text-coffee-800">{usuario.nome}</h1>
-        <p className="text-sm text-coffee-400">@{usuario.username}</p>
+        {/* Cabeçalho em duas colunas: identidade à esquerda, métricas à
+            direita — pedido do usuário pra imitar a disposição de um
+            layout de referência que ele mandou. */}
+        <div className="flex w-full items-start justify-between gap-3">
+          {/* Esquerda: foto, nome, usuário e função */}
+          <div className="flex flex-col items-start text-left">
+            {/* FIX: foto de perfil clicável abre em tela cheia */}
+            <button onClick={() => usuario.fotoURL && setFotoAberta(true)} className="rounded-full">
+              <Avatar src={usuario.fotoURL} nome={usuario.nome} tamanho="lg" />
+            </button>
+            <h1 className="mt-2 font-destaque text-lg font-semibold text-coffee-800">{usuario.nome}</h1>
+            <p className="text-sm text-coffee-400">@{usuario.username}</p>
 
-        {usuario.tagFuncao && usuario.tagFuncao !== 'Membro' && (
-          <span className="mt-2 rounded-full bg-coffee-100 px-3 py-1 text-xs font-medium text-coffee-600">
-            {usuario.tagFuncao}
-          </span>
-        )}
+            {usuario.tagFuncao && usuario.tagFuncao !== 'Membro' && (
+              <span className="mt-2 rounded-full bg-coffee-100 px-3 py-1 text-xs font-medium text-coffee-600">
+                {usuario.tagFuncao}
+              </span>
+            )}
+          </div>
+
+          {/* Direita: pontos, streak (fogueira) e vitrine de conquistas */}
+          <div className="flex flex-shrink-0 flex-col items-end">
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-2.5 text-center shadow-card">
+                <p className="font-destaque text-lg font-bold text-coffee-800">{usuario.pontos || 0}</p>
+                <p className="text-[11px] text-coffee-300">Pontos de Comunhão</p>
+              </div>
+              <StreakFogueira dias={usuario.streakAtual || 0} />
+            </div>
+
+            <VitrineConquistas
+              usuario={usuario}
+              usuarioAtual={usuarioAtual}
+              conquistas={conquistas}
+              vitrine={getVitrineConquistas(usuario, conquistas)}
+              onSalvar={handleSalvarVitrine}
+            />
+          </div>
+        </div>
 
         {ehOutraPessoa && bloqueioAtivo && (
           <button
             onClick={handleAlternarBloqueio}
             disabled={bloqueando}
-            className="mt-3 flex items-center gap-1.5 rounded-full border border-coffee-200 px-3 py-1.5 text-xs font-medium text-coffee-500 disabled:opacity-50"
+            className="mt-4 flex items-center gap-1.5 rounded-full border border-coffee-200 px-3 py-1.5 text-xs font-medium text-coffee-500 disabled:opacity-50"
           >
             {jaBloqueado ? <UserCheck size={13} /> : <UserX size={13} />}
             {jaBloqueado ? 'Desbloquear' : 'Bloquear'}
@@ -119,26 +146,6 @@ export default function ProfileView({ usuario, usuarioAtual }) {
         )}
 
         {usuario.bio && <p className="mt-3 max-w-xs text-sm text-coffee-600">{usuario.bio}</p>}
-
-        <div className="mt-4 flex items-center gap-3">
-          <div className="rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-2.5 text-center shadow-card">
-            <p className="font-destaque text-lg font-bold text-coffee-800">{usuario.pontos || 0}</p>
-            <p className="text-[11px] text-coffee-300">Pontos de Comunhão</p>
-          </div>
-          {usuario.streakAtual > 0 && (
-            <div className="rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-2.5 shadow-card">
-              <StreakBadge dias={usuario.streakAtual} tamanho="lg" />
-            </div>
-          )}
-        </div>
-
-        <VitrineConquistas
-          usuario={usuario}
-          usuarioAtual={usuarioAtual}
-          conquistas={conquistas}
-          vitrine={getVitrineConquistas(usuario, conquistas)}
-          onSalvar={handleSalvarVitrine}
-        />
 
         {/* PACOTE 2 — Carteira de Dracma: só a própria pessoa vê o atalho
             para a própria carteira. */}

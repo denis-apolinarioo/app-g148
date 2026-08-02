@@ -34,7 +34,7 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
   while (souDono && espacos.length < 3) espacos.push(null);
 
   return (
-    <div className="mt-4 flex w-full max-w-xs justify-center gap-3">
+    <div className="mt-3 flex justify-end gap-2">
       {espacos.map((conquista, i) => {
         const Icone = conquista ? Icons[iconePascalCase(conquista.icone)] || Icons.Award : null;
         return (
@@ -44,16 +44,16 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
             onClick={() => souDono && setModalAberto(true)}
             disabled={!souDono}
             title={conquista?.nome}
-            className={`flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full transition-transform ${
+            className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full transition-transform ${
               conquista
                 ? 'bg-gradient-to-br from-gold to-coffee-600 shadow-card'
                 : 'border-2 border-dashed border-coffee-200 bg-coffee-50'
             } ${souDono ? 'active:scale-95' : ''}`}
           >
             {conquista ? (
-              <Icone size={26} strokeWidth={1.8} className="text-cream" />
+              <Icone size={20} strokeWidth={1.8} className="text-cream" />
             ) : (
-              <Plus size={20} className="text-coffee-300" />
+              <Plus size={16} className="text-coffee-300" />
             )}
           </button>
         );
