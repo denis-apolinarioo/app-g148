@@ -6,12 +6,18 @@ import { Music, Sparkles, UserX, UserCheck, Wallet } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import StreakBadge from '@/components/StreakBadge';
 import AchievementBadge from '@/components/AchievementBadge';
+import VitrineConquistas from '@/components/VitrineConquistas';
 import PostCard from '@/components/PostCard';
 import PrayerCard from '@/components/PrayerCard';
 import EmptyState from '@/components/EmptyState';
 import ImageViewerModal from '@/components/ImageViewerModal';
-import { subscribeToUserPosts, subscribeToUserPrayers, toggleBlockUser } from '@/lib/firestore-helpers';
-import { getConquistasDoUsuario, marcarConquistaVista } from '@/lib/achievements';
+import {
+  subscribeToUserPosts,
+  subscribeToUserPrayers,
+  toggleBlockUser,
+  updateUserProfile,
+} from '@/lib/firestore-helpers';
+import { getConquistasDoUsuario, marcarConquistaVista, getVitrineConquistas } from '@/lib/achievements';
 import { useAppConfig } from '@/lib/useAppConfig';
 import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
 
@@ -76,6 +82,15 @@ export default function ProfileView({ usuario, usuarioAtual }) {
     });
   }
 
+  // Salva a escolha da vitrine (até 3 conquistas em destaque no topo do
+  // perfil). `usuario` aqui só é editável de verdade quando é o próprio
+  // dono (ver ProfileView usado em /perfil, que passa o perfil ao vivo via
+  // AuthProvider) — a tela pública de outra pessoa nunca chama isso, já que
+  // o botão da vitrine só é clicável pro dono.
+  async function handleSalvarVitrine(novaSelecao) {
+    await updateUserProfile(usuario.uid, { vitrineConquistas: novaSelecao });
+  }
+
   return (
     <div className="px-4 pb-8 pt-5">
       <div className="flex flex-col items-center text-center">
@@ -116,6 +131,14 @@ export default function ProfileView({ usuario, usuarioAtual }) {
             </div>
           )}
         </div>
+
+        <VitrineConquistas
+          usuario={usuario}
+          usuarioAtual={usuarioAtual}
+          conquistas={conquistas}
+          vitrine={getVitrineConquistas(usuario, conquistas)}
+          onSalvar={handleSalvarVitrine}
+        />
 
         {/* PACOTE 2 — Carteira de Dracma: só a própria pessoa vê o atalho
             para a própria carteira. */}
