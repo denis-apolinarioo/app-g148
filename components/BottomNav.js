@@ -3,14 +3,20 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, ListChecks, HandHeart, Trophy, User } from 'lucide-react';
+import { ABAS_PRINCIPAIS } from '@/lib/constants';
 
-const ITENS = [
-  { href: '/feed', label: 'Feed', icone: Home },
-  { href: '/missoes', label: 'Missões', icone: ListChecks },
-  { href: '/oracao', label: 'Oração', icone: HandHeart },
-  { href: '/ranking', label: 'Ranking', icone: Trophy },
-  { href: '/perfil', label: 'Perfil', icone: User },
-];
+// Mapeia o nome de ícone (string, em lib/constants.js) pro componente lucide
+// de verdade — a lista em si (ordem/href/label) vem de ABAS_PRINCIPAIS, pra
+// ficar garantidamente igual à ordem usada pelo swipe (useSwipeNavigation).
+const ICONES = {
+  home: Home,
+  'list-checks': ListChecks,
+  'hand-heart': HandHeart,
+  trophy: Trophy,
+  user: User,
+};
+
+const ITENS = ABAS_PRINCIPAIS.map((aba) => ({ ...aba, icone: ICONES[aba.icone] }));
 
 export default function BottomNav() {
   const pathname = usePathname();

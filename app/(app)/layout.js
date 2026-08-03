@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/components/AuthProvider';
@@ -9,11 +9,14 @@ import LoadingScreen from '@/components/LoadingScreen';
 import BottomNav from '@/components/BottomNav';
 import ConexaoBanner from '@/components/ConexaoBanner';
 import { processarFilaOffline } from '@/lib/offlineQueue';
+import { useSwipeNavigation } from '@/lib/useSwipeNavigation';
 import { Lock } from 'lucide-react';
 
 export default function AppLayout({ children }) {
   const { usuarioAuth, perfil, carregando } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  const swipeHandlers = useSwipeNavigation();
 
   useEffect(() => {
     if (carregando) return;
@@ -46,9 +49,15 @@ export default function AppLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-cream pb-20">
+    <div className="min-h-screen bg-cream pb-20" {...swipeHandlers}>
       <ConexaoBanner />
-      {children}
+      {/* `key={pathname}` força o React a remontar esse wrapper a cada troca
+          de aba — é o que faz a animação `entrada-aba` (definida em
+          globals.css) tocar de novo em toda navegação, seja por swipe ou
+          pelo toque normal na BottomNav. */}
+      <div key={pathname} className="entrada-aba">
+        {children}
+      </div>
       <BottomNav />
     </div>
   );

@@ -187,3 +187,31 @@ html.dark .placeholder\:text-coffee-300::placeholder {
   color: #9c8462;
 }
 
+/* ----------------------------------------------------------------------
+   NAVEGAÇÃO POR ARRASTAR (swipe) — troca de aba (Feed/Missões/Oração/
+   Ranking/Perfil), tanto pelo gesto quanto pelo toque normal na BottomNav.
+   Entrada leve (fade + um pequeno deslize), sem depender de nenhuma lib de
+   animação — só pra não parecer um corte seco de tela.
+   Ver: lib/useSwipeNavigation.js, app/(app)/layout.js
+   ---------------------------------------------------------------------- */
+@keyframes entrada-aba {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.entrada-aba {
+  animation: entrada-aba 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entrada-aba {
+    animation: none;
+  }
+}
+

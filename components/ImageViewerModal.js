@@ -115,6 +115,11 @@ export default function ImageViewerModal({ src, alt = 'Foto', onClose }) {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
       onClick={onClose}
+      // Tem pinça/zoom/pan próprios (ver aoIniciarToque/aoMoverToque acima).
+      // Isso avisa o useSwipeNavigation (troca de aba arrastando a tela) pra
+      // nunca disputar gesto com esse visualizador — quem arrasta por
+      // natureza tem prioridade.
+      data-swipe-ignore
     >
       <button
         onClick={onClose}
