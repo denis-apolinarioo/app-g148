@@ -7,6 +7,7 @@ import { auth } from '@/lib/firebase';
 import { getUserProfile, subscribeToUserProfile } from '@/lib/firestore-helpers';
 import { solicitarArmazenamentoPersistente } from '@/lib/imageCache';
 import { escutarPushEmPrimeiroPlano, sincronizarBadge } from '@/lib/push';
+import { verificarConquistas } from '@/lib/achievements';
 
 const AuthContext = createContext({
   usuarioAuth: null,
@@ -79,6 +80,20 @@ export function AuthProvider({ children }) {
     });
     return () => unsubscribeAuth();
   }, []);
+
+  // CONQUISTAS NOVAS — checagens que só fazem sentido rodar "de vez em
+  // quando" (não têm 1 evento só que dispare sozinho, ou dependem de uma
+  // ação de OUTRA pessoa que a regra do Firestore não deixa conceder na
+  // sessão de quem agiu — ver comentário em lib/achievements.js,
+  // contexto 'sessao'): "Adão e Eva do App" (1 ano de conta), "Luz do Feed"
+  // (curtidas recebidas) e "Publicano" (saldo de Dracma via transferência
+  // recebida). Roda 1x por sessão, quando a pessoa abre o app logada.
+  useEffect(() => {
+    if (!usuarioAuth) return;
+    verificarConquistas(usuarioAuth.uid, 0, 'sessao').catch((err) => {
+      console.error('Erro ao checar conquistas de sessão:', err);
+    });
+  }, [usuarioAuth]);
 
   useEffect(() => {
     if (!usuarioAuth) return undefined;

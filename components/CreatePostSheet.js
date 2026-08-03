@@ -34,6 +34,9 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   const [previewFoto, setPreviewFoto] = useState('');
   const [srcCorte, setSrcCorte] = useState(''); // URL da imagem bruta pra tela de corte
   const [blobAudio, setBlobAudio] = useState(null);
+  // Duração aproximada (segundos) do áudio gravado — usada só pra
+  // conquistas que exigem duração mínima (ex.: "Arautos da Shoppe").
+  const [duracaoAudio, setDuracaoAudio] = useState(0);
   const [publicando, setPublicando] = useState(false);
   const [erro, setErro] = useState('');
   const inputFotoRef = useRef(null);
@@ -116,6 +119,7 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
         midiaThumbURL,
         categoria: categoria?.nome || null,
         categoriaAcaoId: categoria?.id || null,
+        audioDuracaoSegundos: tipo === 'audio' ? duracaoAudio : null,
       });
 
       // FASE 3 — com categoria escolhida, a pontuação/Dracma seguem o que o
@@ -243,7 +247,16 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
 
           {aba === 'audio' && (
             <div className="mt-3">
-              <AudioRecorderButton onGravado={setBlobAudio} onLimpar={() => setBlobAudio(null)} />
+              <AudioRecorderButton
+                onGravado={(blob, segundos) => {
+                  setBlobAudio(blob);
+                  setDuracaoAudio(segundos || 0);
+                }}
+                onLimpar={() => {
+                  setBlobAudio(null);
+                  setDuracaoAudio(0);
+                }}
+              />
             </div>
           )}
 

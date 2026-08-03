@@ -9,6 +9,7 @@ import RankingRow from '@/components/RankingRow';
 import EmptyState from '@/components/EmptyState';
 import { Trophy } from 'lucide-react';
 import { reportarConexaoOk, reportarErroConexao } from '@/lib/connectivity';
+import { atualizarStreakTop1 } from '@/lib/rankingStreak';
 
 export default function RankingPage() {
   const { perfil } = useAuth();
@@ -40,6 +41,18 @@ export default function RankingPage() {
   }, []);
 
   const minhaPosicao = usuarios?.findIndex((u) => u.id === perfil?.uid);
+  const estouEm1Lugar = minhaPosicao === 0;
+
+  // CONQUISTA "Planando como Águia" — checagem por dia, não em tempo real
+  // (ver comentário de limitação em lib/rankingStreak.js). Só dispara
+  // quando o status de "estar em 1º" muda de fato (não a cada tick do
+  // ranking em tempo real).
+  useEffect(() => {
+    if (!perfil?.uid || minhaPosicao === undefined || minhaPosicao === -1) return;
+    atualizarStreakTop1(perfil.uid, estouEm1Lugar).catch((err) => {
+      console.error('Erro ao atualizar streak de 1º lugar:', err);
+    });
+  }, [perfil?.uid, estouEm1Lugar]);
 
   return (
     <div className="mx-auto max-w-md">

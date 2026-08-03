@@ -22,6 +22,13 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   const analyserRef = useRef(null);
   const animFrameRef = useRef(null);
   const duracaoRef = useRef(0);
+  // Espelha `segundos` (contador visível durante a gravação) num ref, pra
+  // poder ler o valor exato assim que a gravação para (recorder.onstop) —
+  // nesse momento o state `segundos` capturado no closure de
+  // iniciarGravacao já pode estar desatualizado. Usado só pra mandar a
+  // duração aproximada (em segundos inteiros) pra quem consome o áudio
+  // (ex.: conquistas que exigem duração mínima de áudio).
+  const segundosRef = useRef(0);
   // CORREÇÃO DE VAZAMENTO: o AudioContext (usado só pra animar as
   // barrinhas de volume) nunca era fechado — cada gravação criava um novo
   // e o navegador tem um limite de contextos simultâneos por aba. Guardado
@@ -107,7 +114,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
         const tipo = mimeType || 'audio/webm';
         const blob = new Blob(chunksRef.current, { type: tipo });
         setAudioURL(URL.createObjectURL(blob));
-        onGravado(blob);
+        onGravado(blob, segundosRef.current);
         stream.getTracks().forEach((t) => t.stop());
         cancelAnimationFrame(animFrameRef.current);
         setBarras(Array(28).fill(3));
@@ -120,7 +127,11 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
       recorder.start(200);
       setGravando(true);
       setSegundos(0);
-      intervalRef.current = setInterval(() => setSegundos((s) => s + 1), 1000);
+      segundosRef.current = 0;
+      intervalRef.current = setInterval(() => {
+        segundosRef.current += 1;
+        setSegundos(segundosRef.current);
+      }, 1000);
     } catch {
       setErro('Não conseguimos acessar o microfone. Verifique a permissão do navegador.');
     }

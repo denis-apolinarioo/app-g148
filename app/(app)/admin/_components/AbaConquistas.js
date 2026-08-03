@@ -19,6 +19,7 @@ import {
   apagarConquista,
   trocarOrdem,
   migrarConquistasDoCodigoParaFirestore,
+  migrarConquistasNovasParaFirestore,
 } from '@/lib/conquistasRepo';
 import { getTodasAsMissoes } from '@/lib/missionsRepo';
 import { getTodasAsCategoriasAcao } from '@/lib/categoriasAcaoRepo';
@@ -43,6 +44,26 @@ const TIPOS_CONTADOR = [
   { valor: 'dracma_enviado:qtd', label: 'Dracma enviado (quantidade de transferências)' },
   { valor: 'dracma_recebido:qtd', label: 'Dracma recebido (quantidade de transferências)' },
   { valor: 'dracma_ganho_total', label: 'Dracma total ganho (histórico, desde sempre)' },
+  // ---- adicionados junto com o bloco "25 conquistas novas" ----
+  // Os 3 com número embutido no valor (curtidas_por_post:10,
+  // categoria_audio_min:musica:60, pedido_e_oracoes:10) usam o MESMO número
+  // pros 3 níveis I/II/III — o que muda de nível pra nível é o campo "Meta"
+  // (quantos posts/vezes), não esse número embutido. Pra mudar o número
+  // embutido (ex.: exigir 15 curtidas por post em vez de 10), é preciso
+  // apagar e recriar a conquista com um contador diferente — não editável
+  // por aqui.
+  { valor: 'curtidas_por_post:10', label: 'Posts próprios que bateram 10 curtidas' },
+  { valor: 'curtidas_dadas', label: 'Curtidas dadas (em posts diferentes)' },
+  { valor: 'comentarios', label: 'Comentários feitos' },
+  { valor: 'dias_3_oracoes', label: 'Dias com as 3 orações diárias no mesmo dia' },
+  { valor: 'categoria_audio_min:musica:60', label: 'Posts c/ áudio 1min+ na categoria "musica"' },
+  { valor: 'oracao_audio', label: 'Orações diárias enviadas com áudio' },
+  { valor: 'madrugada_oracao', label: 'Orações diárias feitas de madrugada' },
+  { valor: 'conquistas_desbloqueadas', label: 'Conquistas diferentes já desbloqueadas' },
+  { valor: 'cadastro', label: 'Automática no cadastro (1º dia de app)' },
+  { valor: 'conta_idade_dias', label: 'Dias desde a criação da conta' },
+  { valor: 'pedido_e_oracoes:10', label: 'Fez pedido próprio de oração + orou por 10 pessoas' },
+  { valor: 'top1_dias_seguidos', label: 'Dias seguidos em 1º no ranking' },
   { valor: 'manual', label: 'Manual — sem contador automático, eu concedo à mão' },
 ];
 
@@ -84,6 +105,8 @@ export default function AbaConquistas() {
   const [categoriasAcao, setCategoriasAcao] = useState([]);
   const [migrando, setMigrando] = useState(false);
   const [resultadoMigracao, setResultadoMigracao] = useState(null);
+  const [migrandoNovas, setMigrandoNovas] = useState(false);
+  const [resultadoMigracaoNovas, setResultadoMigracaoNovas] = useState(null);
   const [conquistaEditando, setConquistaEditando] = useState(null); // objeto = editar, 'nova' = criar
   const [apagando, setApagando] = useState(null);
 
@@ -117,6 +140,26 @@ export default function AbaConquistas() {
       setResultadoMigracao('Não foi possível migrar agora. Tente de novo em instantes.');
     } finally {
       setMigrando(false);
+    }
+  }
+
+  async function handleMigrarNovas() {
+    if (migrandoNovas) return;
+    setMigrandoNovas(true);
+    setResultadoMigracaoNovas(null);
+    try {
+      const criadas = await migrarConquistasNovasParaFirestore();
+      setResultadoMigracaoNovas(
+        criadas > 0
+          ? `${criadas} conquista(s) nova(s) criada(s) com sucesso.`
+          : 'Nada pra criar — as 25 conquistas novas já estavam aqui.'
+      );
+      carregar();
+    } catch (err) {
+      console.error('Erro na migração das conquistas novas:', err);
+      setResultadoMigracaoNovas('Não foi possível criar agora. Tente de novo em instantes.');
+    } finally {
+      setMigrandoNovas(false);
     }
   }
 
@@ -169,6 +212,26 @@ export default function AbaConquistas() {
         </button>
         {resultadoMigracao && (
           <p className="mt-2 text-center text-xs text-coffee-500">{resultadoMigracao}</p>
+        )}
+      </div>
+
+      <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-4">
+        <p className="text-xs text-coffee-500">
+          Clique aqui pra criar de uma vez as 25 conquistas novas (com os níveis I/II/III de cada
+          uma — 65 no total). Depois de criadas, edite ou apague à vontade aqui embaixo, igual
+          qualquer outra conquista. Seguro clicar mais de uma vez — só cria o que ainda não
+          existir.
+        </p>
+        <button
+          onClick={handleMigrarNovas}
+          disabled={migrandoNovas}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-coffee-200 py-2.5 text-sm font-semibold text-coffee-700 disabled:opacity-40"
+        >
+          {migrandoNovas ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
+          Criar as 25 conquistas novas
+        </button>
+        {resultadoMigracaoNovas && (
+          <p className="mt-2 text-center text-xs text-coffee-500">{resultadoMigracaoNovas}</p>
         )}
       </div>
 

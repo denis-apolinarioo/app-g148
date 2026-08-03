@@ -23,6 +23,9 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
   const [previewFoto, setPreviewFoto] = useState('');
   const [srcCorte, setSrcCorte] = useState(''); // URL da imagem bruta pra tela de corte
   const [blobAudio, setBlobAudio] = useState(null);
+  // Duração aproximada (segundos) do áudio gravado — usada só pra
+  // conquistas que exigem áudio (ex.: "Paulo no Whatsapp").
+  const [duracaoAudio, setDuracaoAudio] = useState(0);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState('');
   const [conquistaNova, setConquistaNova] = useState(null);
@@ -98,7 +101,7 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
         audioURL = await uploadAudio(perfil.uid, blobAudio);
       }
 
-      await submeterMissao(missao.id, perfil, resposta, fotoURL, audioURL);
+      await submeterMissao(missao.id, perfil, resposta, fotoURL, audioURL, missao.permiteAudio && blobAudio ? duracaoAudio : 0);
 
       vibrarMissaoConcluida();
 
@@ -297,7 +300,16 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
                 <label className="mb-1.5 block text-xs font-medium text-coffee-500">
                   Áudio {missao.audioObrigatoria ? '' : '(opcional)'}
                 </label>
-                <AudioRecorderButton onGravado={setBlobAudio} onLimpar={() => setBlobAudio(null)} />
+                <AudioRecorderButton
+                  onGravado={(blob, segundos) => {
+                    setBlobAudio(blob);
+                    setDuracaoAudio(segundos || 0);
+                  }}
+                  onLimpar={() => {
+                    setBlobAudio(null);
+                    setDuracaoAudio(0);
+                  }}
+                />
               </div>
             )}
           </div>
