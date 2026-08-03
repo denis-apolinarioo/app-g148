@@ -1,18 +1,23 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
-import { subscribeToComments, addComment, deleteComment, toggleCommentLike, createReport } from '@/lib/firestore-helpers';
+import { subscribeToComments, addComment, deleteComment, toggleCommentLike, createReport, getAllUsers } from '@/lib/firestore-helpers';
 import { useAuth } from '@/components/AuthProvider';
 import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
 import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
 import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
 import { estaOffline } from '@/lib/connectivity';
 import { enfileirarAcaoOffline } from '@/lib/offlineQueue';
+import { combinaComBusca } from '@/lib/searchUtils';
 import Avatar from '@/components/Avatar';
 import TextoComLinks from '@/components/TextoComLinks';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { Send, Trash2, Heart, Flag } from 'lucide-react';
+
+// Quantas sugestões de @menção mostrar de cada vez — lista curta de propósito,
+// pra caber numa tela pequena sem precisar rolar muito.
+const MAXIMO_SUGESTOES_MENCAO = 5;
 
 const JANELA_DUPLO_TOQUE = 300; // ms — mesmo valor usado no PostCard, pra manter o gesto consistente
 
@@ -188,6 +193,66 @@ export default function CommentSection({ postId, postAutorId }) {
   const [enviando, setEnviando] = useState(false);
   // Item 17 do Bloco 9 — debounce simples pra ignorar duplo toque rápido.
   const emDebounceEnviar = useProtecaoCliqueDuplo();
+  const inputRef = useRef(null);
+
+  // --- @menção com lista de membros ------------------------------------
+  // Lista de usuários só é buscada na primeira vez que a pessoa digita "@"
+  // neste comentário (não em toda montagem do CommentSection), pra não
+  // disparar uma leitura de todos os usuários pra cada post do Feed à toa.
+  const [usuarios, setUsuarios] = useState(null);
+  const [mostrarMencoes, setMostrarMencoes] = useState(false);
+  const [termoMencao, setTermoMencao] = useState('');
+
+  useEffect(() => {
+    if (mostrarMencoes && usuarios === null) {
+      getAllUsers().then(setUsuarios);
+    }
+  }, [mostrarMencoes, usuarios]);
+
+  const sugestoesMencao = useMemo(() => {
+    if (!mostrarMencoes || !usuarios) return [];
+    return usuarios
+      .filter((u) => u.username && combinaComBusca(u.username, termoMencao))
+      .slice(0, MAXIMO_SUGESTOES_MENCAO);
+  }, [usuarios, termoMencao, mostrarMencoes]);
+
+  // Detecta se o cursor está logo depois de um "@...", pra abrir/atualizar
+  // a lista — e fecha assim que a pessoa digita um espaço ou apaga o "@".
+  function handleTextoChange(e) {
+    const valor = e.target.value;
+    setTexto(valor);
+
+    const cursor = e.target.selectionStart ?? valor.length;
+    const antesDoCursor = valor.slice(0, cursor);
+    const match = antesDoCursor.match(/(?:^|\s)@([a-zA-Z0-9_.]*)$/);
+
+    if (match) {
+      setTermoMencao(match[1]);
+      setMostrarMencoes(true);
+    } else {
+      setMostrarMencoes(false);
+    }
+  }
+
+  // Toca num nome da lista: troca o "@termo" digitado pelo "@username"
+  // completo (com espaço no final) e devolve o foco pro campo.
+  function selecionarMencao(usuario) {
+    const campo = inputRef.current;
+    const cursor = campo?.selectionStart ?? texto.length;
+    const antesDoCursor = texto.slice(0, cursor);
+    const depoisDoCursor = texto.slice(cursor);
+    const antesSemMencao = antesDoCursor.replace(/@([a-zA-Z0-9_.]*)$/, '');
+    const novoTexto = `${antesSemMencao}@${usuario.username} ${depoisDoCursor}`;
+
+    setTexto(novoTexto);
+    setMostrarMencoes(false);
+
+    const posicaoFinal = antesSemMencao.length + usuario.username.length + 2;
+    requestAnimationFrame(() => {
+      campo?.focus();
+      campo?.setSelectionRange(posicaoFinal, posicaoFinal);
+    });
+  }
 
   useEffect(() => {
     const unsub = subscribeToComments(postId, setComentarios);
@@ -243,12 +308,32 @@ export default function CommentSection({ postId, postAutorId }) {
 
       <form onSubmit={handleEnviar} className="flex items-center gap-2">
         <Avatar src={perfil?.fotoURL} nome={perfil?.nome || ''} tamanho={28} />
-        <input
-          value={texto}
-          onChange={(e) => setTexto(e.target.value)}
-          placeholder="Escreva um comentário..."
-          className="flex-1 rounded-full border border-coffee-100 bg-cream px-3.5 py-2 text-sm text-coffee-800 placeholder:text-coffee-300"
-        />
+        <div className="relative flex-1">
+          <input
+            ref={inputRef}
+            value={texto}
+            onChange={handleTextoChange}
+            onBlur={() => setTimeout(() => setMostrarMencoes(false), 150)}
+            placeholder="Escreva um comentário..."
+            className="w-full rounded-full border border-coffee-100 bg-cream px-3.5 py-2 text-sm text-coffee-800 placeholder:text-coffee-300"
+          />
+          {mostrarMencoes && sugestoesMencao.length > 0 && (
+            <ul className="absolute inset-x-0 top-full z-10 mt-1.5 max-h-44 overflow-y-auto rounded-xl border border-coffee-100 bg-cream-card py-1 shadow-soft">
+              {sugestoesMencao.map((u) => (
+                <li key={u.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selecionarMencao(u)}
+                    className="block w-full truncate px-3.5 py-2 text-left text-sm font-medium text-coffee-700 hover:bg-coffee-50"
+                  >
+                    @{u.username}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <button
           type="submit"
           disabled={!texto.trim() || enviando}
