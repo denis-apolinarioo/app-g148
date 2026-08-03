@@ -133,7 +133,7 @@ export default function ConfirmarResetModal({ acao, titulo, descricao, onFechar,
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center">
-      <div className="w-full max-w-md rounded-t-2xl bg-cream sm:rounded-2xl">
+      <div className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-coffee-100 px-5 py-4">
           <h2 className="font-destaque text-lg font-semibold text-coffee-800">{titulo}</h2>
           <button onClick={onFechar} className="text-coffee-400">

@@ -221,7 +221,7 @@ function ConfirmarLimparTudoModal({ quantidade, limpando, erro, onCancelar, onCo
       onClick={onCancelar}
     >
       <div
-        className="w-full max-w-md rounded-t-2xl bg-cream-card p-5 sm:rounded-2xl"
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream-card p-5 sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-red-50">

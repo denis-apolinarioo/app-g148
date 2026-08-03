@@ -19,7 +19,7 @@ export default function ConquistaDetalheModal({ conquista, onFechar }) {
       onClick={onFechar}
     >
       <div
-        className="relative w-full max-w-xs rounded-t-2xl bg-cream p-6 text-center sm:rounded-2xl"
+        className="relative max-h-[85vh] w-full max-w-xs overflow-y-auto rounded-t-2xl bg-cream p-6 text-center sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
