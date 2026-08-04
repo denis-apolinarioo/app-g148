@@ -6,6 +6,7 @@ import { useAuth } from '@/components/AuthProvider';
 import LoadingScreen from '@/components/LoadingScreen';
 import Avatar from '@/components/Avatar';
 import { createUserProfile, isUsernameAvailable } from '@/lib/firestore-helpers';
+import { adicionarUsernameValidoCache } from '@/lib/usersCache';
 import { uploadFotoPerfil } from '@/lib/storage';
 import { Camera, Check, X, Loader2 } from 'lucide-react';
 
@@ -108,6 +109,7 @@ export default function OnboardingPage() {
         fotoURL,
         proposito: proposito.trim(),
       });
+      adicionarUsernameValidoCache(username.trim());
 
       router.replace('/feed');
     } catch (err) {

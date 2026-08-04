@@ -202,6 +202,7 @@ export default function CommentSection({ postId, postAutorId }) {
   const [usuarios, setUsuarios] = useState(null);
   const [mostrarMencoes, setMostrarMencoes] = useState(false);
   const [termoMencao, setTermoMencao] = useState('');
+  const [indiceAtivoMencao, setIndiceAtivoMencao] = useState(0);
 
   useEffect(() => {
     if (mostrarMencoes && usuarios === null) {
@@ -215,6 +216,13 @@ export default function CommentSection({ postId, postAutorId }) {
       .filter((u) => u.username && combinaComBusca(u.username, termoMencao))
       .slice(0, MAXIMO_SUGESTOES_MENCAO);
   }, [usuarios, termoMencao, mostrarMencoes]);
+
+  // Sempre que a lista de sugestões muda (nova letra digitada, lista abriu
+  // de novo etc.), volta a "seta" pro primeiro item — evita que o Enter
+  // selecione um item de uma lista antiga que não existe mais na tela.
+  useEffect(() => {
+    setIndiceAtivoMencao(0);
+  }, [sugestoesMencao]);
 
   // Detecta se o cursor está logo depois de um "@...", pra abrir/atualizar
   // a lista — e fecha assim que a pessoa digita um espaço ou apaga o "@".
@@ -234,8 +242,33 @@ export default function CommentSection({ postId, postAutorId }) {
     }
   }
 
-  // Toca num nome da lista: troca o "@termo" digitado pelo "@username"
-  // completo (com espaço no final) e devolve o foco pro campo.
+  // CORREÇÃO DE BUG: com a lista de sugestões aberta, apertar Enter
+  // disparava o envio do comentário ainda pela metade (ex.: "Oi @jo"),
+  // porque Enter num <input> sempre submete o form por padrão. Isso
+  // "reiniciava" o campo no meio da menção e atrapalhava a mensagem
+  // seguinte. Agora, com a lista aberta, Enter escolhe a sugestão
+  // destacada (setas ↑/↓ trocam qual) em vez de enviar; Esc fecha a lista
+  // sem escolher nada. Enter sem a lista aberta continua enviando normal.
+  function handleTeclaNoInput(e) {
+    if (!mostrarMencoes || sugestoesMencao.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setIndiceAtivoMencao((i) => Math.min(i + 1, sugestoesMencao.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setIndiceAtivoMencao((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      selecionarMencao(sugestoesMencao[indiceAtivoMencao] || sugestoesMencao[0]);
+    } else if (e.key === 'Escape') {
+      setMostrarMencoes(false);
+    }
+  }
+
+  // Toca (ou confirma pelo teclado) num nome da lista: troca o "@termo"
+  // digitado pelo "@username" completo (com espaço no final) e devolve o
+  // foco pro campo.
   function selecionarMencao(usuario) {
     const campo = inputRef.current;
     const cursor = campo?.selectionStart ?? texto.length;
@@ -313,19 +346,22 @@ export default function CommentSection({ postId, postAutorId }) {
             ref={inputRef}
             value={texto}
             onChange={handleTextoChange}
+            onKeyDown={handleTeclaNoInput}
             onBlur={() => setTimeout(() => setMostrarMencoes(false), 150)}
             placeholder="Escreva um comentário..."
             className="w-full rounded-full border border-coffee-100 bg-cream px-3.5 py-2 text-sm text-coffee-800 placeholder:text-coffee-300"
           />
           {mostrarMencoes && sugestoesMencao.length > 0 && (
             <ul className="absolute inset-x-0 top-full z-10 mt-1.5 max-h-44 overflow-y-auto rounded-xl border border-coffee-100 bg-cream-card py-1 shadow-soft">
-              {sugestoesMencao.map((u) => (
+              {sugestoesMencao.map((u, i) => (
                 <li key={u.id}>
                   <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => selecionarMencao(u)}
-                    className="block w-full truncate px-3.5 py-2 text-left text-sm font-medium text-coffee-700 hover:bg-coffee-50"
+                    className={`block w-full truncate px-3.5 py-2 text-left text-sm font-medium text-coffee-700 hover:bg-coffee-50 ${
+                      i === indiceAtivoMencao ? 'bg-coffee-50' : ''
+                    }`}
                   >
                     @{u.username}
                   </button>
