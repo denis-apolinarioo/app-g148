@@ -13,7 +13,7 @@
 // log do servidor.
 // ============================================================================
 import { NextResponse } from 'next/server';
-import { getTransporter, remetentePadrao } from '@/lib/mailer';
+import { getTransporter, remetentePadrao, origemValida } from '@/lib/mailer';
 
 const ROTULO_ACAO = {
   pontos: 'zerar os Pontos de Comunhão de TODOS os usuários',
@@ -21,6 +21,10 @@ const ROTULO_ACAO = {
 };
 
 export async function POST(request) {
+  if (!origemValida(request)) {
+    return NextResponse.json({ erro: 'ORIGEM_INVALIDA' }, { status: 403 });
+  }
+
   let body;
   try {
     body = await request.json();

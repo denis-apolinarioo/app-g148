@@ -126,6 +126,22 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // ------------------------------------------------------------------------
+    // SEGREDOS DA CARTEIRA (PIN) — hash+salt do PIN de 4 dígitos, tentativas,
+    // bloqueio e código de recuperação (lib/dracma.js).
+    // ------------------------------------------------------------------------
+    // CORREÇÃO DE SEGURANÇA: esses campos ficavam antes direto em
+    // users/{uid}, que tem `allow read: if isSignedIn()` acima (necessário
+    // pra Feed/Ranking/@menções funcionarem) — ou seja, QUALQUER pessoa
+    // logada conseguia ler o hash+salt do PIN de QUALQUER outra pessoa e
+    // testar as 10.000 combinações offline, sem passar pelo bloqueio de 5
+    // tentativas. Coleção separada, só o próprio dono lê ou grava — nenhuma
+    // outra parte do app precisa ler o PIN de outra pessoa, então isso não
+    // tira nenhuma funcionalidade.
+    match /walletSecrets/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
     // Reserva de nomes de usuário — impede dois perfis com o mesmo @usuario.
     match /usernames/{username} {
       allow read: if isSignedIn();
