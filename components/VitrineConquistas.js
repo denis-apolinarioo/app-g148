@@ -1,10 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import * as Icons from 'lucide-react';
 import { Plus } from 'lucide-react';
 import VitrineConquistasModal from '@/components/VitrineConquistasModal';
-import { iconePascalCase } from '@/lib/missionIcons';
+import EmblemaConquista from '@/components/EmblemaConquista';
 
 /**
  * Vitrine de conquistas em destaque, no topo do perfil (3 "medalhas").
@@ -29,33 +28,24 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
 
   return (
     <div className="mt-3 flex justify-end gap-2">
-      {espacos.map((conquista, i) => {
-        const Icone = conquista ? Icons[iconePascalCase(conquista.icone)] || Icons.Award : null;
-        return (
-          <button
-            key={conquista?.id || `vazio-${i}`}
-            type="button"
-            onClick={() => souDono && setModalAberto(true)}
-            disabled={!souDono}
-            title={conquista?.nome}
-            className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full transition-transform ${
-              conquista
-                ? 'bg-gradient-to-br from-gold to-coffee-600 shadow-card'
-                : 'border-2 border-dashed border-coffee-200 bg-coffee-50'
-            } ${souDono ? 'active:scale-95' : ''}`}
-          >
-            {conquista ? (
-              conquista.imagemURL ? (
-                <img src={conquista.imagemURL} alt="" className="h-full w-full rounded-full object-cover" />
-              ) : (
-                <Icone size={20} strokeWidth={1.8} className="text-cream" />
-              )
-            ) : (
+      {espacos.map((conquista, i) => (
+        <button
+          key={conquista?.id || `vazio-${i}`}
+          type="button"
+          onClick={() => souDono && setModalAberto(true)}
+          disabled={!souDono}
+          title={conquista?.nome}
+          className={`flex-shrink-0 transition-transform ${souDono ? 'active:scale-95' : ''}`}
+        >
+          {conquista ? (
+            <EmblemaConquista conquista={conquista} size={48} bloqueada={false} />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-dashed border-coffee-200 bg-coffee-50">
               <Plus size={16} className="text-coffee-300" />
-            )}
-          </button>
-        );
-      })}
+            </div>
+          )}
+        </button>
+      ))}
 
       {modalAberto && (
         <VitrineConquistasModal

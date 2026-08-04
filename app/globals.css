@@ -188,6 +188,57 @@ html.dark .placeholder\:text-coffee-300::placeholder {
 }
 
 /* ----------------------------------------------------------------------
+   BRILHO DOS EMBLEMAS DE CONQUISTA (tier diamante/ouro/prata/bronze/ferro)
+   ----------------------------------------------------------------------
+   Um "sweep" de luz que varre só os pixels visíveis do PNG do emblema —
+   por isso o mesmo arquivo entra como -webkit-mask-image/mask-image, pra
+   nunca vazar luz por cima do vão onde fica a foto da conquista. Cor,
+   duração e intensidade vêm de lib/emblemas.js (por tier) via variáveis
+   CSS, setadas inline em components/EmblemaConquista.js.
+   mix-blend-mode: screen faz a luz somar em cima do metal em vez de pintar
+   um retalho de cor plano por cima.
+   ---------------------------------------------------------------------- */
+.emblema-brilho {
+  background: linear-gradient(
+    115deg,
+    transparent 32%,
+    var(--brilho-cor, rgba(255, 255, 255, 0.8)) 50%,
+    transparent 68%
+  );
+  background-size: 260% 260%;
+  -webkit-mask-image: var(--brilho-mascara);
+  mask-image: var(--brilho-mascara);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  mix-blend-mode: screen;
+  opacity: var(--brilho-intensidade, 0.6);
+  animation: emblema-brilho-varredura var(--brilho-duracao, 3.2s) ease-in-out infinite;
+}
+
+@keyframes emblema-brilho-varredura {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emblema-brilho {
+    animation: none;
+    background-position: 50% 50%;
+  }
+}
+
+/* ----------------------------------------------------------------------
    NAVEGAÇÃO POR ARRASTAR (swipe) — troca de aba (Feed/Missões/Oração/
    Ranking/Perfil), tanto pelo gesto quanto pelo toque normal na BottomNav.
    Entrada leve (fade + um pequeno deslize), sem depender de nenhuma lib de

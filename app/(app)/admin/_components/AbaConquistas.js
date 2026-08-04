@@ -34,6 +34,7 @@ import { useConfirm } from '@/components/ConfirmProvider';
 import IconGalleryPicker from '@/components/IconGalleryPicker';
 import ImageCropper from '@/components/ImageCropper';
 import { iconePascalCase } from '@/lib/missionIcons';
+import { EMBLEMAS, caminhoEmblema } from '@/lib/emblemas';
 import BuscaUsuario from './BuscaUsuario';
 import { useArrastarReordenar } from './useArrastarReordenar';
 
@@ -416,6 +417,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
   const [nome, setNome] = useState(conquistaInicial?.nome || '');
   const [descricao, setDescricao] = useState(conquistaInicial?.descricao || '');
   const [icone, setIcone] = useState(conquistaInicial?.icone || 'award');
+  const [emblema, setEmblema] = useState(conquistaInicial?.emblema || '');
   const [tipoBase, setTipoBase] = useState(iniciais.tipoBase);
   const [missaoId, setMissaoId] = useState(iniciais.missaoId);
   const [categoriaId, setCategoriaId] = useState(iniciais.categoriaId);
@@ -463,6 +465,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
         nome: nome.trim(),
         descricao: descricao.trim(),
         icone,
+        emblema,
         contadorTipo: montarContadorTipo(tipoBase, missaoId, categoriaId),
         meta: tipoBase === 'manual' ? null : Number(meta) || 0,
         ativa,
@@ -553,6 +556,35 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
 
           <Campo label="Ícone de reserva (usado enquanto não há imagem)">
             <IconGalleryPicker value={icone} onChange={(valor) => setIcone(valor || 'award')} />
+          </Campo>
+
+          <Campo label="Emblema (moldura do tier — opcional)">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setEmblema('')}
+                className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold ${
+                  emblema === ''
+                    ? 'border-coffee-600 text-coffee-600'
+                    : 'border-dashed border-coffee-200 text-coffee-300'
+                }`}
+              >
+                Nenhum
+              </button>
+              {EMBLEMAS.map((tier) => (
+                <button
+                  key={tier.id}
+                  type="button"
+                  onClick={() => setEmblema(tier.id)}
+                  title={tier.nome}
+                  className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full ${
+                    emblema === tier.id ? 'ring-2 ring-coffee-600 ring-offset-2 ring-offset-cream' : ''
+                  }`}
+                >
+                  <img src={caminhoEmblema(tier.id)} alt={tier.nome} className="h-full w-full" />
+                </button>
+              ))}
+            </div>
           </Campo>
 
           <Campo label="Nome">

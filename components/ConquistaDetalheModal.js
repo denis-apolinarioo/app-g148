@@ -1,18 +1,15 @@
 'use client';
 
-import * as Icons from 'lucide-react';
-import { X, Lock } from 'lucide-react';
-import { iconePascalCase } from '@/lib/missionIcons';
+import { X } from 'lucide-react';
+import EmblemaConquista from '@/components/EmblemaConquista';
 
 /**
  * Modal de detalhe de uma conquista — abre ao tocar em qualquer badge
- * (components/AchievementBadge.js), desbloqueada ou não. Mostra a imagem
- * circular (ou o ícone, quando o Admin ainda não subiu imagem), o nome e o
- * texto configurados no painel Admin.
+ * (components/AchievementBadge.js), desbloqueada ou não. Mostra o emblema
+ * (moldura do tier + foto/ícone, via EmblemaConquista), o nome e o texto
+ * configurados no painel Admin.
  */
 export default function ConquistaDetalheModal({ conquista, onFechar }) {
-  const Icone = Icons[iconePascalCase(conquista.icone)] || Icons.Award;
-
   return (
     <div
       className="fixed inset-0 z-[70] flex items-end justify-center bg-coffee-900/40 sm:items-center"
@@ -29,33 +26,8 @@ export default function ConquistaDetalheModal({ conquista, onFechar }) {
           <X size={18} />
         </button>
 
-        <div
-          className={`relative mx-auto flex h-20 w-20 items-center justify-center rounded-full ${
-            conquista.desbloqueada
-              ? 'bg-gradient-to-br from-gold to-coffee-600 shadow-card'
-              : 'border border-coffee-100 bg-coffee-50'
-          }`}
-        >
-          {conquista.imagemURL ? (
-            <img
-              src={conquista.imagemURL}
-              alt=""
-              className={`h-full w-full rounded-full object-cover ${
-                conquista.desbloqueada ? '' : 'opacity-40 grayscale'
-              }`}
-            />
-          ) : (
-            <Icone
-              size={30}
-              strokeWidth={1.8}
-              className={conquista.desbloqueada ? 'text-cream' : 'text-coffee-200'}
-            />
-          )}
-          {!conquista.desbloqueada && (
-            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-coffee-50/60">
-              <Lock size={22} strokeWidth={2.2} className="text-coffee-300" />
-            </div>
-          )}
+        <div className="mx-auto flex items-center justify-center">
+          <EmblemaConquista conquista={conquista} size={96} />
         </div>
 
         <p className="mt-4 font-destaque text-lg font-semibold text-coffee-800">
