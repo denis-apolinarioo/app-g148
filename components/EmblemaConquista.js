@@ -89,6 +89,10 @@ export default function EmblemaConquista({
   // Estilo comum da moldura (imagem do anel) e do brilho mascarado nela —
   // os dois precisam ficar exatamente sobrepostos, maiores que o círculo e
   // deslocados pra fora, então compartilham o mesmo tamanho/posição.
+  // maxWidth/maxHeight: 'none' é necessário só na <img> (não no <div> do
+  // brilho) pra anular o reset global do Tailwind (`img { max-width: 100%;
+  // height: auto }`), que senão prende a largura da moldura a 100% do
+  // círculo e distorce/desalinha o anel.
   const estiloMoldura = { left: deslocX, top: deslocY, width: escala, height: escala };
 
   return (
@@ -121,10 +125,10 @@ export default function EmblemaConquista({
         src={src}
         alt=""
         draggable={false}
-        className={`pointer-events-none absolute z-10 select-none ${
+        className={`pointer-events-none absolute z-10 max-w-none select-none ${
           travada ? 'opacity-40 grayscale' : ''
         }`}
-        style={estiloMoldura}
+        style={{ ...estiloMoldura, maxWidth: 'none', maxHeight: 'none' }}
       />
 
       {/* brilho animado — só quando desbloqueada e sem animação de abertura
