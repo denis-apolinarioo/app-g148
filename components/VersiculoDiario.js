@@ -2,9 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { getVersiculoDoDia } from '@/lib/bible';
+import { pontuarAberturaVersiculo } from '@/lib/points';
 
-export default function VersiculoDiario() {
+/**
+ * Versículo do dia — em vez de mostrar o texto direto, vira um convite
+ * ("Ver o que o Senhor tem a me dizer hoje") ao lado de um pergaminho. Ao
+ * tocar no texto OU no pergaminho, ele "desenrola" pra baixo revelando o
+ * versículo; tocar de novo fecha. Mesmo tema/cores de sempre (coffee-700 +
+ * dourado), só ganhou esse novo comportamento.
+ *
+ * A 1ª abertura de cada dia credita pontos (valor configurável no Admin,
+ * aba Ações > "Abrir o versículo do dia") — abrir/fechar de novo no mesmo
+ * dia não pontua de novo (ver lib/points.js -> pontuarAberturaVersiculo).
+ */
+export default function VersiculoDiario({ uid }) {
   const [versiculo, setVersiculo] = useState(null);
+  const [aberto, setAberto] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -16,30 +29,75 @@ export default function VersiculoDiario() {
     };
   }, []);
 
+  function handleAlternar() {
+    if (!versiculo) return;
+    setAberto((atual) => {
+      const vaiAbrir = !atual;
+      if (vaiAbrir && uid) {
+        pontuarAberturaVersiculo(uid).catch((err) => {
+          console.error('Erro ao pontuar abertura do versículo:', err);
+        });
+      }
+      return vaiAbrir;
+    });
+  }
+
   return (
-    <div className="relative overflow-hidden rounded-xl2 bg-coffee-700 px-6 py-7 shadow-soft">
+    <div className="relative overflow-hidden rounded-xl2 bg-coffee-700 px-6 py-6 shadow-soft">
       <div className="pointer-events-none absolute -right-6 -top-8 font-display text-[7rem] leading-none text-coffee-600/40">
         &rdquo;
       </div>
+
       <p className="relative text-[11px] font-semibold uppercase tracking-wider text-coffee-200">
         Versículo do dia
       </p>
-      {versiculo ? (
-        <>
-          <p className="relative mt-3 font-display text-lg italic leading-relaxed text-cream">
-            {versiculo.texto}
-          </p>
-          <p className="relative mt-3 text-sm font-medium text-coffee-200">
-            {versiculo.referencia} · {versiculo.versao || 'NAA'}
-          </p>
-        </>
-      ) : (
-        <div className="relative mt-3 space-y-2">
-          <div className="h-4 w-full animate-pulse rounded bg-coffee-600/60" />
-          <div className="h-4 w-4/5 animate-pulse rounded bg-coffee-600/60" />
-          <div className="mt-2 h-3 w-1/3 animate-pulse rounded bg-coffee-600/60" />
+
+      <button
+        type="button"
+        onClick={handleAlternar}
+        disabled={!versiculo}
+        className="relative mt-3 flex w-full items-center gap-3.5 text-left disabled:opacity-70"
+      >
+        {/* Pergaminho — dois "rolos" dourados nas pontas e o corpo em tom
+            claro, girando levemente quando aberto pra reforçar o toque. */}
+        <span
+          className={`relative flex h-12 w-9 flex-shrink-0 flex-col items-stretch justify-between rounded-[3px] bg-cream-card/95 shadow-md transition-transform duration-500 ${
+            aberto ? 'rotate-3' : '-rotate-2'
+          }`}
+        >
+          <span className="h-2 flex-shrink-0 rounded-full bg-gradient-to-r from-gold to-coffee-400 shadow-sm" />
+          <span className="h-2 flex-shrink-0 rounded-full bg-gradient-to-r from-coffee-400 to-gold shadow-sm" />
+        </span>
+
+        {versiculo ? (
+          <span className="font-display text-base italic leading-snug text-cream">
+            Ver o que o Senhor tem a me dizer hoje
+          </span>
+        ) : (
+          <span className="flex-1 space-y-2">
+            <span className="block h-4 w-full animate-pulse rounded bg-coffee-600/60" />
+            <span className="block h-4 w-4/5 animate-pulse rounded bg-coffee-600/60" />
+          </span>
+        )}
+      </button>
+
+      {/* "Desenrola pra baixo": grid-template-rows de 0fr -> 1fr é o jeito
+          mais estável de animar até altura automática sem medir nada em
+          JS — o conteúdo real fica dentro de um overflow-hidden. */}
+      <div
+        className={`relative grid transition-[grid-template-rows] duration-500 ease-in-out ${
+          aberto ? 'grid-rows-[1fr] mt-4' : 'grid-rows-[0fr]'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div className="border-t border-coffee-500/50 pt-4">
+            <p className="font-display text-lg italic leading-relaxed text-cream">{versiculo?.texto}</p>
+            <p className="mt-3 text-sm font-medium text-coffee-200">
+              {versiculo?.referencia} · {versiculo?.versao || 'NAA'}
+            </p>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

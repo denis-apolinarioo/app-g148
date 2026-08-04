@@ -16,6 +16,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import Avatar from '@/components/Avatar';
+import AudioPlayer from '@/components/AudioPlayer';
 import CommentSection from '@/components/CommentSection';
 import TextoComLinks from '@/components/TextoComLinks';
 import ImageViewerModal from '@/components/ImageViewerModal';
@@ -353,19 +354,8 @@ export default function PostCard({ post, usuarioAtual }) {
 
     if (item.tipo === 'audio') {
       return (
-        <div
-          key={key}
-          onClick={comDuploToque ? handleTapNoTexto : undefined}
-          className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3 pb-3 pt-4"
-        >
-          {comDuploToque && (
-            <p className="pointer-events-none mb-2 text-center text-[11px] text-coffee-300">
-              toque duas vezes para curtir
-            </p>
-          )}
-          <div onClick={(e) => e.stopPropagation()}>
-            <audio controls src={item.url} className="w-full" />
-          </div>
+        <div key={key} className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3 py-3">
+          <AudioPlayer src={item.url} onTap={comDuploToque ? handleTapNoTexto : undefined} />
           {comDuploToque && coracaoAnimado && (
             <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <Heart size={56} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
@@ -379,10 +369,16 @@ export default function PostCard({ post, usuarioAtual }) {
       return (
         <div
           key={key}
-          className="mb-2.5 flex items-center gap-2 rounded-xl bg-green-50 px-3.5 py-2.5 text-sm text-green-800"
+          onClick={comDuploToque ? handleTapNoTexto : undefined}
+          className="relative mb-2.5 flex items-center gap-2 rounded-xl bg-green-50 px-3.5 py-2.5 text-sm text-green-800"
         >
           <CheckCircle2 size={16} className="flex-shrink-0 text-green-600" />
           <span>{item.label}</span>
+          {comDuploToque && coracaoAnimado && (
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <Heart size={44} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
+            </span>
+          )}
         </div>
       );
     }
@@ -404,9 +400,18 @@ export default function PostCard({ post, usuarioAtual }) {
 
     // texto-curto / texto-longo
     return (
-      <div key={key} className="mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5">
+      <div
+        key={key}
+        onClick={comDuploToque ? handleTapNoTexto : undefined}
+        className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5"
+      >
         {item.label && <p className="mb-0.5 text-[11px] font-medium text-coffee-400">{item.label}</p>}
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-coffee-700">{item.valor}</p>
+        {comDuploToque && coracaoAnimado && (
+          <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <Heart size={44} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
+          </span>
+        )}
       </div>
     );
   }
@@ -557,23 +562,12 @@ export default function PostCard({ post, usuarioAtual }) {
         </button>
       )}
 
-      {/* Áudio manual — os controles nativos (play, barra) ocupam todo o
-          espaço clicável deles, então o duplo toque não pode ficar "em
-          cima" do áudio (senão nunca sobra clique pra reconhecer o gesto,
-          e ainda atrapalha o play/pause). Por isso criamos um cartão ao
-          redor do player, com uma faixa de toque própria (acima) livre pra
-          curtir. */}
+      {/* Áudio manual — player com a cara do app (ver AudioPlayer.js), com
+          duplo toque pra curtir em qualquer parte dele (play, onda, ou o
+          espaço vazio ao redor). */}
       {!itensMissao && post.tipo === 'audio' && post.midiaURL && (
-        <div
-          onClick={handleTapNoTexto}
-          className="relative mb-3 rounded-xl border border-coffee-100 bg-cream px-3 pb-3 pt-4"
-        >
-          <p className="pointer-events-none mb-2 text-center text-[11px] text-coffee-300">
-            toque duas vezes para curtir
-          </p>
-          <div onClick={(e) => e.stopPropagation()}>
-            <audio controls src={post.midiaURL} className="w-full" />
-          </div>
+        <div className="relative mb-3 rounded-xl border border-coffee-100 bg-cream px-3 py-3">
+          <AudioPlayer src={post.midiaURL} onTap={handleTapNoTexto} />
           {coracaoAnimado && (
             <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <Heart size={56} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />

@@ -74,7 +74,7 @@ export default function FeedPage() {
       </header>
 
       <div className="space-y-4 px-4 pt-4">
-        <VersiculoDiario />
+        <VersiculoDiario uid={perfil?.uid} />
 
         <button
           onClick={() => setCriando(true)}

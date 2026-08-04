@@ -105,13 +105,14 @@ service cloud.firestore {
         (userId == request.auth.uid &&
           request.resource.data.isAdmin == resource.data.isAdmin &&
           request.resource.data.get('travado', false) == resource.data.get('travado', false)) ||
-        // Um admin pode ajustar os pontos, o Dracma OU o travamento de outra
-        // pessoa (usado ao aprovar um desafio individual, ao ajustar saldo
-        // manualmente — lib/dracma.js -> ajustarDracmaManualmente — e ao
-        // travar/destravar acesso — lib/firestore-helpers.js ->
-        // toggleTravarUsuario). PACOTE 2: adicionado `dracmas` a esta lista
-        // (antes só `pontos`/`travado` estavam liberados aqui).
-        (isAdmin() && (apenasEstesCamposMudaram(['pontos']) || apenasEstesCamposMudaram(['dracmas']) || apenasEstesCamposMudaram(['travado']))) ||
+        // Um admin pode ajustar os pontos, o Dracma, o travamento OU a
+        // função (tagFuncao) de outra pessoa (usado ao aprovar um desafio
+        // individual, ao ajustar saldo manualmente — lib/dracma.js ->
+        // ajustarDracmaManualmente —, ao travar/destravar acesso —
+        // lib/firestore-helpers.js -> toggleTravarUsuario — e ao trocar a
+        // função de alguém pela aba Usuários do Admin). PACOTE 2: `dracmas`
+        // adicionado; leva de Funções: `tagFuncao` adicionado.
+        (isAdmin() && (apenasEstesCamposMudaram(['pontos']) || apenasEstesCamposMudaram(['dracmas']) || apenasEstesCamposMudaram(['travado']) || apenasEstesCamposMudaram(['tagFuncao']))) ||
         // PACOTE 3 — Transferência de Dracma entre usuários: permite que
         // QUALQUER pessoa logada e não travada credite Dracma em OUTRO
         // usuário (o destinatário da transferência que ela mesma iniciou),
@@ -235,6 +236,18 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------------
+    // FUNÇÕES (papéis da comunidade, ex.: "Líder de Célula") — mesmo padrão
+    // de "conquistas"/"categoriasAcao": o Admin cria/edita/reordena/apaga
+    // pelo painel (aba Funções, lib/funcoesRepo.js). Leitura liberada pra
+    // qualquer pessoa logada, porque o seletor de função no Editar Perfil
+    // precisa ler as funções ativas.
+    // ------------------------------------------------------------------------
+    match /funcoes/{funcaoId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
     // FASE 2 — CATEGORIAS DE AÇÃO (catálogo) — mesmo padrão de "conquistas":
     // o Admin cria/edita/apaga pelo painel (aba Categorias). Leitura
     // liberada pra qualquer pessoa logada, porque o seletor de categoria ao
@@ -271,7 +284,24 @@ service cloud.firestore {
       allow create: if isSignedIn() && !usuarioTravado() &&
         request.resource.data.uid == request.auth.uid &&
         submissionId.matches(request.auth.uid + '_.*');
-      allow update, delete: if false;
+      // CORREÇÃO DE BUG: o app grava o `postId` do post automático de volta
+      // nesta submissão logo depois de criá-lo (ver submeterMissao em
+      // lib/points.js), pra permitir "encaminhar" da submissão pro post
+      // gerado. A regra antiga bloqueava QUALQUER update, então essa escrita
+      // sempre falhava com permissão negada (os pontos já tinham sido
+      // creditados antes, então o erro só quebrava esse último passo). Só o
+      // dono da submissão pode alterar, e só o campo `postId`.
+      allow update: if isSignedIn() && resource.data.uid == request.auth.uid &&
+        apenasEstesCamposMudaram(['postId']);
+      // CORREÇÃO DE BUG: apagar o post automático de uma missão (ver
+      // removerPontosMissaoDoPostApagado em lib/points.js) tenta apagar
+      // este documento pra liberar a missão de novo, mas a regra recusava
+      // TODA exclusão — o app engolia o erro (try/catch), então pontos e
+      // Dracma voltavam certinho mas a missão nunca reabria. Só o dono da
+      // submissão (ou o Admin, que pode apagar post de qualquer pessoa)
+      // pode apagar; a decisão de SE ela pode ser apagada (só quando ainda
+      // é do ciclo/período atual) já é feita no app antes de chamar isto.
+      allow delete: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
     // Histórico auditável de cada ponto ganho — nunca editável depois de criado.

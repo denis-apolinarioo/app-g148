@@ -11,6 +11,7 @@ import AdminLoginGate from './_components/AdminLoginGate';
 import AbaAcoes from './_components/AbaAcoes';
 import AbaMissoes from './_components/AbaMissoes';
 import AbaConquistas from './_components/AbaConquistas';
+import AbaFuncoes from './_components/AbaFuncoes';
 import AbaUsuarios from './_components/AbaUsuarios';
 import AbaCorreio from './_components/AbaCorreio';
 import AbaDenuncias from './_components/AbaDenuncias';
@@ -22,7 +23,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 // específicas) agora vive dentro da aba Ações, junto com as Ações básicas
 // (ver _components/AbaAcoes.js). O arquivo _components/AbaCategoriasAcao.js
 // não é mais usado e pode ser apagado do repositório.
-const ABAS = ['Ações', 'Missões', 'Conquistas', 'Usuários', 'Correio', 'Denúncias', 'Histórico', 'Config'];
+const ABAS = ['Ações', 'Missões', 'Conquistas', 'Funções', 'Usuários', 'Correio', 'Denúncias', 'Histórico', 'Config'];
 
 export default function AdminPage() {
   const { usuarioAuth, perfil } = useAuth();
@@ -82,6 +83,7 @@ export default function AdminPage() {
           {aba === 'Ações' && <AbaAcoes />}
           {aba === 'Missões' && <AbaMissoes />}
           {aba === 'Conquistas' && <AbaConquistas />}
+          {aba === 'Funções' && <AbaFuncoes />}
           {aba === 'Usuários' && <AbaUsuarios />}
           {aba === 'Correio' && <AbaCorreio />}
           {aba === 'Denúncias' && <AbaDenuncias />}

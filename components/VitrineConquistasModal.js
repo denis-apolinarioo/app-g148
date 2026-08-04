@@ -1,25 +1,41 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Check } from 'lucide-react';
-import EmblemaConquista from '@/components/EmblemaConquista';
+import * as Icons from 'lucide-react';
+import { X, Check, ChevronUp, ChevronDown } from 'lucide-react';
+import { iconePascalCase } from '@/lib/missionIcons';
 
 const MAXIMO = 3;
 
 /**
  * Escolha da vitrine: toque numa conquista já desbloqueada pra marcar/
- * desmarcar. A ordem em que a pessoa marca vira a ordem de exibição no
- * perfil (primeira marcada = primeira medalha). Trava em 3 escolhidas.
+ * desmarcar (até MAXIMO). A ordem de exibição é livre e fica explícita
+ * numa lista embaixo, com setinhas pra mover — em vez de depender da ordem
+ * de toque, que ficava confusa ao desmarcar/marcar de novo.
  */
 export default function VitrineConquistasModal({ desbloqueadas, selecaoAtual, onFechar, onSalvar }) {
   const [selecionadas, setSelecionadas] = useState(selecaoAtual);
   const [salvando, setSalvando] = useState(false);
+  const porId = {};
+  desbloqueadas.forEach((c) => {
+    porId[c.id] = c;
+  });
 
   function alternar(id) {
     setSelecionadas((atual) => {
       if (atual.includes(id)) return atual.filter((x) => x !== id);
       if (atual.length >= MAXIMO) return atual;
       return [...atual, id];
+    });
+  }
+
+  function mover(index, direcao) {
+    setSelecionadas((atual) => {
+      const alvo = index + direcao;
+      if (alvo < 0 || alvo >= atual.length) return atual;
+      const nova = [...atual];
+      [nova[index], nova[alvo]] = [nova[alvo], nova[index]];
+      return nova;
     });
   }
 
@@ -58,6 +74,7 @@ export default function VitrineConquistasModal({ desbloqueadas, selecaoAtual, on
         <div className="grid grid-cols-3 gap-3">
           {desbloqueadas.map((c) => {
             const marcada = selecionadas.includes(c.id);
+            const Icone = Icons[iconePascalCase(c.icone)] || Icons.Award;
             const travadaPeloLimite = !marcada && selecionadas.length >= MAXIMO;
             return (
               <button
@@ -69,8 +86,12 @@ export default function VitrineConquistasModal({ desbloqueadas, selecaoAtual, on
                   marcada ? 'border-gold bg-gold/10' : 'border-coffee-100'
                 } ${travadaPeloLimite ? 'opacity-40' : ''}`}
               >
-                <div className="relative">
-                  <EmblemaConquista conquista={c} size={48} bloqueada={false} mostrarCadeado={false} />
+                <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-gold to-coffee-600">
+                  {c.imagemURL ? (
+                    <img src={c.imagemURL} alt="" className="h-full w-full rounded-full object-cover" />
+                  ) : (
+                    <Icone size={20} strokeWidth={1.8} className="text-cream" />
+                  )}
                   {marcada && (
                     <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gold ring-2 ring-cream">
                       <Check size={11} className="text-coffee-900" strokeWidth={3} />
@@ -83,14 +104,61 @@ export default function VitrineConquistasModal({ desbloqueadas, selecaoAtual, on
           })}
         </div>
 
-        <button
-          type="button"
-          onClick={confirmar}
-          disabled={salvando}
-          className="mt-5 w-full rounded-full bg-coffee-800 py-3 text-sm font-semibold text-cream disabled:opacity-60"
-        >
-          {salvando ? 'Salvando...' : 'Salvar'}
-        </button>
+        {selecionadas.length > 0 && (
+          <div className="mt-5 border-t border-coffee-100 pt-4">
+            <p className="mb-2 text-xs font-medium text-coffee-500">
+              Ordem de exibição — use as setinhas pra mudar
+            </p>
+            <div className="space-y-1.5">
+              {selecionadas.map((id, index) => (
+                <div
+                  key={id}
+                  className="flex items-center gap-2 rounded-lg border border-coffee-100 bg-cream-card px-2.5 py-1.5"
+                >
+                  <span className="flex-1 truncate text-xs font-semibold text-coffee-700">
+                    {index + 1}. {porId[id]?.nome}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => mover(index, -1)}
+                    disabled={index === 0}
+                    className="text-coffee-300 disabled:opacity-20"
+                  >
+                    <ChevronUp size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => mover(index, 1)}
+                    disabled={index === selecionadas.length - 1}
+                    className="text-coffee-300 disabled:opacity-20"
+                  >
+                    <ChevronDown size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-5 flex items-center gap-2">
+          {selecionadas.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setSelecionadas([])}
+              className="flex-shrink-0 rounded-full border border-coffee-100 px-4 py-3 text-xs font-semibold text-coffee-500"
+            >
+              Não mostrar nenhuma
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={confirmar}
+            disabled={salvando}
+            className="flex-1 rounded-full bg-coffee-800 py-3 text-sm font-semibold text-cream disabled:opacity-60"
+          >
+            {salvando ? 'Salvando...' : 'Salvar'}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ import ImageCropper from '@/components/ImageCropper';
 import { updateUserProfile } from '@/lib/firestore-helpers';
 import { atualizarUsuarioCache } from '@/lib/usersCache';
 import { uploadFotoPerfil } from '@/lib/storage';
-import { TAGS_FUNCAO } from '@/lib/constants';
+import { getFuncoesAtivas } from '@/lib/funcoesRepo';
 import { Camera, KeyRound, Loader2 } from 'lucide-react';
 
 export default function EditarPerfilPage() {
@@ -19,7 +19,8 @@ export default function EditarPerfilPage() {
   const { perfil } = useAuth();
   const [nome, setNome] = useState(perfil?.nome || '');
   const [proposito, setProposito] = useState(perfil?.proposito || '');
-  const [tagFuncao, setTagFuncao] = useState(perfil?.tagFuncao || 'Membro');
+  const [tagFuncao, setTagFuncao] = useState(perfil?.tagFuncao || '');
+  const [funcoes, setFuncoes] = useState(null);
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
   const [srcCorte, setSrcCorte] = useState('');
@@ -42,6 +43,17 @@ export default function EditarPerfilPage() {
       if (previewFoto) URL.revokeObjectURL(previewFoto);
     };
   }, [previewFoto]);
+
+  // Carrega as funções ativas (lib/funcoesRepo.js) pro seletor. Ninguém
+  // pode ficar sem função selecionada — por isso, assim que a lista chega,
+  // se por algum motivo o campo ainda estiver vazio (perfil muito antigo,
+  // sem tagFuncao gravado), cai na primeira função ativa disponível.
+  useEffect(() => {
+    getFuncoesAtivas().then((lista) => {
+      setFuncoes(lista);
+      setTagFuncao((atual) => atual || lista[0]?.nome || '');
+    });
+  }, []);
 
   if (!perfil) return <LoadingScreen />;
 
@@ -121,7 +133,16 @@ export default function EditarPerfilPage() {
         </div>
 
         <Campo label="Nome">
-          <input value={nome} onChange={(e) => setNome(e.target.value)} className="input" />
+          <input
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            maxLength={28}
+            className="input"
+          />
+          <p className="mt-1 text-[11px] text-coffee-300">
+            Aparece em 1 linha só no perfil — se o nome completo não couber, ele é cortado
+            (ex.: "Maria Eduarda Nascimento…"). Se preferir, abrevie aqui mesmo.
+          </p>
         </Campo>
 
         <Campo label="Propósito">
@@ -134,10 +155,21 @@ export default function EditarPerfilPage() {
         </Campo>
 
         <Campo label="Função na comunidade">
-          <select value={tagFuncao} onChange={(e) => setTagFuncao(e.target.value)} className="input">
-            {TAGS_FUNCAO.map((t) => (
-              <option key={t} value={t}>
-                {t}
+          <select
+            value={tagFuncao}
+            onChange={(e) => setTagFuncao(e.target.value)}
+            className="input"
+          >
+            {/* Se a função atual não estiver mais na lista ativa (foi
+                desativada/apagada no Admin), mostra ela mesmo assim como
+                opção — assim a pessoa nunca fica sem seleção nenhuma; basta
+                trocar pra uma das ativas quando quiser. */}
+            {tagFuncao && !funcoes?.some((f) => f.nome === tagFuncao) && (
+              <option value={tagFuncao}>{tagFuncao}</option>
+            )}
+            {funcoes?.map((f) => (
+              <option key={f.id} value={f.nome}>
+                {f.nome}
               </option>
             ))}
           </select>
@@ -147,7 +179,7 @@ export default function EditarPerfilPage() {
 
         <button
           onClick={handleSalvar}
-          disabled={salvando || !nome.trim()}
+          disabled={salvando || !nome.trim() || !tagFuncao}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-3.5 text-sm font-semibold text-cream disabled:opacity-40"
         >
           {salvando && <Loader2 size={16} className="animate-spin" />}

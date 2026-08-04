@@ -1,15 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Lock, Unlock, Loader2, SlidersHorizontal, Search, X } from 'lucide-react';
+import { Lock, Unlock, Loader2, SlidersHorizontal, Search, X, UserCog } from 'lucide-react';
 import DracmaIcon from '@/components/DracmaIcon';
 import Avatar from '@/components/Avatar';
 import { useAuth } from '@/components/AuthProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
-import { getAllUsers, toggleTravarUsuario } from '@/lib/firestore-helpers';
+import { getAllUsers, toggleTravarUsuario, updateUserProfile } from '@/lib/firestore-helpers';
 import { ajustarPontosManualmente } from '@/lib/points';
 import { ajustarDracmaManualmente, formatarDracma } from '@/lib/dracma';
 import { combinaComBusca } from '@/lib/searchUtils';
+import { getTodasAsFuncoes } from '@/lib/funcoesRepo';
 
 // A migração que ativava o campo `dracmas` pra quem já estava cadastrado
 // antes da 2ª moeda existir já rodou e não é mais necessária — o botão
@@ -22,9 +23,35 @@ export default function AbaUsuarios() {
   const [travandoId, setTravandoId] = useState(null);
   const [ajuste, setAjuste] = useState(null); // { usuario, tipo: 'pontos' | 'dracma' }
 
+  // Troca de função (aba Funções) — o Admin pode mudar a de qualquer
+  // pessoa daqui, além da própria pessoa poder trocar a sua quando quiser
+  // pelo Editar Perfil (ver app/(app)/perfil/editar/page.js).
+  const [funcoes, setFuncoes] = useState(null);
+  const [trocandoFuncaoUid, setTrocandoFuncaoUid] = useState(null);
+  const [salvandoFuncao, setSalvandoFuncao] = useState(false);
+
   useEffect(() => {
     getAllUsers().then(setUsuarios);
+    getTodasAsFuncoes().then(setFuncoes);
   }, []);
+
+  // Troca a função de UM usuário específico. Deixa escolher entre TODAS as
+  // funções (não só as ativas) — se o Admin já deixou a pessoa com uma
+  // função que virou inativa depois, ele ainda precisa conseguir trocar
+  // pra outra sem ficar travado.
+  async function handleTrocarFuncao(uid, novaFuncao) {
+    if (!novaFuncao || salvandoFuncao) return;
+    setSalvandoFuncao(true);
+    try {
+      await updateUserProfile(uid, { tagFuncao: novaFuncao });
+      setUsuarios((lista) => lista.map((u) => (u.id === uid ? { ...u, tagFuncao: novaFuncao } : u)));
+      setTrocandoFuncaoUid(null);
+    } catch (err) {
+      console.error('Erro ao trocar função do usuário:', err);
+    } finally {
+      setSalvandoFuncao(false);
+    }
+  }
 
   // Item 13 do Bloco 6 — travar/destravar acesso, com confirmação (agora
   // usando o popup próprio do app em vez do confirm() feio do navegador).
@@ -92,59 +119,95 @@ export default function AbaUsuarios() {
       {usuariosFiltrados.map((u) => (
         <div
           key={u.id}
-          className="flex items-center gap-2 rounded-xl2 border border-coffee-100 bg-cream-card px-3.5 py-2.5"
+          className="rounded-xl2 border border-coffee-100 bg-cream-card px-3.5 py-2.5"
         >
-          <Avatar src={u.fotoURL} nome={u.nome} tamanho="sm" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-coffee-800">{u.nome}</p>
-            <p className="text-xs text-coffee-300">@{u.username}</p>
-          </div>
-          {u.isAdmin && (
-            <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold">
-              admin
-            </span>
-          )}
-          {u.travado && (
-            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
-              travado
-            </span>
-          )}
-          <button
-            onClick={() => setAjuste({ usuario: u, tipo: 'pontos' })}
-            aria-label={`Ajustar pontos de ${u.nome}`}
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-coffee-300 hover:text-coffee-600"
-          >
-            <SlidersHorizontal size={14} />
-          </button>
-          <button
-            onClick={() => setAjuste({ usuario: u, tipo: 'dracma' })}
-            aria-label={`Ajustar Dracma de ${u.nome}`}
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-coffee-300 hover:text-gold"
-          >
-            <DracmaIcon size={14} />
-          </button>
-          <button
-            onClick={() => handleAlternarTravamento(u)}
-            disabled={travandoId === u.id || u.id === perfil?.uid}
-            title={
-              u.id === perfil?.uid
-                ? 'Não é possível travar a própria conta'
-                : u.travado
-                  ? 'Destravar acesso'
-                  : 'Travar acesso'
-            }
-            className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border disabled:opacity-40 ${
-              u.travado ? 'border-red-200 bg-red-50 text-red-600' : 'border-coffee-100 text-coffee-400'
-            }`}
-          >
-            {travandoId === u.id ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : u.travado ? (
-              <Unlock size={14} />
-            ) : (
-              <Lock size={14} />
+          <div className="flex items-center gap-2">
+            <Avatar src={u.fotoURL} nome={u.nome} tamanho="sm" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-coffee-800">{u.nome}</p>
+              <p className="truncate text-xs text-coffee-300">
+                @{u.username}
+                {u.tagFuncao ? ` · ${u.tagFuncao}` : ''}
+              </p>
+            </div>
+            {u.isAdmin && (
+              <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold text-gold">
+                admin
+              </span>
             )}
-          </button>
+            {u.travado && (
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                travado
+              </span>
+            )}
+            <button
+              onClick={() => setTrocandoFuncaoUid(trocandoFuncaoUid === u.id ? null : u.id)}
+              aria-label={`Trocar função de ${u.nome}`}
+              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-coffee-300 hover:text-coffee-600"
+            >
+              <UserCog size={14} />
+            </button>
+            <button
+              onClick={() => setAjuste({ usuario: u, tipo: 'pontos' })}
+              aria-label={`Ajustar pontos de ${u.nome}`}
+              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-coffee-300 hover:text-coffee-600"
+            >
+              <SlidersHorizontal size={14} />
+            </button>
+            <button
+              onClick={() => setAjuste({ usuario: u, tipo: 'dracma' })}
+              aria-label={`Ajustar Dracma de ${u.nome}`}
+              className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-coffee-300 hover:text-gold"
+            >
+              <DracmaIcon size={14} />
+            </button>
+            <button
+              onClick={() => handleAlternarTravamento(u)}
+              disabled={travandoId === u.id || u.id === perfil?.uid}
+              title={
+                u.id === perfil?.uid
+                  ? 'Não é possível travar a própria conta'
+                  : u.travado
+                    ? 'Destravar acesso'
+                    : 'Travar acesso'
+              }
+              className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border disabled:opacity-40 ${
+                u.travado ? 'border-red-200 bg-red-50 text-red-600' : 'border-coffee-100 text-coffee-400'
+              }`}
+            >
+              {travandoId === u.id ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : u.travado ? (
+                <Unlock size={14} />
+              ) : (
+                <Lock size={14} />
+              )}
+            </button>
+          </div>
+
+          {/* Seletor de função — abre embaixo da linha, entre TODAS as
+              funções (não só ativas), pra nunca travar o Admin se a pessoa
+              já estiver com uma função que virou inativa. */}
+          {trocandoFuncaoUid === u.id && (
+            <div className="mt-2.5 flex items-center gap-2 border-t border-coffee-100 pt-2.5">
+              <select
+                defaultValue={u.tagFuncao || ''}
+                onChange={(e) => handleTrocarFuncao(u.id, e.target.value)}
+                disabled={salvandoFuncao}
+                className="flex-1 rounded-lg border border-coffee-100 bg-cream px-2.5 py-2 text-xs text-coffee-800 disabled:opacity-50"
+              >
+                {u.tagFuncao && !funcoes?.some((f) => f.nome === u.tagFuncao) && (
+                  <option value={u.tagFuncao}>{u.tagFuncao}</option>
+                )}
+                {funcoes?.map((f) => (
+                  <option key={f.id} value={f.nome}>
+                    {f.nome}
+                  </option>
+                ))}
+              </select>
+              {salvandoFuncao && <Loader2 size={14} className="animate-spin text-coffee-400" />}
+            </div>
+          )}
         </div>
       ))}
 

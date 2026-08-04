@@ -1,23 +1,31 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sparkles, ListChecks } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import TopBar from '@/components/TopBar';
 import MissionCard from '@/components/MissionCard';
 import MissionSubmitModal from '@/components/MissionSubmitModal';
+import MissaoEnvioListaModal from '@/components/MissaoEnvioListaModal';
 import StreakBadge from '@/components/StreakBadge';
 import EmptyState from '@/components/EmptyState';
 import { getMissoesPorCategoria } from '@/lib/missionsRepo';
-import { calcularCicloAtual, getStatusMissoesNoCiclo } from '@/lib/missionCycles';
+import { calcularCicloAtual, getStatusMissoesNoCiclo, getSubmissoesDoCicloComPost } from '@/lib/missionCycles';
 
 export default function MissoesPage() {
   const { perfil } = useAuth();
+  const router = useRouter();
   const [carregandoMissoes, setCarregandoMissoes] = useState(true);
   const [missoesExclusivas, setMissoesExclusivas] = useState([]);
   const [missoesGerais, setMissoesGerais] = useState([]);
   const [status, setStatus] = useState({});
   const [missaoAtiva, setMissaoAtiva] = useState(null);
+  // Botão de "encaminhar" do MissionCard — enquanto busca os envios já
+  // feitos no período (missaoId), ou já com a lista pronta pra escolher
+  // ({ missao, submissoes }) quando há mais de um envio no período.
+  const [missaoBuscandoEnvios, setMissaoBuscandoEnvios] = useState(null);
+  const [listaEnviosParaEscolher, setListaEnviosParaEscolher] = useState(null);
 
   // Busca as missões (agora vêm do Firestore, coleção "missoes" — o Admin
   // pode criar/editar/apagar pelo próprio painel, sem precisar de deploy).
@@ -57,6 +65,28 @@ export default function MissoesPage() {
     setMissaoAtiva(missao);
   }
 
+  // Botão de "encaminhar" — leva direto pro post já feito nesta missão, no
+  // período atual. Com 1 envio só, vai direto; com mais de 1 (missão que
+  // pode ser cumprida várias vezes por período), abre a listinha pra
+  // escolher qual dos posts ver, do mais recente pro mais antigo.
+  async function encaminharParaEnvioAnterior(missao) {
+    if (missaoBuscandoEnvios) return;
+    setMissaoBuscandoEnvios(missao.id);
+    try {
+      const submissoes = await getSubmissoesDoCicloComPost(perfil.uid, missao);
+      if (submissoes.length === 0) return; // nada pra encaminhar (raro — status já teria escondido o botão)
+      if (submissoes.length === 1) {
+        router.push(`/post/${submissoes[0].postId}`);
+        return;
+      }
+      setListaEnviosParaEscolher({ missao, submissoes });
+    } catch (err) {
+      console.error('Erro ao buscar envios anteriores da missão:', err);
+    } finally {
+      setMissaoBuscandoEnvios(null);
+    }
+  }
+
   const todasVisiveis = [...missoesExclusivas, ...missoesGerais];
   const cumpridas = todasVisiveis.filter((m) => status[m.id]?.esgotada).length;
 
@@ -90,6 +120,7 @@ export default function MissoesPage() {
                     concluida={!!status[missao.id]?.esgotada}
                     progresso={status[missao.id]}
                     onClick={abrirMissao}
+                    onEncaminhar={encaminharParaEnvioAnterior}
                   />
                 ))
               )}
@@ -106,6 +137,7 @@ export default function MissoesPage() {
                     concluida={!!status[missao.id]?.esgotada}
                     progresso={status[missao.id]}
                     onClick={abrirMissao}
+                    onEncaminhar={encaminharParaEnvioAnterior}
                   />
                 ))
               )}
@@ -119,6 +151,18 @@ export default function MissoesPage() {
           missao={missaoAtiva}
           onFechar={() => setMissaoAtiva(null)}
           onConcluida={carregarStatus}
+        />
+      )}
+
+      {listaEnviosParaEscolher && (
+        <MissaoEnvioListaModal
+          titulo={listaEnviosParaEscolher.missao.titulo}
+          submissoes={listaEnviosParaEscolher.submissoes}
+          onEscolher={(submissao) => {
+            setListaEnviosParaEscolher(null);
+            router.push(`/post/${submissao.postId}`);
+          }}
+          onFechar={() => setListaEnviosParaEscolher(null)}
         />
       )}
     </div>

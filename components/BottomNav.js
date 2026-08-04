@@ -2,15 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, ListChecks, HandHeart, Trophy, User } from 'lucide-react';
+import { Home, HandHeart, Trophy, User } from 'lucide-react';
 import { ABAS_PRINCIPAIS } from '@/lib/constants';
+import BowArrowIcon from '@/components/BowArrowIcon';
 
 // Mapeia o nome de ícone (string, em lib/constants.js) pro componente lucide
 // de verdade — a lista em si (ordem/href/label) vem de ABAS_PRINCIPAIS, pra
 // ficar garantidamente igual à ordem usada pelo swipe (useSwipeNavigation).
 const ICONES = {
   home: Home,
-  'list-checks': ListChecks,
+  // Ícone de arco e flecha no lugar do genérico de lista de tarefas.
+  'bow-arrow': BowArrowIcon,
   'hand-heart': HandHeart,
   trophy: Trophy,
   user: User,

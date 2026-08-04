@@ -63,7 +63,14 @@ export default function StreakFogueira({ dias = 0 }) {
     <button
       type="button"
       onClick={handleClick}
-      className="flex flex-col items-center gap-1 px-1 py-1"
+      // Padding inferior igual ao card de Pontos de Comunhão (py-2.5 = 10px)
+      // — o topo fica mais enxuto (pt-1) porque a lenha/chama já é um
+      // elemento visualmente "pesado". Isso faz o rótulo "X dias" cair na
+      // mesma altura do rótulo "Pontos de Comunhão" ao lado, quando os dois
+      // ficam numa linha com items-end (ver ProfileView.js) — antes, com
+      // padding simétrico pequeno, a fogueira "vazava" pra baixo por ser
+      // mais alta que o card e parecia desalinhada.
+      className="flex flex-col items-center gap-1 px-1 pb-2.5 pt-1"
       aria-label={`Streak de ${dias} ${dias === 1 ? 'dia' : 'dias'}`}
     >
       <div className="relative h-12 w-14">

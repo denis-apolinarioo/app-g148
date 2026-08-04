@@ -51,9 +51,10 @@ export default function MeuPerfilPage() {
             {tema === 'escuro' ? <Sun size={21} /> : <Moon size={21} />}
           </button>
           <MailboxLink size={21} />
-          {/* Carteira de Dracma — realocada pra cá (perto de config e afins),
-              antes ficava solta no meio do perfil */}
-          <Link href="/carteira" className="text-coffee-500">
+          {/* Carteira subiu pra cá (perto dos outros ícones de configuração
+              do cabeçalho) — o atalho e a página em si continuam iguais,
+              só a localização mudou. */}
+          <Link href="/carteira" className="text-coffee-500" aria-label="Carteira">
             <Wallet size={21} />
           </Link>
           <Link href="/perfil/editar" className="text-coffee-500">

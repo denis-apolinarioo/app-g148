@@ -13,7 +13,13 @@ export default function RankingRow({ posicao, usuario, souEu }) {
         souEu ? 'border-coffee-400 bg-coffee-50' : 'border-coffee-100 bg-cream-card'
       }`}
     >
-      <span className="flex w-7 flex-shrink-0 items-center justify-center font-destaque text-base font-semibold text-coffee-400">
+      {/* Medalhas do top 3 um pouco maiores que o número puro das demais
+          posições, pra dar mais destaque sem exagerar. */}
+      <span
+        className={`flex w-7 flex-shrink-0 items-center justify-center font-destaque font-semibold text-coffee-400 ${
+          medalha ? 'text-xl' : 'text-base'
+        }`}
+      >
         {medalha || posicao}
       </span>
       <Avatar src={usuario.fotoURL} nome={usuario.nome} tamanho="sm" />
