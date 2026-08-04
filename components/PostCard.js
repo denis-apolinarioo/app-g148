@@ -21,8 +21,9 @@ import TextoComLinks from '@/components/TextoComLinks';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import LikesListModal from '@/components/LikesListModal';
 import EditarPostModal from '@/components/EditarPostModal';
+import ConfirmarAcaoModal from '@/components/ConfirmarAcaoModal';
 import { toggleLike, deletePost, createReport, alternarOcultarPost } from '@/lib/firestore-helpers';
-import { removerPontosPost } from '@/lib/points';
+import { removerPontosPost, removerPontosMissaoDoPostApagado } from '@/lib/points';
 import { removerDracmaPost } from '@/lib/dracma';
 import { getUsuarioCache } from '@/lib/usersCache';
 import { getCachedImageURL } from '@/lib/imageCache';
@@ -58,6 +59,9 @@ export default function PostCard({ post, usuarioAtual }) {
   const [alternandoOculto, setAlternandoOculto] = useState(false);
   const [denunciando, setDenunciando] = useState(false);
   const [denunciado, setDenunciado] = useState(false);
+  // Confirmação antes de apagar (post ou missão) — ver handleDelete abaixo.
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [apagandoPost, setApagandoPost] = useState(false);
   // Hierarquia visual de post de missão (foto > áudio > demais campos, na
   // ordem definida na missão) — só o primeiro item aparece de cara, o
   // resto fica atrás de "Ver mais" pra não abarrotar o feed.
@@ -215,25 +219,65 @@ export default function PostCard({ post, usuarioAtual }) {
   }
 
   async function handleDelete() {
-    if (!confirm('Apagar este post?')) return;
-    await deletePost(post.id);
-    // Item 17 — remove os pontos ganhos por este post (se houver)
-    if (post.pontosGanhos) {
-      try {
-        await removerPontosPost(post.autorId, post.id, post.pontosGanhos);
-      } catch (err) {
-        console.error('Erro ao remover pontos do post apagado:', err);
+    if (apagandoPost) return;
+    setApagandoPost(true);
+    try {
+      await deletePost(post.id);
+      if (post.origemMissaoId && post.origemMissaoSubmissaoId) {
+        // Post veio de missão — remove os pontos dela (e libera a missão
+        // de novo, se a submissão ainda for do ciclo/período atual).
+        try {
+          await removerPontosMissaoDoPostApagado(
+            post.autorId,
+            post.origemMissaoId,
+            post.origemMissaoSubmissaoId,
+            post.pontosGanhos
+          );
+        } catch (err) {
+          console.error('Erro ao remover pontos da missão apagada:', err);
+        }
+      } else {
+        // Item 17 — remove os pontos ganhos por este post (se houver)
+        if (post.pontosGanhos) {
+          try {
+            await removerPontosPost(post.autorId, post.id, post.pontosGanhos);
+          } catch (err) {
+            console.error('Erro ao remover pontos do post apagado:', err);
+          }
+        }
+        // FASE 3 — remove o Dracma ganho por este post (se a categoria dava
+        // Dracma e o limite não tinha sido atingido na hora de publicar).
+        if (post.dracmaGanho) {
+          try {
+            await removerDracmaPost(post.autorId, post.id, post.dracmaGanho);
+          } catch (err) {
+            console.error('Erro ao remover Dracma do post apagado:', err);
+          }
+        }
       }
+      setConfirmandoExclusao(false);
+    } catch (err) {
+      console.error('Erro ao apagar post:', err);
+    } finally {
+      setApagandoPost(false);
     }
-    // FASE 3 — remove o Dracma ganho por este post (se a categoria dava
-    // Dracma e o limite não tinha sido atingido na hora de publicar).
-    if (post.dracmaGanho) {
-      try {
-        await removerDracmaPost(post.autorId, post.id, post.dracmaGanho);
-      } catch (err) {
-        console.error('Erro ao remover Dracma do post apagado:', err);
-      }
+  }
+
+  // CORREÇÃO DE BUG: apagar um post (ou o post automático de uma missão)
+  // devolve/retira os pontos e o Dracma ganhos com ele — mas isso não
+  // ficava claro na hora, só um "Apagar este post?" seco. Agora o aviso
+  // sempre menciona o prejuízo, de forma simples.
+  function mensagemPerdaAoApagar() {
+    if (post.origemMissaoId) {
+      return post.pontosGanhos
+        ? `Você vai perder os ${post.pontosGanhos} ponto${post.pontosGanhos === 1 ? '' : 's'} que ganhou com essa missão. Essa ação não pode ser desfeita.`
+        : 'Você vai perder os pontos que ganhou com essa missão. Essa ação não pode ser desfeita.';
     }
+    const partes = [];
+    if (post.pontosGanhos) partes.push(`${post.pontosGanhos} ponto${post.pontosGanhos === 1 ? '' : 's'}`);
+    if (post.dracmaGanho) partes.push(`${post.dracmaGanho} Dracma`);
+    if (partes.length === 0) return 'Essa ação não pode ser desfeita.';
+    return `Você vai perder ${partes.join(' e ')} que ganhou com esse post. Essa ação não pode ser desfeita.`;
   }
 
   // Correção: editar deixou de mexer só em `texto` direto aqui (o que
@@ -440,7 +484,11 @@ export default function PostCard({ post, usuarioAtual }) {
           </button>
         )}
         {(ehDono || ehAdmin) && (
-          <button onClick={handleDelete} className="text-coffee-200 hover:text-red-500" aria-label="Apagar post">
+          <button
+            onClick={() => setConfirmandoExclusao(true)}
+            className="text-coffee-200 hover:text-red-500"
+            aria-label="Apagar post"
+          >
             <Trash2 size={15} />
           </button>
         )}
@@ -592,6 +640,17 @@ export default function PostCard({ post, usuarioAtual }) {
       )}
 
       {editandoAberto && <EditarPostModal post={post} onFechar={() => setEditandoAberto(false)} />}
+
+      {confirmandoExclusao && (
+        <ConfirmarAcaoModal
+          titulo={post.origemMissaoId ? 'Apagar esta missão?' : 'Apagar este post?'}
+          mensagem={mensagemPerdaAoApagar()}
+          textoConfirmar="Apagar"
+          confirmando={apagandoPost}
+          onFechar={() => setConfirmandoExclusao(false)}
+          onConfirmar={handleDelete}
+        />
+      )}
     </div>
   );
 }
