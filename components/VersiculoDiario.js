@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ScrollText } from 'lucide-react';
 import { getVersiculoDoDia } from '@/lib/bible';
 import { pontuarAberturaVersiculo } from '@/lib/points';
 
@@ -58,15 +59,14 @@ export default function VersiculoDiario({ uid }) {
         disabled={!versiculo}
         className="relative mt-3 flex w-full items-center gap-3.5 text-left disabled:opacity-70"
       >
-        {/* Pergaminho — dois "rolos" dourados nas pontas e o corpo em tom
-            claro, girando levemente quando aberto pra reforçar o toque. */}
+        {/* Pergaminho dourado — ícone de diploma/pergaminho, girando
+            levemente quando aberto pra reforçar o toque. */}
         <span
-          className={`relative flex h-12 w-9 flex-shrink-0 flex-col items-stretch justify-between rounded-[3px] bg-cream-card/95 shadow-md transition-transform duration-500 ${
-            aberto ? 'rotate-3' : '-rotate-2'
+          className={`relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-coffee-600/60 shadow-md transition-transform duration-500 ${
+            aberto ? 'rotate-6' : '-rotate-3'
           }`}
         >
-          <span className="h-2 flex-shrink-0 rounded-full bg-gradient-to-r from-gold to-coffee-400 shadow-sm" />
-          <span className="h-2 flex-shrink-0 rounded-full bg-gradient-to-r from-coffee-400 to-gold shadow-sm" />
+          <ScrollText className="h-6 w-6 text-gold-soft" strokeWidth={1.8} />
         </span>
 
         {versiculo ? (
