@@ -1,9 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import * as Icons from 'lucide-react';
 import { X, Check } from 'lucide-react';
-import { iconePascalCase } from '@/lib/missionIcons';
+import EmblemaConquista from '@/components/EmblemaConquista';
 
 const MAXIMO = 3;
 
@@ -59,7 +58,6 @@ export default function VitrineConquistasModal({ desbloqueadas, selecaoAtual, on
         <div className="grid grid-cols-3 gap-3">
           {desbloqueadas.map((c) => {
             const marcada = selecionadas.includes(c.id);
-            const Icone = Icons[iconePascalCase(c.icone)] || Icons.Award;
             const travadaPeloLimite = !marcada && selecionadas.length >= MAXIMO;
             return (
               <button
@@ -71,12 +69,8 @@ export default function VitrineConquistasModal({ desbloqueadas, selecaoAtual, on
                   marcada ? 'border-gold bg-gold/10' : 'border-coffee-100'
                 } ${travadaPeloLimite ? 'opacity-40' : ''}`}
               >
-                <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-gold to-coffee-600">
-                  {c.imagemURL ? (
-                    <img src={c.imagemURL} alt="" className="h-full w-full rounded-full object-cover" />
-                  ) : (
-                    <Icone size={20} strokeWidth={1.8} className="text-cream" />
-                  )}
+                <div className="relative">
+                  <EmblemaConquista conquista={c} size={48} bloqueada={false} mostrarCadeado={false} />
                   {marcada && (
                     <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gold ring-2 ring-cream">
                       <Check size={11} className="text-coffee-900" strokeWidth={3} />

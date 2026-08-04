@@ -27,7 +27,7 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
   while (souDono && espacos.length < 3) espacos.push(null);
 
   return (
-    <div className="mt-4 flex w-full justify-end gap-3">
+    <div className="flex justify-end gap-3">
       {espacos.map((conquista, i) => (
         <button
           key={conquista?.id || `vazio-${i}`}

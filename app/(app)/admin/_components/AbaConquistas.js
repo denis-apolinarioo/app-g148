@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import * as Icons from 'lucide-react';
 import {
   Loader2,
   Plus,
@@ -33,7 +32,7 @@ import { useAuth } from '@/components/AuthProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import IconGalleryPicker from '@/components/IconGalleryPicker';
 import ImageCropper from '@/components/ImageCropper';
-import { iconePascalCase } from '@/lib/missionIcons';
+import EmblemaConquista from '@/components/EmblemaConquista';
 import { EMBLEMAS, caminhoEmblema } from '@/lib/emblemas';
 import BuscaUsuario from './BuscaUsuario';
 import { useArrastarReordenar } from './useArrastarReordenar';
@@ -232,7 +231,6 @@ export default function AbaConquistas() {
 
         <div className="space-y-2">
           {conquistasArrastaveis.map((conquista, index) => {
-            const Icone = Icons[iconePascalCase(conquista.icone)] || Icons.Award;
             return (
               <div
                 key={conquista.id}
@@ -265,17 +263,7 @@ export default function AbaConquistas() {
                   </button>
                 </div>
 
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gold to-coffee-600">
-                  {conquista.imagemURL ? (
-                    <img
-                      src={conquista.imagemURL}
-                      alt=""
-                      className="h-full w-full rounded-full object-cover"
-                    />
-                  ) : (
-                    <Icone size={17} strokeWidth={1.8} className="text-cream" />
-                  )}
-                </div>
+                <EmblemaConquista conquista={conquista} size={40} bloqueada={false} mostrarCadeado={false} className="flex-shrink-0" />
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-coffee-800">
@@ -379,12 +367,9 @@ function BuscaConquistasPorPessoa() {
       )}
       {selecionado &&
         conquistasDaPessoa?.map((c) => {
-          const Icone = Icons[iconePascalCase(c.icone)] || Icons.Award;
           return (
             <div key={c.id} className="flex items-center gap-2.5 rounded-lg bg-cream px-3 py-2">
-              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gold to-coffee-600">
-                <Icone size={14} strokeWidth={1.8} className="text-cream" />
-              </div>
+              <EmblemaConquista conquista={c} size={32} bloqueada={false} mostrarCadeado={false} className="flex-shrink-0" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-coffee-700">{c.nome}</p>
                 {c.desbloqueadoEm && (
@@ -525,16 +510,13 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
         <div className="space-y-4 p-5">
           <Campo label="Imagem circular (opcional — sem imagem, usa o ícone abaixo)">
             <div className="flex items-center gap-3">
-              <span className="flex h-14 w-14 flex-shrink-0 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-gold to-coffee-600">
-                {previewImagem ? (
-                  <img src={previewImagem} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  (() => {
-                    const IconePreview = Icons[iconePascalCase(icone)] || Icons.Award;
-                    return <IconePreview size={22} className="text-cream" strokeWidth={1.8} />;
-                  })()
-                )}
-              </span>
+              <EmblemaConquista
+                conquista={{ imagemURL: previewImagem, icone, emblema }}
+                size={56}
+                bloqueada={false}
+                mostrarCadeado={false}
+                className="flex-shrink-0"
+              />
               <label className="cursor-pointer rounded-lg border border-coffee-200 px-3 py-2 text-xs font-semibold text-coffee-700">
                 {previewImagem ? 'Trocar imagem' : 'Enviar imagem'}
                 <input type="file" accept="image/*" onChange={handleEscolherImagem} className="hidden" />

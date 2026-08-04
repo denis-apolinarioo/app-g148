@@ -113,8 +113,18 @@ export default function ProfileView({ usuario, usuarioAtual }) {
             )}
           </div>
 
-          {/* Direita: pontos, streak (fogueira) e vitrine de conquistas */}
-          <div className="flex flex-shrink-0 flex-col items-end">
+          {/* Direita: vitrine de conquistas (bem no topo, alinhada com nome/
+              usuário/função à esquerda), depois pontos e streak (fogueira)
+              logo abaixo — tudo na mesma linha do cabeçalho, sem seção
+              extra */}
+          <div className="flex flex-shrink-0 flex-col items-end gap-2">
+            <VitrineConquistas
+              usuario={usuario}
+              usuarioAtual={usuarioAtual}
+              conquistas={conquistas}
+              vitrine={getVitrineConquistas(usuario, conquistas)}
+              onSalvar={handleSalvarVitrine}
+            />
             <div className="flex items-center gap-2">
               <div className="rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-2.5 text-center shadow-card">
                 <p className="font-destaque text-lg font-bold text-coffee-800">{usuario.pontos || 0}</p>
@@ -124,17 +134,6 @@ export default function ProfileView({ usuario, usuarioAtual }) {
             </div>
           </div>
         </div>
-
-        {/* Vitrine em linha própria, com largura total do perfil — assim as
-            3 medalhas em destaque podem ficar maiores sem espremer a coluna
-            de pontos/fogueira ao lado. */}
-        <VitrineConquistas
-          usuario={usuario}
-          usuarioAtual={usuarioAtual}
-          conquistas={conquistas}
-          vitrine={getVitrineConquistas(usuario, conquistas)}
-          onSalvar={handleSalvarVitrine}
-        />
 
         {ehOutraPessoa && bloqueioAtivo && (
           <button
