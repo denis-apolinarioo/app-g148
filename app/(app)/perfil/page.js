@@ -6,7 +6,7 @@ import { auth } from '@/lib/firebase';
 import { useAuth } from '@/components/AuthProvider';
 import ProfileView from '@/components/ProfileView';
 import LoadingScreen from '@/components/LoadingScreen';
-import { Settings, Crown, LogOut, Sun, Moon } from 'lucide-react';
+import { Settings, Crown, LogOut, Sun, Moon, Wallet } from 'lucide-react';
 import MailboxLink from '@/components/MailboxLink';
 import { limparTokenAoSair } from '@/lib/push';
 import { useTema } from '@/lib/theme';
@@ -51,6 +51,11 @@ export default function MeuPerfilPage() {
             {tema === 'escuro' ? <Sun size={21} /> : <Moon size={21} />}
           </button>
           <MailboxLink size={21} />
+          {/* Carteira de Dracma — realocada pra cá (perto de config e afins),
+              antes ficava solta no meio do perfil */}
+          <Link href="/carteira" className="text-coffee-500">
+            <Wallet size={21} />
+          </Link>
           <Link href="/perfil/editar" className="text-coffee-500">
             <Settings size={21} />
           </Link>

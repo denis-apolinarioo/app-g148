@@ -27,7 +27,7 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
   while (souDono && espacos.length < 3) espacos.push(null);
 
   return (
-    <div className="mt-3 flex justify-end gap-2">
+    <div className="mt-4 flex w-full justify-end gap-3">
       {espacos.map((conquista, i) => (
         <button
           key={conquista?.id || `vazio-${i}`}
@@ -38,10 +38,10 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
           className={`flex-shrink-0 transition-transform ${souDono ? 'active:scale-95' : ''}`}
         >
           {conquista ? (
-            <EmblemaConquista conquista={conquista} size={48} bloqueada={false} />
+            <EmblemaConquista conquista={conquista} size={76} bloqueada={false} />
           ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-dashed border-coffee-200 bg-coffee-50">
-              <Plus size={16} className="text-coffee-300" />
+            <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-2 border-dashed border-coffee-200 bg-coffee-50">
+              <Plus size={22} className="text-coffee-300" />
             </div>
           )}
         </button>

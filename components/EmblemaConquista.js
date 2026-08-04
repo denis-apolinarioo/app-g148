@@ -67,10 +67,12 @@ export default function EmblemaConquista({
 
   return (
     <div style={{ width: size, height: size }} className={`relative ${className}`}>
-      {/* foto/ícone da conquista, encaixado no vão do emblema */}
+      {/* foto/ícone da conquista, encaixado no vão do emblema — percentuais
+          calculados a partir do círculo real do novo desenho do anel (fica
+          por dentro da moldura, igual à referência mandada pelo usuário) */}
       <div
         className="absolute overflow-hidden rounded-full bg-cream-card"
-        style={{ left: '17%', right: '17%', top: '12%', bottom: '22%' }}
+        style={{ left: '20.7%', right: '20.7%', top: '14.6%', bottom: '26.9%' }}
       >
         <div className="flex h-full w-full items-center justify-center">
           {conquista.imagemURL ? (

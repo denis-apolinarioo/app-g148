@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Music, Sparkles, UserX, UserCheck, Wallet } from 'lucide-react';
+import { Music, Sparkles, UserX, UserCheck } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import StreakFogueira from '@/components/StreakFogueira';
 import AchievementBadge from '@/components/AchievementBadge';
@@ -123,16 +122,19 @@ export default function ProfileView({ usuario, usuarioAtual }) {
               </div>
               <StreakFogueira dias={usuario.streakAtual || 0} />
             </div>
-
-            <VitrineConquistas
-              usuario={usuario}
-              usuarioAtual={usuarioAtual}
-              conquistas={conquistas}
-              vitrine={getVitrineConquistas(usuario, conquistas)}
-              onSalvar={handleSalvarVitrine}
-            />
           </div>
         </div>
+
+        {/* Vitrine em linha própria, com largura total do perfil — assim as
+            3 medalhas em destaque podem ficar maiores sem espremer a coluna
+            de pontos/fogueira ao lado. */}
+        <VitrineConquistas
+          usuario={usuario}
+          usuarioAtual={usuarioAtual}
+          conquistas={conquistas}
+          vitrine={getVitrineConquistas(usuario, conquistas)}
+          onSalvar={handleSalvarVitrine}
+        />
 
         {ehOutraPessoa && bloqueioAtivo && (
           <button
@@ -146,17 +148,6 @@ export default function ProfileView({ usuario, usuarioAtual }) {
         )}
 
         {usuario.bio && <p className="mt-3 max-w-xs text-sm text-coffee-600">{usuario.bio}</p>}
-
-        {/* PACOTE 2 — Carteira de Dracma: só a própria pessoa vê o atalho
-            para a própria carteira. */}
-        {usuarioAtual?.uid === usuario.uid && (
-          <Link
-            href="/carteira"
-            className="mt-3 flex items-center gap-1.5 rounded-full border border-coffee-200 px-3 py-1.5 text-xs font-medium text-coffee-500"
-          >
-            <Wallet size={13} /> Carteira
-          </Link>
-        )}
 
         {usuario.proposito && (
           <div className="mt-5 w-full max-w-xs rounded-xl2 border border-coffee-100 bg-cream-card p-4 text-left shadow-card">
