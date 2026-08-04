@@ -1,14 +1,14 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import * as Icons from 'lucide-react';
 import { Plus } from 'lucide-react';
 import VitrineConquistasModal from '@/components/VitrineConquistasModal';
 import ConquistaDetalheModal from '@/components/ConquistaDetalheModal';
-import { iconePascalCase } from '@/lib/missionIcons';
+import EmblemaConquista from '@/components/EmblemaConquista';
 import { vibrarToqueLeve } from '@/lib/haptics';
 
 const DURACAO_LONG_PRESS = 500; // ms — igual ao padrão já usado no PostCard
+const TAMANHO_MEDALHAO = 72; // 4.5rem — combina com o h-[4.5rem] w-[4.5rem] do botão
 
 /**
  * Vitrine de conquistas em destaque, no topo do perfil — medalhão maior,
@@ -68,7 +68,6 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
   return (
     <div className="mt-3 flex items-center justify-end gap-2.5">
       {espacos.map((conquista, i) => {
-        const Icone = conquista ? Icons[iconePascalCase(conquista.icone)] || Icons.Award : null;
         // Atraso escalonado por posição pra a flutuação de cada medalhão
         // não ficar toda em sincronia — fica mais orgânico.
         const atraso = `${i * 0.7}s`;
@@ -87,21 +86,16 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
             title={conquista?.nome}
             style={conquista ? { animationDelay: atraso } : undefined}
             className={`relative flex h-[4.5rem] w-[4.5rem] flex-shrink-0 items-center justify-center rounded-full transition-transform active:scale-95 ${
-              conquista
-                ? 'animate-vitrineFlutuar bg-gradient-to-br from-gold to-coffee-600 shadow-[0_10px_18px_-6px_rgba(58,38,22,0.45)] ring-2 ring-white/50'
-                : 'border-2 border-dashed border-coffee-200 bg-coffee-50'
+              conquista ? 'animate-vitrineFlutuar' : 'border-2 border-dashed border-coffee-200 bg-coffee-50'
             }`}
           >
             {conquista ? (
-              conquista.imagemURL ? (
-                <img
-                  src={conquista.imagemURL}
-                  alt=""
-                  className="h-full w-full rounded-full object-cover"
-                />
-              ) : (
-                <Icone size={28} strokeWidth={1.8} className="text-cream" />
-              )
+              <EmblemaConquista
+                conquista={conquista}
+                size={TAMANHO_MEDALHAO}
+                bloqueada={false}
+                mostrarCadeado={false}
+              />
             ) : (
               <Plus size={18} className="text-coffee-300" />
             )}
