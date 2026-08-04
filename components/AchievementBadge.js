@@ -94,7 +94,7 @@ export default function AchievementBadge({ conquista, onAberta }) {
             <>
               <div
                 className="absolute flex items-center justify-center overflow-hidden rounded-full bg-cream-card"
-                style={{ left: '21.5%', right: '21.5%', top: '16%', bottom: '27%' }}
+                style={{ left: '17%', right: '17%', top: '12%', bottom: '22%' }}
               >
                 {conteudo}
               </div>

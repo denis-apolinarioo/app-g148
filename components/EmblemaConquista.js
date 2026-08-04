@@ -70,7 +70,7 @@ export default function EmblemaConquista({
       {/* foto/ícone da conquista, encaixado no vão do emblema */}
       <div
         className="absolute overflow-hidden rounded-full bg-cream-card"
-        style={{ left: '21.5%', right: '21.5%', top: '16%', bottom: '27%' }}
+        style={{ left: '17%', right: '17%', top: '12%', bottom: '22%' }}
       >
         <div className="flex h-full w-full items-center justify-center">
           {conquista.imagemURL ? (
