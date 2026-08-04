@@ -9,7 +9,6 @@ import EmptyState from '@/components/EmptyState';
 import { ShieldAlert } from 'lucide-react';
 import AdminLoginGate from './_components/AdminLoginGate';
 import AbaAcoes from './_components/AbaAcoes';
-import AbaCategoriasAcao from './_components/AbaCategoriasAcao';
 import AbaMissoes from './_components/AbaMissoes';
 import AbaConquistas from './_components/AbaConquistas';
 import AbaUsuarios from './_components/AbaUsuarios';
@@ -19,7 +18,11 @@ import AbaConfiguracoes from './_components/AbaConfiguracoes';
 import AbaHistorico from './_components/AbaHistorico';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
-const ABAS = ['Ações', 'Categorias', 'Missões', 'Conquistas', 'Usuários', 'Correio', 'Denúncias', 'Histórico', 'Config'];
+// "Categorias" deixou de ser uma aba separada — o conteúdo (Ações
+// específicas) agora vive dentro da aba Ações, junto com as Ações básicas
+// (ver _components/AbaAcoes.js). O arquivo _components/AbaCategoriasAcao.js
+// não é mais usado e pode ser apagado do repositório.
+const ABAS = ['Ações', 'Missões', 'Conquistas', 'Usuários', 'Correio', 'Denúncias', 'Histórico', 'Config'];
 
 export default function AdminPage() {
   const { usuarioAuth, perfil } = useAuth();
@@ -77,7 +80,6 @@ export default function AdminPage() {
       <div className="px-4 py-4">
         <ErrorBoundary key={aba}>
           {aba === 'Ações' && <AbaAcoes />}
-          {aba === 'Categorias' && <AbaCategoriasAcao />}
           {aba === 'Missões' && <AbaMissoes />}
           {aba === 'Conquistas' && <AbaConquistas />}
           {aba === 'Usuários' && <AbaUsuarios />}

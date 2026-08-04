@@ -9,7 +9,8 @@ import {
   Trash2,
   ChevronUp,
   ChevronDown,
-  UploadCloud,
+  GripVertical,
+  Users,
   X,
 } from 'lucide-react';
 import {
@@ -18,17 +19,19 @@ import {
   atualizarMissao,
   apagarMissao,
   trocarOrdem,
-  migrarMissoesDoCodigoParaFirestore,
-  migrarCamposDasMissoes,
-  migrarPeriodicidadeParaCiclos,
+  reordenarMissoes,
+  buscarSubmissoesPorUsuario,
 } from '@/lib/missionsRepo';
 import { statusDaMissao } from '@/lib/missionCycles';
 import { getAllUsers } from '@/lib/firestore-helpers';
-import { todayBrasilia } from '@/lib/dateUtils';
+import { todayBrasilia, formatDateTimeBR } from '@/lib/dateUtils';
 import { slugify } from '@/lib/slug';
 import { useAuth } from '@/components/AuthProvider';
+import { useConfirm } from '@/components/ConfirmProvider';
 import Avatar from '@/components/Avatar';
 import IconGalleryPicker from '@/components/IconGalleryPicker';
+import BuscaUsuario from './BuscaUsuario';
+import { useArrastarReordenar } from './useArrastarReordenar';
 
 const CATEGORIAS = [
   { valor: 'exclusiva', label: 'Missões Exclusivas', legenda: 'Só quem for marcado em "Destinatários" vê' },
@@ -78,16 +81,12 @@ function descreverMissao(missao) {
 
 export default function AbaMissoes() {
   const { perfil } = useAuth();
+  const confirmar = useConfirm();
   const [missoes, setMissoes] = useState(null);
-  const [migrando, setMigrando] = useState(false);
-  const [resultadoMigracao, setResultadoMigracao] = useState(null);
-  const [corrigindoCampos, setCorrigindoCampos] = useState(false);
-  const [resultadoCorrecaoCampos, setResultadoCorrecaoCampos] = useState(null);
-  const [corrigindoPeriodo, setCorrigindoPeriodo] = useState(false);
-  const [resultadoCorrecaoPeriodo, setResultadoCorrecaoPeriodo] = useState(null);
   const [missaoEditando, setMissaoEditando] = useState(null); // objeto = editar, 'nova' = criar
   const [categoriaNova, setCategoriaNova] = useState('geral');
   const [apagando, setApagando] = useState(null);
+  const [mostrarBuscaPessoa, setMostrarBuscaPessoa] = useState(false);
 
   const carregar = useCallback(() => {
     getTodasAsMissoes().then(setMissoes);
@@ -97,69 +96,14 @@ export default function AbaMissoes() {
     carregar();
   }, [carregar]);
 
-  async function handleMigrar() {
-    if (migrando) return;
-    setMigrando(true);
-    setResultadoMigracao(null);
-    try {
-      const criadas = await migrarMissoesDoCodigoParaFirestore();
-      setResultadoMigracao(
-        criadas > 0
-          ? `${criadas} missão(ões) migrada(s) com sucesso.`
-          : 'Nada pra migrar — todas as missões do código já estavam aqui.'
-      );
-      carregar();
-    } catch (err) {
-      console.error('Erro na migração de missões:', err);
-      setResultadoMigracao('Não foi possível migrar agora. Tente de novo em instantes.');
-    } finally {
-      setMigrando(false);
-    }
-  }
-
-  async function handleCorrigirCampos() {
-    if (corrigindoCampos) return;
-    setCorrigindoCampos(true);
-    setResultadoCorrecaoCampos(null);
-    try {
-      const migradas = await migrarCamposDasMissoes();
-      setResultadoCorrecaoCampos(
-        migradas > 0
-          ? `${migradas} missão(ões) com o formato corrigido.`
-          : 'Nada pra corrigir — todas as missões já estão no formato novo.'
-      );
-      carregar();
-    } catch (err) {
-      console.error('Erro ao corrigir formato dos campos das missões:', err);
-      setResultadoCorrecaoCampos('Não foi possível corrigir agora. Tente de novo em instantes.');
-    } finally {
-      setCorrigindoCampos(false);
-    }
-  }
-
-  async function handleCorrigirPeriodo() {
-    if (corrigindoPeriodo) return;
-    setCorrigindoPeriodo(true);
-    setResultadoCorrecaoPeriodo(null);
-    try {
-      const migradas = await migrarPeriodicidadeParaCiclos();
-      setResultadoCorrecaoPeriodo(
-        migradas > 0
-          ? `${migradas} missão(ões) convertida(s) pro novo período.`
-          : 'Nada pra converter — todas as missões já estão no formato novo de período.'
-      );
-      carregar();
-    } catch (err) {
-      console.error('Erro ao converter período das missões:', err);
-      setResultadoCorrecaoPeriodo('Não foi possível converter agora. Tente de novo em instantes.');
-    } finally {
-      setCorrigindoPeriodo(false);
-    }
-  }
-
   async function handleApagar(missao) {
-    if (!confirm(`Apagar a missão "${missao.titulo}"? Isso não afeta o histórico já registrado.`))
-      return;
+    const ok = await confirmar({
+      titulo: `Apagar a missão "${missao.titulo}"?`,
+      descricao: 'Isso não afeta o histórico já registrado.',
+      perigo: true,
+      labelConfirmar: 'Apagar',
+    });
+    if (!ok) return;
     setApagando(missao.id);
     try {
       await apagarMissao(missao.id, perfil, missao.titulo);
@@ -168,17 +112,6 @@ export default function AbaMissoes() {
       console.error('Erro ao apagar missão:', err);
     } finally {
       setApagando(null);
-    }
-  }
-
-  async function handleMover(lista, index, direcao) {
-    const alvo = index + direcao;
-    if (alvo < 0 || alvo >= lista.length) return;
-    try {
-      await trocarOrdem(lista[index], lista[alvo]);
-      carregar();
-    } catch (err) {
-      console.error('Erro ao reordenar missão:', err);
     }
   }
 
@@ -191,142 +124,31 @@ export default function AbaMissoes() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-4">
-        <p className="text-xs text-coffee-500">
-          Se você acabou de ativar isso, clique aqui uma vez pra trazer as missões que já
-          existiam no código pra dentro desta lista. É seguro clicar mais de uma vez — só cria o
-          que ainda não existir.
-        </p>
-        <button
-          onClick={handleMigrar}
-          disabled={migrando}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-coffee-200 py-2.5 text-sm font-semibold text-coffee-700 disabled:opacity-40"
-        >
-          {migrando ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-          Migrar missões do código
-        </button>
-        {resultadoMigracao && (
-          <p className="mt-2 text-center text-xs text-coffee-500">{resultadoMigracao}</p>
-        )}
-
-        <button
-          onClick={handleCorrigirCampos}
-          disabled={corrigindoCampos}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-coffee-200 py-2.5 text-sm font-semibold text-coffee-700 disabled:opacity-40"
-        >
-          {corrigindoCampos ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : (
-            <UploadCloud size={14} />
-          )}
-          Corrigir formato dos campos
-        </button>
-        {resultadoCorrecaoCampos && (
-          <p className="mt-2 text-center text-xs text-coffee-500">{resultadoCorrecaoCampos}</p>
-        )}
-
-        <button
-          onClick={handleCorrigirPeriodo}
-          disabled={corrigindoPeriodo}
-          className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-coffee-200 py-2.5 text-sm font-semibold text-coffee-700 disabled:opacity-40"
-        >
-          {corrigindoPeriodo ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : (
-            <UploadCloud size={14} />
-          )}
-          Converter período (diária/semanal/mensal → dias)
-        </button>
-        {resultadoCorrecaoPeriodo && (
-          <p className="mt-2 text-center text-xs text-coffee-500">{resultadoCorrecaoPeriodo}</p>
-        )}
-      </div>
-
       {grupos.map((grupo) => (
-        <div key={grupo.valor}>
-          <div className="mb-1 flex items-center justify-between">
-            <h3 className="font-destaque text-sm font-semibold text-coffee-700">{grupo.label}</h3>
-            <button
-              onClick={() => {
-                setCategoriaNova(grupo.valor);
-                setMissaoEditando('nova');
-              }}
-              className="flex items-center gap-1 text-xs font-semibold text-coffee-600"
-            >
-              <Plus size={13} /> Nova
-            </button>
-          </div>
-          <p className="mb-2 text-[11px] text-coffee-300">{grupo.legenda}</p>
-
-          {grupo.lista.length === 0 && (
-            <p className="text-xs text-coffee-300">Nenhuma missão aqui ainda.</p>
-          )}
-
-          <div className="space-y-2">
-            {grupo.lista.map((missao, index) => {
-              const status = statusDaMissao(missao);
-              return (
-                <div
-                  key={missao.id}
-                  className={`flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream-card px-3.5 py-2.5 ${
-                    missao.ativa === false ? 'opacity-50' : ''
-                  }`}
-                >
-                  <div className="flex flex-shrink-0 flex-col">
-                    <button
-                      onClick={() => handleMover(grupo.lista, index, -1)}
-                      disabled={index === 0}
-                      className="text-coffee-300 disabled:opacity-20"
-                    >
-                      <ChevronUp size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleMover(grupo.lista, index, 1)}
-                      disabled={index === grupo.lista.length - 1}
-                      className="text-coffee-300 disabled:opacity-20"
-                    >
-                      <ChevronDown size={14} />
-                    </button>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-coffee-800">
-                      {missao.titulo}
-                      {missao.ativa === false && (
-                        <span className="ml-1.5 text-[10px] font-medium text-coffee-400">(inativa)</span>
-                      )}
-                      {missao.ativa !== false && ROTULO_STATUS[status] && (
-                        <span className="ml-1.5 text-[10px] font-medium text-coffee-400">
-                          ({ROTULO_STATUS[status]})
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-coffee-400">
-                      {descreverMissao(missao)} · +{missao.pontos} pontos
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setMissaoEditando(missao)}
-                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-coffee-200 text-coffee-600"
-                  >
-                    <Pencil size={13} />
-                  </button>
-                  <button
-                    onClick={() => handleApagar(missao)}
-                    disabled={apagando === missao.id}
-                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-coffee-200 text-red-600 disabled:opacity-40"
-                  >
-                    {apagando === missao.id ? (
-                      <Loader2 size={13} className="animate-spin" />
-                    ) : (
-                      <Trash2 size={13} />
-                    )}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <GrupoDeMissoes
+          key={grupo.valor}
+          grupo={grupo}
+          onRecarregar={carregar}
+          onNova={() => {
+            setCategoriaNova(grupo.valor);
+            setMissaoEditando('nova');
+          }}
+          onEditar={setMissaoEditando}
+          onApagar={handleApagar}
+          apagando={apagando}
+        />
       ))}
+
+      <div>
+        <button
+          onClick={() => setMostrarBuscaPessoa((v) => !v)}
+          className="flex items-center gap-1.5 text-xs font-semibold text-coffee-600"
+        >
+          <Users size={13} />
+          {mostrarBuscaPessoa ? 'Esconder busca por pessoa' : 'Buscar quem já cumpriu qual missão'}
+        </button>
+        {mostrarBuscaPessoa && <BuscaMissoesPorPessoa />}
+      </div>
 
       {missaoEditando && (
         <MissaoFormModal
@@ -339,6 +161,179 @@ export default function AbaMissoes() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Um grupo (Exclusivas ou Gerais) com sua própria lista arrastável — cada
+// grupo precisa da sua própria instância do hook de arrastar-e-soltar (por
+// isso vira um componente à parte, não um `.map()` inline).
+// ----------------------------------------------------------------------------
+function GrupoDeMissoes({ grupo, onRecarregar, onNova, onEditar, onApagar, apagando }) {
+  const { itensVisuais, propsDoItem, propsDaAlca } = useArrastarReordenar(grupo.lista, (novaOrdem) =>
+    reordenarMissoes(novaOrdem).then(onRecarregar)
+  );
+
+  async function handleMover(index, direcao) {
+    const alvo = index + direcao;
+    if (alvo < 0 || alvo >= itensVisuais.length) return;
+    try {
+      await trocarOrdem(itensVisuais[index], itensVisuais[alvo]);
+      onRecarregar();
+    } catch (err) {
+      console.error('Erro ao reordenar missão:', err);
+    }
+  }
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between">
+        <h3 className="font-destaque text-sm font-semibold text-coffee-700">{grupo.label}</h3>
+        <button onClick={onNova} className="flex items-center gap-1 text-xs font-semibold text-coffee-600">
+          <Plus size={13} /> Nova
+        </button>
+      </div>
+      <p className="mb-2 text-[11px] text-coffee-300">{grupo.legenda}</p>
+
+      {itensVisuais.length === 0 && (
+        <p className="text-xs text-coffee-300">Nenhuma missão aqui ainda.</p>
+      )}
+
+      <div className="space-y-2">
+        {itensVisuais.map((missao, index) => {
+          const status = statusDaMissao(missao);
+          return (
+            <div
+              key={missao.id}
+              {...propsDoItem(index)}
+              className={`flex items-center gap-1.5 rounded-xl border border-coffee-100 bg-cream-card px-3.5 py-2.5 ${
+                missao.ativa === false ? 'opacity-50' : ''
+              }`}
+            >
+              <span
+                {...propsDaAlca(index)}
+                className="flex-shrink-0 cursor-grab touch-none text-coffee-200 active:cursor-grabbing"
+                aria-label="Arrastar para reordenar"
+              >
+                <GripVertical size={15} />
+              </span>
+              <div className="flex flex-shrink-0 flex-col">
+                <button
+                  onClick={() => handleMover(index, -1)}
+                  disabled={index === 0}
+                  className="text-coffee-300 disabled:opacity-20"
+                >
+                  <ChevronUp size={14} />
+                </button>
+                <button
+                  onClick={() => handleMover(index, 1)}
+                  disabled={index === itensVisuais.length - 1}
+                  className="text-coffee-300 disabled:opacity-20"
+                >
+                  <ChevronDown size={14} />
+                </button>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-coffee-800">
+                  {missao.titulo}
+                  {missao.ativa === false && (
+                    <span className="ml-1.5 text-[10px] font-medium text-coffee-400">(inativa)</span>
+                  )}
+                  {missao.ativa !== false && ROTULO_STATUS[status] && (
+                    <span className="ml-1.5 text-[10px] font-medium text-coffee-400">
+                      ({ROTULO_STATUS[status]})
+                    </span>
+                  )}
+                </p>
+                <p className="text-xs text-coffee-400">
+                  {descreverMissao(missao)} · +{missao.pontos} pontos
+                </p>
+              </div>
+              <button
+                onClick={() => onEditar(missao)}
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-coffee-200 text-coffee-600"
+              >
+                <Pencil size={13} />
+              </button>
+              <button
+                onClick={() => onApagar(missao)}
+                disabled={apagando === missao.id}
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-coffee-200 text-red-600 disabled:opacity-40"
+              >
+                {apagando === missao.id ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <Trash2 size={13} />
+                )}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Busca "por pessoa" das Missões — escolhe alguém e vê quantas vezes ela já
+// cumpriu cada missão, e quando foi a última vez. Mesmo padrão de busca
+// usado em Histórico/Conquistas/Ações (ver BuscaUsuario.js).
+// ----------------------------------------------------------------------------
+function BuscaMissoesPorPessoa() {
+  const [usuarios, setUsuarios] = useState(null);
+  const [selecionado, setSelecionado] = useState(null);
+  const [registros, setRegistros] = useState(null);
+
+  useEffect(() => {
+    getAllUsers()
+      .then(setUsuarios)
+      .catch((err) => {
+        console.error('[BuscaMissoesPorPessoa] Erro ao carregar usuários:', err);
+        setUsuarios([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!selecionado) return;
+    setRegistros(null);
+    buscarSubmissoesPorUsuario(selecionado.id)
+      .then(setRegistros)
+      .catch((err) => {
+        console.error('[BuscaMissoesPorPessoa] Erro ao buscar submissões:', err);
+        setRegistros([]);
+      });
+  }, [selecionado]);
+
+  return (
+    <div className="mt-2.5 space-y-2.5 rounded-xl2 border border-coffee-100 bg-cream-card p-3.5">
+      <BuscaUsuario usuarios={usuarios} selecionado={selecionado} onSelecionar={setSelecionado} />
+
+      {selecionado && registros === null && (
+        <div className="h-12 animate-pulse rounded-lg bg-coffee-100/60" />
+      )}
+      {selecionado && registros?.length === 0 && (
+        <p className="text-xs text-coffee-300">Essa pessoa ainda não cumpriu nenhuma missão.</p>
+      )}
+      {selecionado &&
+        registros?.map((r) => (
+          <div
+            key={r.missaoId}
+            className="flex items-center justify-between gap-2 rounded-lg bg-cream px-3 py-2"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-coffee-700">{r.titulo}</p>
+              {r.ultimaData && (
+                <p className="text-[11px] text-coffee-300">
+                  última vez em {formatDateTimeBR(r.ultimaData)}
+                </p>
+              )}
+            </div>
+            <span className="flex-shrink-0 font-destaque text-sm font-bold text-coffee-700">
+              {r.quantidade}x
+            </span>
+          </div>
+        ))}
     </div>
   );
 }
@@ -495,8 +490,14 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center">
-      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center"
+      onClick={onFechar}
+    >
+      <div
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-coffee-100 px-5 py-4">
           <h2 className="font-destaque text-lg font-semibold text-coffee-800">
             {editando ? 'Editar missão' : 'Nova missão'}
@@ -507,12 +508,6 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
         </div>
 
         <div className="space-y-4 px-5 py-5">
-          {editando && (
-            <p className="text-xs text-coffee-300">
-              ID: <code>{missaoInicial.id}</code> (não muda depois de criada)
-            </p>
-          )}
-
           <Campo label="Título">
             <input
               value={titulo}

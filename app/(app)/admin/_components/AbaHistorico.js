@@ -13,6 +13,7 @@ import { getAllUsers } from '@/lib/firestore-helpers';
 import { combinaComBusca } from '@/lib/searchUtils';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
+import BuscaUsuario from './BuscaUsuario';
 
 // Item 9º do Bloco 3 — tela de histórico das ações do admin (por enquanto,
 // ajuste manual de pontos e o toggle de bloqueio de usuário usam isso — mas
@@ -155,7 +156,6 @@ function HistoricoRecentes() {
 // feitos nela.
 // ----------------------------------------------------------------------------
 function HistoricoPorUsuario() {
-  const [busca, setBusca] = useState('');
   const [usuarios, setUsuarios] = useState(null);
   const [selecionado, setSelecionado] = useState(null);
   const [registros, setRegistros] = useState(null);
@@ -183,109 +183,35 @@ function HistoricoPorUsuario() {
       });
   }, [selecionado]);
 
-  const usuariosFiltrados = useMemo(() => {
-    if (!usuarios || !busca.trim()) return [];
-    return usuarios.filter((u) => combinaComBusca(u.nome, busca) || combinaComBusca(u.username, busca));
-  }, [usuarios, busca]);
-
-  if (selecionado) {
-    return (
-      <div className="space-y-3">
-        <button
-          onClick={() => {
-            setSelecionado(null);
-            setRegistros(null);
-          }}
-          className="text-xs font-medium text-coffee-500"
-        >
-          ← Voltar pra busca
-        </button>
-
-        <div className="flex items-center gap-2.5">
-          <Avatar src={selecionado.fotoURL} nome={selecionado.nome} tamanho="sm" />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-coffee-800">{selecionado.nome}</p>
-            {selecionado.username && (
-              <p className="truncate text-xs text-coffee-400">@{selecionado.username}</p>
-            )}
-          </div>
-        </div>
-
-        {registros === null && (
-          <div className="space-y-2">
-            {[1, 2].map((i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl2 bg-coffee-100/60" />
-            ))}
-          </div>
-        )}
-
-        {registros?.length === 0 && !erro && (
-          <EmptyState
-            icone={History}
-            titulo="Nenhum ajuste encontrado"
-            descricao="Essa pessoa ainda não teve pontos alterados manualmente."
-          />
-        )}
-
-        {erro && registros?.length === 0 && (
-          <EmptyState
-            icone={History}
-            titulo="Não deu pra carregar"
-            descricao="Tenta de novo em alguns segundos."
-          />
-        )}
-
-        {registros?.map((r) => (
-          <LinhaRegistro key={r.id} registro={r} ocultarAlvo />
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-3">
-      <div className="relative">
-        <Search
-          size={15}
-          className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-coffee-300"
-        />
-        <input
-          type="text"
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          placeholder="Buscar por nome ou @username..."
-          className="w-full rounded-lg border border-coffee-100 bg-cream-card py-2 pl-8 pr-3 text-sm text-coffee-800"
-        />
-      </div>
+      <BuscaUsuario usuarios={usuarios} selecionado={selecionado} onSelecionar={setSelecionado} />
 
-      {usuarios === null && <div className="h-16 animate-pulse rounded-xl2 bg-coffee-100/60" />}
-
-      {usuarios !== null && !busca.trim() && (
-        <p className="px-1 text-xs text-coffee-300">
-          Digite um nome ou @username pra ver o histórico de pontos dessa pessoa.
-        </p>
-      )}
-
-      {busca.trim() !== '' && (
-        <div className="overflow-hidden rounded-xl border border-coffee-100 bg-cream-card">
-          {usuariosFiltrados.length === 0 && (
-            <p className="px-3.5 py-3 text-center text-xs text-coffee-400">Ninguém encontrado.</p>
-          )}
-          {usuariosFiltrados.map((u) => (
-            <button
-              key={u.id}
-              onClick={() => setSelecionado(u)}
-              className="flex w-full items-center gap-2.5 border-b border-coffee-50 px-3.5 py-2.5 text-left last:border-b-0"
-            >
-              <Avatar src={u.fotoURL} nome={u.nome} tamanho="sm" />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-coffee-800">{u.nome}</p>
-                {u.username && <p className="truncate text-xs text-coffee-400">@{u.username}</p>}
-              </div>
-            </button>
+      {selecionado && registros === null && (
+        <div className="space-y-2">
+          {[1, 2].map((i) => (
+            <div key={i} className="h-16 animate-pulse rounded-xl2 bg-coffee-100/60" />
           ))}
         </div>
       )}
+
+      {selecionado && registros?.length === 0 && !erro && (
+        <EmptyState
+          icone={History}
+          titulo="Nenhum ajuste encontrado"
+          descricao="Essa pessoa ainda não teve pontos alterados manualmente."
+        />
+      )}
+
+      {selecionado && erro && registros?.length === 0 && (
+        <EmptyState
+          icone={History}
+          titulo="Não deu pra carregar"
+          descricao="Tenta de novo em alguns segundos."
+        />
+      )}
+
+      {selecionado && registros?.map((r) => <LinhaRegistro key={r.id} registro={r} ocultarAlvo />)}
     </div>
   );
 }

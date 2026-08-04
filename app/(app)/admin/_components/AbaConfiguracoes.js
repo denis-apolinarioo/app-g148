@@ -16,6 +16,7 @@ import {
 import { resetarPontosDeTodos } from '@/lib/points';
 import { resetarDracmasDeTodos } from '@/lib/dracma';
 import ConfirmarResetModal from '@/components/ConfirmarResetModal';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 export default function AbaConfiguracoes() {
   const { perfil } = useAuth();
@@ -115,20 +116,28 @@ function ToggleConfig({ icone: Icone, titulo, descricao, ativo, salvando, onAlte
 // usuários — ação irreversível.
 // ----------------------------------------------------------------------------
 function ZonaDePerigo({ admin }) {
+  const confirmar = useConfirm();
   const [modalAberto, setModalAberto] = useState(null); // null | 'pontos' | 'dracmas'
   const [executando, setExecutando] = useState(false);
   const [resultado, setResultado] = useState(null); // { acao, quantidade } | null
   const [erro, setErro] = useState('');
 
-  function handleAbrirConfirmacao(acao) {
+  async function handleAbrirConfirmacao(acao) {
     setErro('');
     setResultado(null);
-    const mensagem =
+    const descricao =
       acao === 'pontos'
-        ? 'Tem certeza que quer zerar os Pontos de Comunhão de TODOS os usuários do app? Essa ação não pode ser desfeita.'
-        : 'Tem certeza que quer zerar os Dracmas de TODOS os usuários do app? Essa ação não pode ser desfeita.';
-    // 1º fator da confirmação tripla: pop up nativo.
-    if (window.confirm(mensagem)) {
+        ? 'Isso zera os Pontos de Comunhão de TODOS os usuários do app. Essa ação não pode ser desfeita.'
+        : 'Isso zera os Dracmas de TODOS os usuários do app. Essa ação não pode ser desfeita.';
+    // 1º fator da confirmação tripla (os outros dois ficam dentro de
+    // ConfirmarResetModal: código por e-mail e senha do admin).
+    const ok = await confirmar({
+      titulo: 'Tem certeza?',
+      descricao,
+      perigo: true,
+      labelConfirmar: 'Continuar',
+    });
+    if (ok) {
       setModalAberto(acao);
     }
   }

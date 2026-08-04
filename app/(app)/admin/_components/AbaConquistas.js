@@ -9,6 +9,8 @@ import {
   Trash2,
   ChevronUp,
   ChevronDown,
+  GripVertical,
+  Users,
   UploadCloud,
   X,
 } from 'lucide-react';
@@ -18,22 +20,29 @@ import {
   atualizarConquista,
   apagarConquista,
   trocarOrdem,
-  migrarConquistasDoCodigoParaFirestore,
+  reordenarConquistas,
   migrarConquistasNovasParaFirestore,
 } from '@/lib/conquistasRepo';
 import { getTodasAsMissoes } from '@/lib/missionsRepo';
 import { getTodasAsCategoriasAcao } from '@/lib/categoriasAcaoRepo';
+import { getConquistasDoUsuario } from '@/lib/achievements';
+import { getAllUsers } from '@/lib/firestore-helpers';
+import { formatDateTimeBR } from '@/lib/dateUtils';
 import { uploadImagemConquista } from '@/lib/storage';
 import { useAuth } from '@/components/AuthProvider';
+import { useConfirm } from '@/components/ConfirmProvider';
 import IconGalleryPicker from '@/components/IconGalleryPicker';
 import ImageCropper from '@/components/ImageCropper';
 import { iconePascalCase } from '@/lib/missionIcons';
+import BuscaUsuario from './BuscaUsuario';
+import { useArrastarReordenar } from './useArrastarReordenar';
 
 // Cada opção corresponde a um contadorTipo (ver lib/achievements.js). As
 // opções "missao" e "categoria" são especiais: o valor final salvo vira
 // "missao:<id da missão>" ou "categoria:<id da categoria>" (ver
 // montarContadorTipo/desmontarContadorTipo abaixo). "categoria" é a Fase 2
-// (Admin > Categorias) — conta quantas vezes a pessoa fez aquela categoria.
+// (Admin > Ações > Ações específicas) — conta quantas vezes a pessoa fez
+// aquela categoria.
 const TIPOS_CONTADOR = [
   { valor: 'streak', label: 'Sequência de dias ativos (streak)' },
   { valor: 'oracao', label: 'Orações (pedidos orados pela pessoa)' },
@@ -100,15 +109,15 @@ function descreverContador(conquista, missoesPorId, categoriasPorId) {
 
 export default function AbaConquistas() {
   const { perfil } = useAuth();
+  const confirmar = useConfirm();
   const [conquistas, setConquistas] = useState(null);
   const [missoes, setMissoes] = useState([]);
   const [categoriasAcao, setCategoriasAcao] = useState([]);
-  const [migrando, setMigrando] = useState(false);
-  const [resultadoMigracao, setResultadoMigracao] = useState(null);
-  const [migrandoNovas, setMigrandoNovas] = useState(false);
-  const [resultadoMigracaoNovas, setResultadoMigracaoNovas] = useState(null);
   const [conquistaEditando, setConquistaEditando] = useState(null); // objeto = editar, 'nova' = criar
   const [apagando, setApagando] = useState(null);
+  const [mostrarBuscaPessoa, setMostrarBuscaPessoa] = useState(false);
+  const [migrandoNovas, setMigrandoNovas] = useState(false);
+  const [resultadoMigracaoNovas, setResultadoMigracaoNovas] = useState(null);
 
   const carregar = useCallback(() => {
     getTodasAsConquistas().then(setConquistas);
@@ -122,26 +131,6 @@ export default function AbaConquistas() {
 
   const missoesPorId = Object.fromEntries(missoes.map((m) => [m.id, m]));
   const categoriasPorId = Object.fromEntries(categoriasAcao.map((c) => [c.id, c]));
-
-  async function handleMigrar() {
-    if (migrando) return;
-    setMigrando(true);
-    setResultadoMigracao(null);
-    try {
-      const criadas = await migrarConquistasDoCodigoParaFirestore();
-      setResultadoMigracao(
-        criadas > 0
-          ? `${criadas} conquista(s) migrada(s) com sucesso.`
-          : 'Nada pra migrar — todas as conquistas do código já estavam aqui.'
-      );
-      carregar();
-    } catch (err) {
-      console.error('Erro na migração de conquistas:', err);
-      setResultadoMigracao('Não foi possível migrar agora. Tente de novo em instantes.');
-    } finally {
-      setMigrando(false);
-    }
-  }
 
   async function handleMigrarNovas() {
     if (migrandoNovas) return;
@@ -164,12 +153,13 @@ export default function AbaConquistas() {
   }
 
   async function handleApagar(conquista) {
-    if (
-      !confirm(
-        `Apagar a conquista "${conquista.nome}"? Quem já desbloqueou continua com ela — só sai do catálogo pra quem ainda não tinha.`
-      )
-    )
-      return;
+    const ok = await confirmar({
+      titulo: `Apagar a conquista "${conquista.nome}"?`,
+      descricao: 'Quem já desbloqueou continua com ela — só sai do catálogo pra quem ainda não tinha.',
+      perigo: true,
+      labelConfirmar: 'Apagar',
+    });
+    if (!ok) return;
     setApagando(conquista.id);
     try {
       await apagarConquista(conquista.id, perfil, conquista.nome);
@@ -181,11 +171,16 @@ export default function AbaConquistas() {
     }
   }
 
+  const { itensVisuais: conquistasArrastaveis, propsDoItem, propsDaAlca } = useArrastarReordenar(
+    conquistas || [],
+    (novaOrdem) => reordenarConquistas(novaOrdem).then(carregar)
+  );
+
   async function handleMover(index, direcao) {
     const alvo = index + direcao;
-    if (!conquistas || alvo < 0 || alvo >= conquistas.length) return;
+    if (!conquistasArrastaveis || alvo < 0 || alvo >= conquistasArrastaveis.length) return;
     try {
-      await trocarOrdem(conquistas[index], conquistas[alvo]);
+      await trocarOrdem(conquistasArrastaveis[index], conquistasArrastaveis[alvo]);
       carregar();
     } catch (err) {
       console.error('Erro ao reordenar conquista:', err);
@@ -196,25 +191,6 @@ export default function AbaConquistas() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-4">
-        <p className="text-xs text-coffee-500">
-          Se você acabou de ativar isso, clique aqui uma vez pra trazer as conquistas que já
-          existiam no código pra dentro desta lista. É seguro clicar mais de uma vez — só cria o
-          que ainda não existir.
-        </p>
-        <button
-          onClick={handleMigrar}
-          disabled={migrando}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-coffee-200 py-2.5 text-sm font-semibold text-coffee-700 disabled:opacity-40"
-        >
-          {migrando ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-          Migrar conquistas do código
-        </button>
-        {resultadoMigracao && (
-          <p className="mt-2 text-center text-xs text-coffee-500">{resultadoMigracao}</p>
-        )}
-      </div>
-
       <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-4">
         <p className="text-xs text-coffee-500">
           Clique aqui pra criar de uma vez as 25 conquistas novas (com os níveis I/II/III de cada
@@ -254,15 +230,23 @@ export default function AbaConquistas() {
         )}
 
         <div className="space-y-2">
-          {conquistas.map((conquista, index) => {
+          {conquistasArrastaveis.map((conquista, index) => {
             const Icone = Icons[iconePascalCase(conquista.icone)] || Icons.Award;
             return (
               <div
                 key={conquista.id}
-                className={`flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream-card px-3.5 py-2.5 ${
+                {...propsDoItem(index)}
+                className={`flex items-center gap-1.5 rounded-xl border border-coffee-100 bg-cream-card px-3.5 py-2.5 ${
                   conquista.ativa === false ? 'opacity-50' : ''
                 }`}
               >
+                <span
+                  {...propsDaAlca(index)}
+                  className="flex-shrink-0 cursor-grab touch-none text-coffee-200 active:cursor-grabbing"
+                  aria-label="Arrastar para reordenar"
+                >
+                  <GripVertical size={15} />
+                </span>
                 <div className="flex flex-shrink-0 flex-col">
                   <button
                     onClick={() => handleMover(index, -1)}
@@ -273,7 +257,7 @@ export default function AbaConquistas() {
                   </button>
                   <button
                     onClick={() => handleMover(index, 1)}
-                    disabled={index === conquistas.length - 1}
+                    disabled={index === conquistasArrastaveis.length - 1}
                     className="text-coffee-300 disabled:opacity-20"
                   >
                     <ChevronDown size={14} />
@@ -325,6 +309,15 @@ export default function AbaConquistas() {
             );
           })}
         </div>
+
+        <button
+          onClick={() => setMostrarBuscaPessoa((v) => !v)}
+          className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-coffee-600"
+        >
+          <Users size={13} />
+          {mostrarBuscaPessoa ? 'Esconder busca por pessoa' : 'Buscar quem já conquistou o quê'}
+        </button>
+        {mostrarBuscaPessoa && <BuscaConquistasPorPessoa />}
       </div>
 
       {conquistaEditando && (
@@ -339,6 +332,69 @@ export default function AbaConquistas() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Busca "por pessoa" das Conquistas — escolhe alguém e vê quais conquistas
+// ela já desbloqueou e quando. Mesmo padrão de busca usado em Histórico/
+// Missões/Ações (ver BuscaUsuario.js).
+// ----------------------------------------------------------------------------
+function BuscaConquistasPorPessoa() {
+  const [usuarios, setUsuarios] = useState(null);
+  const [selecionado, setSelecionado] = useState(null);
+  const [conquistasDaPessoa, setConquistasDaPessoa] = useState(null);
+
+  useEffect(() => {
+    getAllUsers()
+      .then(setUsuarios)
+      .catch((err) => {
+        console.error('[BuscaConquistasPorPessoa] Erro ao carregar usuários:', err);
+        setUsuarios([]);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!selecionado) return;
+    setConquistasDaPessoa(null);
+    getConquistasDoUsuario(selecionado.id)
+      .then((todas) => setConquistasDaPessoa(todas.filter((c) => c.desbloqueada)))
+      .catch((err) => {
+        console.error('[BuscaConquistasPorPessoa] Erro ao buscar conquistas:', err);
+        setConquistasDaPessoa([]);
+      });
+  }, [selecionado]);
+
+  return (
+    <div className="mt-2.5 space-y-2.5 rounded-xl2 border border-coffee-100 bg-cream-card p-3.5">
+      <BuscaUsuario usuarios={usuarios} selecionado={selecionado} onSelecionar={setSelecionado} />
+
+      {selecionado && conquistasDaPessoa === null && (
+        <div className="h-12 animate-pulse rounded-lg bg-coffee-100/60" />
+      )}
+      {selecionado && conquistasDaPessoa?.length === 0 && (
+        <p className="text-xs text-coffee-300">Essa pessoa ainda não desbloqueou nenhuma conquista.</p>
+      )}
+      {selecionado &&
+        conquistasDaPessoa?.map((c) => {
+          const Icone = Icons[iconePascalCase(c.icone)] || Icons.Award;
+          return (
+            <div key={c.id} className="flex items-center gap-2.5 rounded-lg bg-cream px-3 py-2">
+              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gold to-coffee-600">
+                <Icone size={14} strokeWidth={1.8} className="text-cream" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-coffee-700">{c.nome}</p>
+                {c.desbloqueadoEm && (
+                  <p className="text-[11px] text-coffee-300">
+                    desbloqueada em {formatDateTimeBR(c.desbloqueadoEm)}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
     </div>
   );
 }
@@ -446,8 +502,14 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-coffee-900/40 sm:items-center">
-      <div className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl">
+    <div
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-coffee-900/40 sm:items-center"
+      onClick={onFechar}
+    >
+      <div
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-coffee-100 px-5 py-4">
           <h3 className="font-destaque text-base font-semibold text-coffee-800">
             {editando ? 'Editar conquista' : 'Nova conquista'}
@@ -559,7 +621,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
               </select>
               {categoriasAcao.length === 0 && (
                 <p className="mt-1.5 text-[11px] text-coffee-400">
-                  Nenhuma categoria criada ainda — vá na aba Categorias primeiro.
+                  Nenhuma categoria criada ainda — vá em Admin &gt; Ações &gt; Ações específicas primeiro.
                 </p>
               )}
             </Campo>

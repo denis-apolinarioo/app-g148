@@ -47,8 +47,14 @@ export default function IconGalleryPicker({ value, onChange }) {
       </div>
 
       {galeriaAberta && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-coffee-900/40 sm:items-center">
-          <div className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl">
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-coffee-900/40 sm:items-center"
+          onClick={() => setGaleriaAberta(false)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b border-coffee-100 px-5 py-4">
               <h3 className="font-destaque text-base font-semibold text-coffee-800">
                 Escolha um ícone

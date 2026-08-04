@@ -14,8 +14,10 @@ import {
 import { uploadFotoCorreioComThumb } from '@/lib/storage';
 import { combinaComBusca } from '@/lib/searchUtils';
 import { formatDateTimeBR } from '@/lib/dateUtils';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 export default function AbaCorreio() {
+  const confirmar = useConfirm();
   const [usuarios, setUsuarios] = useState([]);
   const [busca, setBusca] = useState('');
   const [selecionados, setSelecionados] = useState([]);
@@ -258,9 +260,13 @@ function HistoricoMensagens({ usuarios }) {
   const pessoaSelecionada = usuarios.find((u) => u.id === pessoaId);
 
   async function handleApagar(msg) {
-    if (!confirm('Apagar esta mensagem? Some do Correio de quem recebeu (mesmo se estiver fixada).')) {
-      return;
-    }
+    const ok = await confirmar({
+      titulo: 'Apagar esta mensagem?',
+      descricao: 'Some do Correio de quem recebeu (mesmo se estiver fixada).',
+      perigo: true,
+      labelConfirmar: 'Apagar',
+    });
+    if (!ok) return;
     setApagandoId(msg.id);
     try {
       await deleteMailMessage(msg.id);

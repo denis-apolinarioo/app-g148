@@ -1,5 +1,6 @@
 import './globals.css';
 import { AuthProvider } from '@/components/AuthProvider';
+import { ConfirmProvider } from '@/components/ConfirmProvider';
 
 export const metadata = {
   title: 'G148 — Geração 148',
@@ -54,7 +55,9 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body className="font-body">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </AuthProvider>
       </body>
     </html>
   );

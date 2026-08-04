@@ -2,9 +2,10 @@
 
 // ============================================================================
 // PACOTE 3, item 3.3 — 2º e 3º fator da confirmação tripla pros botões de
-// reset em massa (Pontos/Dracma) no Admin. O 1º fator (pop up) já aconteceu
-// antes deste componente ser montado — ver handleAbrirConfirmacao() em
-// AbaConfiguracoes.js, que usa window.confirm().
+// reset em massa (Pontos/Dracma) no Admin. O 1º fator (popup de
+// confirmação) já aconteceu antes deste componente ser montado — ver
+// handleAbrirConfirmacao() em AbaConfiguracoes.js, que usa o popup próprio
+// do app (components/ConfirmProvider.js).
 //
 // Passo 1 (aqui dentro): código de 6 dígitos por e-mail — gerado no aparelho
 // do admin (igual à recuperação de PIN da Carteira, lib/dracma.js), enviado
@@ -132,8 +133,14 @@ export default function ConfirmarResetModal({ acao, titulo, descricao, onFechar,
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center">
-      <div className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center"
+      onClick={onFechar}
+    >
+      <div
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-coffee-100 px-5 py-4">
           <h2 className="font-destaque text-lg font-semibold text-coffee-800">{titulo}</h2>
           <button onClick={onFechar} className="text-coffee-400">

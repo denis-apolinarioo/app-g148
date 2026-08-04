@@ -10,15 +10,18 @@ import { Settings, Crown, LogOut, Sun, Moon } from 'lucide-react';
 import MailboxLink from '@/components/MailboxLink';
 import { limparTokenAoSair } from '@/lib/push';
 import { useTema } from '@/lib/theme';
+import { useConfirm } from '@/components/ConfirmProvider';
 
 export default function MeuPerfilPage() {
   const { perfil } = useAuth();
   const [tema, alternarTema] = useTema();
+  const confirmar = useConfirm();
 
   if (!perfil) return <LoadingScreen />;
 
   async function handleSair() {
-    if (confirm('Sair da sua conta?')) {
+    const ok = await confirmar({ titulo: 'Sair da sua conta?', labelConfirmar: 'Sair' });
+    if (ok) {
       // Item 25 do Bloco 10 — remove o token de push deste aparelho ANTES
       // de sair, senão quem ficar logado em outra conta nesse mesmo
       // navegador continuaria recebendo pushes da conta anterior.

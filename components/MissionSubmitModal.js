@@ -138,8 +138,17 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
 
   if (conquistaNova) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-coffee-900/50 px-6">
-        <div className="w-full max-w-xs rounded-2xl bg-cream-card p-6 text-center shadow-soft">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-coffee-900/50 px-6"
+        onClick={() => {
+          onConcluida?.();
+          onFechar();
+        }}
+      >
+        <div
+          className="w-full max-w-xs rounded-2xl bg-cream-card p-6 text-center shadow-soft"
+          onClick={(e) => e.stopPropagation()}
+        >
           {conquistaNova.imagemURL ? (
             <img
               src={conquistaNova.imagemURL}
@@ -183,8 +192,14 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center">
-      <div className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center"
+      onClick={onFechar}
+    >
+      <div
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-coffee-100 px-5 py-4">
           <h2 className="font-destaque text-lg font-semibold text-coffee-800">{missao.titulo}</h2>
           <button onClick={onFechar} className="text-coffee-400">

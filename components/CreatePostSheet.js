@@ -25,9 +25,10 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   const { perfil } = useAuth();
   const [aba, setAba] = useState('texto');
   const [texto, setTexto] = useState('');
-  // FASE 3 — categoria escolhida entre as configuráveis pelo Admin (aba
-  // Categorias). `null` = "Nenhuma", mesmo comportamento de antes (pontua o
-  // valor padrão de post no Feed, editável em Admin > Ações).
+  // FASE 3 — categoria escolhida entre as configuráveis pelo Admin (Admin >
+  // Ações > Ações específicas). `null` = "Nenhuma", mesmo comportamento de
+  // antes (pontua o valor padrão de post no Feed, editável em Admin > Ações
+  // > Ações básicas).
   const [categoriasDisponiveis, setCategoriasDisponiveis] = useState([]);
   const [categoria, setCategoria] = useState(null);
   const [arquivoFoto, setArquivoFoto] = useState(null);
@@ -78,19 +79,29 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
     };
   }, [previewFoto]);
 
-  // FASE 3 — carrega as categorias ativas cadastradas pelo Admin (aba
-  // Categorias). Se nenhuma foi criada ainda, o seletor mostra só "Nenhuma"
-  // — mesmo visual de antes da Fase 3.
+  // FASE 3 — carrega as categorias ativas cadastradas pelo Admin (Admin >
+  // Ações > Ações específicas). Se nenhuma foi criada ainda, o seletor
+  // mostra só "Nenhuma" — mesmo visual de antes da Fase 3.
   useEffect(() => {
     getTodasAsCategoriasAcao().then((todas) => {
       setCategoriasDisponiveis(todas.filter((c) => c.ativa !== false));
     });
   }, []);
 
-  const podePublicar =
+  const podePublicarConteudo =
     (aba === 'texto' && texto.trim()) ||
     (aba === 'foto' && arquivoFoto) ||
     (aba === 'audio' && blobAudio);
+
+  // FASE — categoria pode exigir imagem/texto/áudio (configurado em Admin >
+  // Ações > Ações específicas). `exigenciasPendentes` lista só o que ainda
+  // falta, e vai encolhendo conforme a pessoa preenche cada campo.
+  const exigenciasPendentes = [];
+  if (categoria?.exigeTexto && !texto.trim()) exigenciasPendentes.push('texto');
+  if (categoria?.exigeImagem && !(aba === 'foto' && arquivoFoto)) exigenciasPendentes.push('imagem');
+  if (categoria?.exigeAudio && !(aba === 'audio' && blobAudio)) exigenciasPendentes.push('áudio');
+
+  const podePublicar = podePublicarConteudo && exigenciasPendentes.length === 0;
 
   async function handlePublicar() {
     if (!podePublicar || publicando || emDebouncePublicar()) return;
@@ -165,8 +176,14 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center">
-      <div className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-coffee-900/40 sm:items-center"
+      onClick={onFechar}
+    >
+      <div
+        className="max-h-[88vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between border-b border-coffee-100 px-5 py-4">
           <h2 className="font-destaque text-lg font-semibold text-coffee-800">Nova publicação</h2>
           <button onClick={onFechar} className="text-coffee-400">
@@ -287,6 +304,11 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
                 </button>
               ))}
             </div>
+            {categoria && exigenciasPendentes.length > 0 && (
+              <p className="mt-2 text-[11px] text-amber-700">
+                Esta categoria exige: {exigenciasPendentes.join(', ')}.
+              </p>
+            )}
           </div>
 
           {erro && <p className="mt-3 text-sm text-red-700">{erro}</p>}
