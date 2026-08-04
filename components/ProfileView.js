@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Music, Sparkles, UserX, UserCheck } from 'lucide-react';
+import { UserX, UserCheck } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import StreakFogueira from '@/components/StreakFogueira';
 import AchievementBadge from '@/components/AchievementBadge';
@@ -146,26 +146,30 @@ export default function ProfileView({ usuario, usuarioAtual }) {
           </button>
         )}
 
-        {usuario.bio && <p className="mt-3 max-w-xs text-sm text-coffee-600">{usuario.bio}</p>}
-
         {usuario.proposito && (
-          <div className="mt-5 w-full max-w-xs rounded-xl2 border border-coffee-100 bg-cream-card p-4 text-left shadow-card">
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-coffee-500">
-              <Sparkles size={13} /> Propósito
-            </p>
-            <p className="mt-1 text-sm italic text-coffee-600">{usuario.proposito}</p>
-          </div>
-        )}
-
-        {usuario.musicaFavorita && (
-          <div className="mt-2.5 flex w-full max-w-xs items-center gap-2 rounded-xl2 border border-coffee-100 bg-cream-card p-4 text-left shadow-card">
-            <Music size={16} className="flex-shrink-0 text-coffee-400" />
-            <p className="text-sm text-coffee-600">{usuario.musicaFavorita}</p>
+          <div className="mt-5 w-full rounded-xl2 bg-coffee-800 p-4 text-left shadow-card">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gold-soft">Propósito</p>
+            <p className="mt-1.5 text-sm italic text-cream">{usuario.proposito}</p>
           </div>
         )}
       </div>
 
-      {/* FIX: conquistas viram terceira aba, não ficam soltas acima */}
+      {/* Emblemas (conquistas) — logo abaixo dos pontos de comunhão e da
+          streak, ainda no bloco de cabeçalho do perfil, em vez de ficar
+          escondido numa terceira aba */}
+      {conquistas.length > 0 && (
+        <div className="mt-6">
+          <p className="mb-2.5 text-xs font-semibold text-coffee-500">
+            Conquistas ({conquistas.filter((c) => c.desbloqueada).length}/{conquistas.length})
+          </p>
+          <div className="grid grid-cols-4 gap-3">
+            {conquistas.map((c) => (
+              <AchievementBadge key={c.id} conquista={c} onAberta={handleAbrirConquista} />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-7">
         <div className="mb-3 flex gap-4 border-b border-coffee-100">
           <AbaBtn ativo={aba === 'posts'} onClick={() => setAba('posts')} label="Posts" />
@@ -173,11 +177,6 @@ export default function ProfileView({ usuario, usuarioAtual }) {
             ativo={aba === 'oracoes'}
             onClick={() => setAba('oracoes')}
             label={`Orações${pedidosAtivos.length ? ` (${pedidosAtivos.length})` : ''}`}
-          />
-          <AbaBtn
-            ativo={aba === 'conquistas'}
-            onClick={() => setAba('conquistas')}
-            label={`Conquistas (${conquistas.filter((c) => c.desbloqueada).length}/${conquistas.length})`}
           />
         </div>
 
@@ -201,15 +200,6 @@ export default function ProfileView({ usuario, usuarioAtual }) {
             {pedidosAtivos.length === 0 && <EmptyState titulo="Nenhum pedido ativo" />}
             {pedidosAtivos.map((p) => (
               <PrayerCard key={p.id} pedido={p} />
-            ))}
-          </div>
-        )}
-
-        {aba === 'conquistas' && (
-          <div className="grid grid-cols-5 gap-2.5 pt-1">
-            {conquistas.length === 0 && <div className="h-24 animate-pulse rounded-xl2 bg-coffee-100/60" />}
-            {conquistas.map((c) => (
-              <AchievementBadge key={c.id} conquista={c} onAberta={handleAbrirConquista} />
             ))}
           </div>
         )}

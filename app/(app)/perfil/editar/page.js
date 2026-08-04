@@ -18,9 +18,7 @@ export default function EditarPerfilPage() {
   const router = useRouter();
   const { perfil } = useAuth();
   const [nome, setNome] = useState(perfil?.nome || '');
-  const [bio, setBio] = useState(perfil?.bio || '');
   const [proposito, setProposito] = useState(perfil?.proposito || '');
-  const [musicaFavorita, setMusicaFavorita] = useState(perfil?.musicaFavorita || '');
   const [tagFuncao, setTagFuncao] = useState(perfil?.tagFuncao || 'Membro');
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
@@ -67,9 +65,7 @@ export default function EditarPerfilPage() {
     try {
       const dados = {
         nome: nome.trim(),
-        bio: bio.trim(),
         proposito: proposito.trim(),
-        musicaFavorita: musicaFavorita.trim(),
         tagFuncao,
       };
       if (arquivoFoto) {
@@ -128,31 +124,12 @@ export default function EditarPerfilPage() {
           <input value={nome} onChange={(e) => setNome(e.target.value)} className="input" />
         </Campo>
 
-        <Campo label="Bio">
-          <textarea
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            rows={2}
-            className="input resize-none"
-            placeholder="Fale um pouco sobre você"
-          />
-        </Campo>
-
         <Campo label="Propósito">
           <textarea
             value={proposito}
             onChange={(e) => setProposito(e.target.value)}
             rows={2}
             className="input resize-none"
-          />
-        </Campo>
-
-        <Campo label="Música favorita">
-          <input
-            value={musicaFavorita}
-            onChange={(e) => setMusicaFavorita(e.target.value)}
-            className="input"
-            placeholder="Nome da música e artista"
           />
         </Campo>
 

@@ -38,9 +38,9 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
           className={`flex-shrink-0 transition-transform ${souDono ? 'active:scale-95' : ''}`}
         >
           {conquista ? (
-            <EmblemaConquista conquista={conquista} size={76} bloqueada={false} />
+            <EmblemaConquista conquista={conquista} size={84} bloqueada={false} />
           ) : (
-            <div className="flex h-[76px] w-[76px] items-center justify-center rounded-full border-2 border-dashed border-coffee-200 bg-coffee-50">
+            <div className="flex h-[84px] w-[84px] items-center justify-center rounded-full border-2 border-dashed border-coffee-200 bg-coffee-50">
               <Plus size={22} className="text-coffee-300" />
             </div>
           )}
