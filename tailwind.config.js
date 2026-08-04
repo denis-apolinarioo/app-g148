@@ -66,12 +66,6 @@ module.exports = {
           '0%': { transform: 'translateY(0) scale(0.85)', opacity: '1' },
           '100%': { transform: 'translateY(-38px) scale(0.4)', opacity: '0' },
         },
-        // Vitrine de Conquistas — reflexo de vidro "varrendo" o medalhão,
-        // com pausa entre uma passada e outra (não fica passando sem parar).
-        vitrineBrilho: {
-          '0%, 12%': { transform: 'translateX(-130%) rotate(20deg)' },
-          '38%, 100%': { transform: 'translateX(230%) rotate(20deg)' },
-        },
         // Flutuação bem sutil dos medalhões da vitrine, pra dar sensação de
         // "peça de mostruário" viva, sem exagerar.
         vitrineFlutuar: {
@@ -85,7 +79,6 @@ module.exports = {
         conquistaRevelada: 'conquistaRevelada 0.45s ease-out 0.25s both',
         chamaFlutuar: 'chamaFlutuar 1.1s ease-in-out infinite',
         faiscaSobe: 'faiscaSobe 0.7s ease-out forwards',
-        vitrineBrilho: 'vitrineBrilho 3.6s ease-in-out infinite',
         vitrineFlutuar: 'vitrineFlutuar 3.2s ease-in-out infinite',
       },
     },

@@ -12,11 +12,12 @@ import { EMBLEMAS_POR_ID, caminhoEmblema } from '@/lib/emblemas';
  *
  *  - Sem `conquista.emblema`: círculo simples com gradiente (visual
  *    original, mantido pra quem ainda não escolheu um tier no Admin).
- *  - Com `conquista.emblema`: a foto/ícone fica numa camada de trás (z-0),
- *    do tamanho exato do vão circular do desenho do anel, e a moldura do
- *    tier entra por CIMA (z-10) — nunca o contrário. Isso é o que garante
- *    que o anel sempre apareça como moldura visível por cima da foto, e não
- *    "escondido" dentro do espaço dela.
+ *  - Com `conquista.emblema`: a foto/ícone preenche o círculo INTEIRO
+ *    (z-0), e a moldura do tier (anel + louros) entra por CIMA (z-10) maior
+ *    que o próprio círculo e deslocada (ver `moldura` em lib/emblemas.js),
+ *    pra aparecer como um elemento externo ao redor da foto — nunca dentro
+ *    dela nem cobrindo o centro. `moldura.escala/deslocX/deslocY` é
+ *    calculado por tier a partir do vão real de cada PNG.
  *
  * `size` é em px (a moldura é sempre quadrada). `bloqueada` decide o
  * tratamento de cinza + cadeado; por padrão usa `!conquista.desbloqueada`.
@@ -84,52 +85,56 @@ export default function EmblemaConquista({
   }
 
   const src = caminhoEmblema(tier.id);
+  const { escala, deslocX, deslocY } = tier.moldura;
+  // Estilo comum da moldura (imagem do anel) e do brilho mascarado nela —
+  // os dois precisam ficar exatamente sobrepostos, maiores que o círculo e
+  // deslocados pra fora, então compartilham o mesmo tamanho/posição.
+  const estiloMoldura = { left: deslocX, top: deslocY, width: escala, height: escala };
 
   return (
-    <div style={{ width: size, height: size }} className={`relative ${className}`}>
-      {/* foto/ícone da conquista — camada de trás (z-0), encaixada exatamente
-          no vão circular do anel (percentuais medidos a partir do desenho
-          real em public/emblemas/*.png). A moldura entra por cima dela, não
-          o contrário. */}
-      <div
-        className="absolute z-0 overflow-hidden rounded-full bg-cream-card"
-        style={{ left: '20%', right: '20%', top: '14%', bottom: '26%' }}
-      >
-        <div className="flex h-full w-full items-center justify-center">
-          {conquista.imagemURL ? (
-            <img
-              src={conquista.imagemURL}
-              alt=""
-              className={`h-full w-full object-cover ${
-                travada ? 'opacity-50 grayscale' : ''
-              } ${animRevelada}`}
-            />
-          ) : (
+    <div style={{ width: size, height: size }} className={`relative isolate ${className}`}>
+      {/* foto/ícone da conquista — preenche o círculo inteiro (z-0). A
+          moldura do tier entra por cima, maior e por fora (ver acima). */}
+      <div className="absolute inset-0 z-0 overflow-hidden rounded-full bg-cream-card">
+        {conquista.imagemURL ? (
+          <img
+            src={conquista.imagemURL}
+            alt=""
+            className={`h-full w-full object-cover ${
+              travada ? 'opacity-50 grayscale' : ''
+            } ${animRevelada}`}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
             <Icone
-              size={Math.round(size * 0.25)}
+              size={Math.round(size * 0.4)}
               strokeWidth={1.8}
               className={`${travada ? 'text-coffee-200 opacity-70' : 'text-coffee-500'} ${animRevelada}`}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* moldura do tier — sempre por cima da foto (z-10) */}
+      {/* moldura do tier — maior que o círculo e deslocada, aparece como
+          elemento externo (anel + louros ultrapassando a borda da foto) */}
       <img
         src={src}
         alt=""
         draggable={false}
-        className={`pointer-events-none absolute inset-0 z-10 h-full w-full select-none ${
+        className={`pointer-events-none absolute z-10 select-none ${
           travada ? 'opacity-40 grayscale' : ''
         }`}
+        style={estiloMoldura}
       />
 
       {/* brilho animado — só quando desbloqueada e sem animação de abertura
-          em andamento, mascarado no formato do emblema, também por cima */}
+          em andamento, mascarado no formato da moldura, na mesma posição/
+          tamanho dela */}
       {!travada && !abrindo && (
         <div
-          className="emblema-brilho pointer-events-none absolute inset-0 z-10"
+          className="emblema-brilho pointer-events-none absolute z-10"
           style={{
+            ...estiloMoldura,
             '--brilho-mascara': `url(${src})`,
             '--brilho-cor': tier.corBrilho,
             '--brilho-duracao': `${tier.duracaoSeg}s`,
