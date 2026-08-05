@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import * as Icons from 'lucide-react';
-import { UserX, UserCheck, LayoutGrid, HandHeart, Award } from 'lucide-react';
+import { UserX, UserCheck, LayoutGrid, Award } from 'lucide-react';
+import PrayingHandsIcon from '@/components/PrayingHandsIcon';
 import Avatar from '@/components/Avatar';
 import StreakFogueira from '@/components/StreakFogueira';
 import AchievementBadge from '@/components/AchievementBadge';
@@ -98,7 +99,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
   }
 
   return (
-    <div className="px-4 pb-8 pt-5">
+    <div className="px-4 pb-8 pt-3">
       <div className="flex flex-col items-center text-center">
         {/* Cabeçalho em duas colunas: identidade à esquerda, métricas à
             direita — pedido do usuário pra imitar a disposição de um
@@ -184,9 +185,10 @@ export default function ProfileView({ usuario, usuarioAtual }) {
         )}
       </div>
 
-      {/* Abas em estilo "Instagram" — ícone + contagem, 3 seções iguais
-          (posts à esquerda, orações no centro, conquistas à direita). */}
-      <div className="mt-7">
+      {/* Abas em estilo "Instagram" — só ícone, sem texto (pedido do
+          usuário); o label continua existindo como aria-label pra leitor de
+          tela, e o `title` mostra a contagem no hover em telas maiores. */}
+      <div className="mt-5">
         <div className="mb-3 flex border-b border-coffee-100">
           <AbaBtn
             ativo={aba === 'posts'}
@@ -197,7 +199,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
           <AbaBtn
             ativo={aba === 'oracoes'}
             onClick={() => setAba('oracoes')}
-            icone={HandHeart}
+            icone={PrayingHandsIcon}
             label={`Orações${pedidosAtivos.length ? ` (${pedidosAtivos.length})` : ''}`}
           />
           <AbaBtn
@@ -258,12 +260,13 @@ function AbaBtn({ ativo, onClick, icone: Icone, label }) {
   return (
     <button
       onClick={onClick}
-      className={`flex flex-1 flex-col items-center gap-1 border-b-2 pb-2.5 pt-1 transition-colors ${
+      aria-label={label}
+      title={label}
+      className={`flex flex-1 items-center justify-center border-b-2 pb-2.5 pt-2 transition-colors ${
         ativo ? 'border-coffee-700 text-coffee-800' : 'border-transparent text-coffee-300'
       }`}
     >
-      <Icone size={19} strokeWidth={ativo ? 2.2 : 1.8} />
-      <span className="text-[11px] font-medium leading-none">{label}</span>
+      <Icone size={26} strokeWidth={ativo ? 2.1 : 1.7} />
     </button>
   );
 }
