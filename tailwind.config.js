@@ -72,6 +72,12 @@ module.exports = {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-3px)' },
         },
+        // Entrada do popup flutuante de detalhe da conquista (abre/fecha ao
+        // tocar num selo, ver ConquistaDetalheModal).
+        popupFlutuante: {
+          '0%': { transform: 'scale(0.86) translateY(10px)', opacity: '0' },
+          '100%': { transform: 'scale(1) translateY(0)', opacity: '1' },
+        },
       },
       animation: {
         curtidaPop: 'curtidaPop 0.7s ease-out forwards',
@@ -80,6 +86,7 @@ module.exports = {
         chamaFlutuar: 'chamaFlutuar 1.1s ease-in-out infinite',
         faiscaSobe: 'faiscaSobe 0.7s ease-out forwards',
         vitrineFlutuar: 'vitrineFlutuar 3.2s ease-in-out infinite',
+        popupFlutuante: 'popupFlutuante 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both',
       },
     },
   },

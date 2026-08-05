@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { vibrarConquista } from '@/lib/haptics';
 import EmblemaConquista from '@/components/EmblemaConquista';
 import ConquistaDetalheModal from '@/components/ConquistaDetalheModal';
+import { overflowMoldura } from '@/lib/emblemas';
 
 // Tamanho do selo no grid de conquistas do perfil (ver ProfileView, seção
 // logo abaixo dos pontos de comunhão / streak). Combina com o grid-cols-5
@@ -33,6 +34,10 @@ export default function AchievementBadge({ conquista, onAberta }) {
 
   const desbloqueada = !!conquista.desbloqueada;
   const podeAbrir = desbloqueada && !conquista.visto;
+  // A moldura do tier vaza pra fora do círculo (ver lib/emblemas.js) — sem
+  // essa folga extra o nome fica colado visualmente no anel, mesmo com gap
+  // normal entre os dois elementos.
+  const espacoParaAnel = overflowMoldura(conquista.emblema, TAMANHO_BADGE);
 
   function handleClick() {
     if (abrindo) return;
@@ -65,6 +70,7 @@ export default function AchievementBadge({ conquista, onAberta }) {
           abrindo={abrindo}
         />
         <p
+          style={{ marginTop: espacoParaAnel > 0 ? espacoParaAnel + 4 : 0 }}
           className={`font-destaque text-[11px] font-semibold leading-tight ${
             desbloqueada ? 'text-coffee-600' : 'text-coffee-300'
           }`}

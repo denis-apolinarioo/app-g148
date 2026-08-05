@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import * as Icons from 'lucide-react';
 import { X, Check, ChevronUp, ChevronDown } from 'lucide-react';
-import { iconePascalCase } from '@/lib/missionIcons';
+import EmblemaConquista from '@/components/EmblemaConquista';
+import { overflowMoldura } from '@/lib/emblemas';
 
 const MAXIMO = 3;
+const TAMANHO_SELO = 52;
 
 /**
  * Escolha da vitrine: toque numa conquista já desbloqueada pra marcar/
@@ -74,8 +75,8 @@ export default function VitrineConquistasModal({ desbloqueadas, selecaoAtual, on
         <div className="grid grid-cols-3 gap-3">
           {desbloqueadas.map((c) => {
             const marcada = selecionadas.includes(c.id);
-            const Icone = Icons[iconePascalCase(c.icone)] || Icons.Award;
             const travadaPeloLimite = !marcada && selecionadas.length >= MAXIMO;
+            const espacoParaAnel = overflowMoldura(c.emblema, TAMANHO_SELO);
             return (
               <button
                 key={c.id}
@@ -86,19 +87,23 @@ export default function VitrineConquistasModal({ desbloqueadas, selecaoAtual, on
                   marcada ? 'border-gold bg-gold/10' : 'border-coffee-100'
                 } ${travadaPeloLimite ? 'opacity-40' : ''}`}
               >
-                <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-gold to-coffee-600">
-                  {c.imagemURL ? (
-                    <img src={c.imagemURL} alt="" className="h-full w-full rounded-full object-cover" />
-                  ) : (
-                    <Icone size={20} strokeWidth={1.8} className="text-cream" />
-                  )}
+                <div
+                  className="relative flex-shrink-0"
+                  style={{ width: TAMANHO_SELO, height: TAMANHO_SELO }}
+                >
+                  <EmblemaConquista conquista={c} size={TAMANHO_SELO} bloqueada={false} />
                   {marcada && (
-                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-gold ring-2 ring-cream">
+                    <span className="absolute -right-1 -top-1 z-30 flex h-5 w-5 items-center justify-center rounded-full bg-gold ring-2 ring-cream">
                       <Check size={11} className="text-coffee-900" strokeWidth={3} />
                     </span>
                   )}
                 </div>
-                <p className="font-destaque text-[10px] font-semibold leading-tight text-coffee-600">{c.nome}</p>
+                <p
+                  style={{ marginTop: espacoParaAnel > 0 ? espacoParaAnel + 4 : 0 }}
+                  className="font-destaque text-[10px] font-semibold leading-tight text-coffee-600"
+                >
+                  {c.nome}
+                </p>
               </button>
             );
           })}
