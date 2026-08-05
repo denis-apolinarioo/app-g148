@@ -92,9 +92,44 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
       audioCtxRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
+
+      // Cadeia de volume: em vez de só multiplicar o ganho (o que estoura/
+      // distorce qualquer parte que já tava alta), primeiro um COMPRESSOR
+      // "nivela" a diferença entre trechos baixos e altos (aproxima o
+      // volume dos dois sem cortar nada), depois um GANHO real levanta o
+      // volume geral, e por fim um LIMITADOR (2º compressor, bem agressivo
+      // e rápido) trava o teto pra garantir que nada estoure mesmo que
+      // alguém grite ou bata no microfone — evita perder qualidade mesmo
+      // com o áudio saindo mais alto.
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.value = -30;
+      compressor.knee.value = 12;
+      compressor.ratio.value = 3;
+      compressor.attack.value = 0.003;
+      compressor.release.value = 0.25;
+
+      const ganho = ctx.createGain();
+      ganho.gain.value = 1.8; // ~+5dB de reforço
+
+      const limitador = ctx.createDynamicsCompressor();
+      limitador.threshold.value = -1;
+      limitador.knee.value = 0;
+      limitador.ratio.value = 20;
+      limitador.attack.value = 0.001;
+      limitador.release.value = 0.1;
+
+      const destino = ctx.createMediaStreamDestination();
+
+      source.connect(compressor);
+      compressor.connect(ganho);
+      ganho.connect(limitador);
+      limitador.connect(destino);
+
+      // Barrinhas de volume durante a gravação lêem depois do processamento
+      // (limitador), pra refletir o volume já reforçado que vai ser gravado.
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
-      source.connect(analyser);
+      limitador.connect(analyser);
       analyserRef.current = analyser;
       animFrameRef.current = requestAnimationFrame(animarBarras);
 
@@ -110,7 +145,10 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
       const opcoes = { audioBitsPerSecond: 64000 };
       if (mimeType) opcoes.mimeType = mimeType;
 
-      const recorder = new MediaRecorder(stream, opcoes);
+      // Grava o stream JÁ PROCESSADO (destino.stream), não o stream cru do
+      // microfone (`stream`) — é isso que aplica o reforço de volume no
+      // arquivo final.
+      const recorder = new MediaRecorder(destino.stream, opcoes);
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
 
