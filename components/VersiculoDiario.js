@@ -83,10 +83,14 @@ export default function VersiculoDiario({ uid }) {
 
       {/* "Desenrola pra baixo": grid-template-rows de 0fr -> 1fr é o jeito
           mais estável de animar até altura automática sem medir nada em
-          JS — o conteúdo real fica dentro de um overflow-hidden. */}
+          JS — o conteúdo real fica dentro de um overflow-hidden. O mt-4
+          (espaço acima da linha) também entra na transição — antes só o
+          grid-template-rows animava e o mt-4 sumia de vez ao fechar,
+          fazendo a linha "pular" pra cima de repente em vez de subir
+          suave junto com o resto. */}
       <div
-        className={`relative grid transition-[grid-template-rows] duration-500 ease-in-out ${
-          aberto ? 'grid-rows-[1fr] mt-4' : 'grid-rows-[0fr]'
+        className={`relative grid transition-[grid-template-rows,margin-top] duration-500 ease-in-out ${
+          aberto ? 'grid-rows-[1fr] mt-4' : 'grid-rows-[0fr] mt-0'
         }`}
       >
         <div className="overflow-hidden">
