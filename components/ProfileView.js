@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import * as Icons from 'lucide-react';
-import { UserX, UserCheck, LayoutGrid, Award } from 'lucide-react';
+import { UserX, UserCheck } from 'lucide-react';
 import PrayingHandsIcon from '@/components/PrayingHandsIcon';
+import NavPostIcon from '@/components/icons/NavPostIcon';
+import NavMedalIcon from '@/components/icons/NavMedalIcon';
 import Avatar from '@/components/Avatar';
 import StreakFogueira from '@/components/StreakFogueira';
 import AchievementBadge from '@/components/AchievementBadge';
@@ -193,7 +195,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
           <AbaBtn
             ativo={aba === 'posts'}
             onClick={() => setAba('posts')}
-            icone={LayoutGrid}
+            icone={NavPostIcon}
             label="Posts"
           />
           <AbaBtn
@@ -205,7 +207,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
           <AbaBtn
             ativo={aba === 'conquistas'}
             onClick={() => setAba('conquistas')}
-            icone={Award}
+            icone={NavMedalIcon}
             label={`Conquistas (${conquistas.filter((c) => c.desbloqueada).length}/${conquistas.length})`}
           />
         </div>
