@@ -8,7 +8,7 @@ import EmblemaConquista from '@/components/EmblemaConquista';
 import { vibrarToqueLeve } from '@/lib/haptics';
 
 const DURACAO_LONG_PRESS = 500; // ms — igual ao padrão já usado no PostCard
-const TAMANHO_MEDALHAO = 72; // 4.5rem — combina com o h-[4.5rem] w-[4.5rem] do botão
+const TAMANHO_MEDALHAO = 60; // 3.75rem — combina com o h-[3.75rem] w-[3.75rem] do botão
 
 /**
  * Vitrine de conquistas em destaque, no topo do perfil — medalhão maior,
@@ -66,7 +66,7 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
   }
 
   return (
-    <div className="mt-3 flex flex-wrap items-center justify-end gap-2.5">
+    <div className="mt-3 flex flex-wrap items-center justify-end gap-4">
       {espacos.map((conquista, i) => {
         // Atraso escalonado por posição pra a flutuação de cada medalhão
         // não ficar toda em sincronia — fica mais orgânico.
@@ -85,7 +85,7 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
             disabled={!conquista && !souDono}
             title={conquista?.nome}
             style={conquista ? { animationDelay: atraso } : undefined}
-            className={`relative flex h-[4.5rem] w-[4.5rem] flex-shrink-0 items-center justify-center rounded-full transition-transform active:scale-95 ${
+            className={`relative flex h-[3.75rem] w-[3.75rem] flex-shrink-0 items-center justify-center rounded-full transition-transform active:scale-95 ${
               conquista ? 'animate-vitrineFlutuar' : 'border-2 border-dashed border-coffee-200 bg-coffee-50'
             }`}
           >

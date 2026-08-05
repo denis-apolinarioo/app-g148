@@ -6,9 +6,11 @@ import EmblemaConquista from '@/components/EmblemaConquista';
 import ConquistaDetalheModal from '@/components/ConquistaDetalheModal';
 
 // Tamanho do selo no grid de conquistas do perfil (ver ProfileView, seção
-// logo abaixo dos pontos de comunhão / streak). Combina com o grid-cols-4
-// usado lá — não aumentar sem revisar o grid junto.
-const TAMANHO_BADGE = 80;
+// logo abaixo dos pontos de comunhão / streak). Combina com o grid-cols-5
+// usado lá — não aumentar sem revisar o grid junto (a moldura do tier vaza
+// ~12% do tamanho pra fora de cada lado, então o gap do grid tem que cobrir
+// isso pra não sobrepor a vizinha).
+const TAMANHO_BADGE = 56;
 
 /**
  * Badge de conquista clicável usado no grid do perfil. O visual em si (selo

@@ -136,14 +136,14 @@ export default function ProfileView({ usuario, usuarioAtual }) {
               items-end (em vez de items-center) alinha o rótulo "X dias" da
               fogueira com o rótulo "Pontos de Comunhão" do card ao lado —
               ver o ajuste de padding equivalente em StreakFogueira.js. */}
-          {/* pr-7: a moldura dourada de cada emblema (anel/coroa) é
+          {/* pr-4: a moldura dourada de cada emblema (anel/coroa) é
               desenhada maior que o círculo de propósito e "vaza" pra fora
               (efeito 3D pedido) — nas medalhas do meio essa sobra vaza por
               cima da vizinha, mas na ÚLTIMA (mais à direita) não tem
               vizinho, então ela vazava pra fora da tela mesmo, sobrando um
               pedaço cortado na borda. Esse padding reserva o espaço certo
               pra sobra caber sem cortar nem estourar a largura da tela. */}
-          <div className="-mt-3 ml-auto flex flex-shrink-0 flex-col items-end pr-7">
+          <div className="-mt-3 ml-auto flex flex-shrink-0 flex-col items-end pr-4">
             <div className="flex items-end gap-2">
               <div className="rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-2.5 text-center shadow-card">
                 <p className="font-destaque text-lg font-bold text-coffee-800">{usuario.pontos || 0}</p>
@@ -237,7 +237,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
         )}
 
         {aba === 'conquistas' && (
-          <div className="grid grid-cols-5 gap-2.5 pt-1">
+          <div className="grid grid-cols-5 gap-x-3 gap-y-4 pt-1">
             {conquistas.length === 0 && <div className="h-24 animate-pulse rounded-xl2 bg-coffee-100/60" />}
             {conquistas.map((c) => (
               <AchievementBadge key={c.id} conquista={c} onAberta={handleAbrirConquista} />
