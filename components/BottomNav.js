@@ -4,22 +4,59 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Trophy, User } from 'lucide-react';
 import { ABAS_PRINCIPAIS } from '@/lib/constants';
-import BowArrowIcon from '@/components/BowArrowIcon';
-import PrayingHandsIcon from '@/components/PrayingHandsIcon';
+
+// Ícones do lucide-react pra Feed/Ranking/Perfil (mantidos como já estavam,
+// só maiores) — envolvidos numa função pra terem a mesma interface
+// {size, ativo} dos ícones em imagem abaixo.
+function iconeLucide(Cmp) {
+  return function IconeLucideWrap({ size, ativo }) {
+    return (
+      <Cmp
+        size={size}
+        strokeWidth={ativo ? 2.3 : 1.8}
+        className={ativo ? 'text-coffee-700' : 'text-coffee-300'}
+      />
+    );
+  };
+}
+
+// Missões e Oração usam os PNGs recortados da imagem de referência que o
+// usuário mandou (public/icons/custom/) — arco-e-flecha e mãos orando —
+// em vez de ícone de fonte/lib, por isso trocam de arquivo (ativo/inativo)
+// em vez de mudar de cor via CSS.
+function IconeArcoFlecha({ size, ativo }) {
+  return (
+    <img
+      src={ativo ? '/icons/custom/bow-active.png' : '/icons/custom/bow-inactive.png'}
+      width={size}
+      height={size}
+      alt=""
+      className="object-contain"
+    />
+  );
+}
+
+function IconeMaosOrando({ size, ativo }) {
+  return (
+    <img
+      src={ativo ? '/icons/custom/hands-active-nav.png' : '/icons/custom/hands-inactive.png'}
+      width={size}
+      height={size}
+      alt=""
+      className="object-contain"
+    />
+  );
+}
 
 // Mapeia o nome de ícone (string, em lib/constants.js) pro componente de
 // verdade — a lista em si (ordem/href/label) vem de ABAS_PRINCIPAIS, pra
 // ficar garantidamente igual à ordem usada pelo swipe (useSwipeNavigation).
-// Ícones do lucide-react (biblioteca de verdade) + os dois customizados que
-// já existiam no app (arco-e-flecha e mãos orando) — a mesma mão-orando
-// agora é usada aqui E na aba "Orações" do Perfil, pra ficar igual nos dois
-// lugares.
 const ICONES = {
-  home: Home,
-  'bow-arrow': BowArrowIcon,
-  'hand-heart': PrayingHandsIcon,
-  trophy: Trophy,
-  user: User,
+  home: iconeLucide(Home),
+  'bow-arrow': IconeArcoFlecha,
+  'hand-heart': IconeMaosOrando,
+  trophy: iconeLucide(Trophy),
+  user: iconeLucide(User),
 };
 
 const ITENS = ABAS_PRINCIPAIS.map((aba) => ({ ...aba, icone: ICONES[aba.icone] }));
@@ -40,11 +77,7 @@ export default function BottomNav() {
               title={label}
               className="flex flex-1 flex-col items-center justify-center py-3"
             >
-              <Icone
-                size={26}
-                strokeWidth={ativo ? 2.3 : 1.8}
-                className={ativo ? 'text-coffee-700' : 'text-coffee-300'}
-              />
+              <Icone size={28} ativo={ativo} />
               {/* Texto removido da barra (pedido anterior) — o label
                   continua existindo como aria-label/title, pra não perder
                   acessibilidade. */}

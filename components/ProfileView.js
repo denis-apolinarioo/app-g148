@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import * as Icons from 'lucide-react';
-import { UserX, UserCheck, LayoutGrid } from 'lucide-react';
-import PrayingHandsIcon from '@/components/PrayingHandsIcon';
+import { UserX, UserCheck } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import StreakFogueira from '@/components/StreakFogueira';
 import AchievementBadge from '@/components/AchievementBadge';
@@ -28,10 +27,46 @@ import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
 // existir nesta versão instalada, em vez de quebrar a tela inteira.
 const IconeProposito = Icons.Cross || Icons.Sparkle || Icons.Sparkles;
 
-// Ícone da aba "Conquistas" — mesmo padrão defensivo acima: usa "Medal" (um
-// medalhão, mais bonito e mais a cara de conquista do que o "Award"
-// genérico) e cai pro Award se essa versão do lucide-react não tiver.
-const IconeConquistas = Icons.Medal || Icons.Award;
+// Ícones das abas do Perfil (Posts/Orações/Conquistas) — PNGs recortados
+// da imagem de referência que o usuário mandou (public/icons/custom/), no
+// lugar dos ícones de lib. Como a cor vem "gravada" na imagem (não são
+// SVG com currentColor), cada um troca de arquivo pelo prop `ativo` em
+// vez de herdar cor via CSS.
+function IconePosts({ size, ativo }) {
+  return (
+    <img
+      src={ativo ? '/icons/custom/post-active.png' : '/icons/custom/post-inactive.png'}
+      width={size}
+      height={size}
+      alt=""
+      className="object-contain"
+    />
+  );
+}
+
+function IconeOracoesPerfil({ size, ativo }) {
+  return (
+    <img
+      src={ativo ? '/icons/custom/hands-active-perfil.png' : '/icons/custom/hands-inactive.png'}
+      width={size}
+      height={size}
+      alt=""
+      className="object-contain"
+    />
+  );
+}
+
+function IconeConquistas({ size, ativo }) {
+  return (
+    <img
+      src={ativo ? '/icons/custom/medal-active.png' : '/icons/custom/medal-inactive.png'}
+      width={size}
+      height={size}
+      alt=""
+      className="object-contain"
+    />
+  );
+}
 
 export default function ProfileView({ usuario, usuarioAtual }) {
   const [posts, setPosts] = useState(null);
@@ -198,13 +233,13 @@ export default function ProfileView({ usuario, usuarioAtual }) {
           <AbaBtn
             ativo={aba === 'posts'}
             onClick={() => setAba('posts')}
-            icone={LayoutGrid}
+            icone={IconePosts}
             label="Posts"
           />
           <AbaBtn
             ativo={aba === 'oracoes'}
             onClick={() => setAba('oracoes')}
-            icone={PrayingHandsIcon}
+            icone={IconeOracoesPerfil}
             label={`Orações${pedidosAtivos.length ? ` (${pedidosAtivos.length})` : ''}`}
           />
           <AbaBtn
@@ -271,7 +306,7 @@ function AbaBtn({ ativo, onClick, icone: Icone, label }) {
         ativo ? 'border-coffee-700 text-coffee-800' : 'border-transparent text-coffee-300'
       }`}
     >
-      <Icone size={28} strokeWidth={ativo ? 2.1 : 1.7} />
+      <Icone size={30} strokeWidth={ativo ? 2.1 : 1.7} ativo={ativo} />
     </button>
   );
 }
