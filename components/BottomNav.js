@@ -2,24 +2,24 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Home, Trophy, User } from 'lucide-react';
 import { ABAS_PRINCIPAIS } from '@/lib/constants';
-import NavHomeIcon from '@/components/icons/NavHomeIcon';
-import NavBowArrowIcon from '@/components/icons/NavBowArrowIcon';
-import NavPrayingHandsIcon from '@/components/icons/NavPrayingHandsIcon';
-import NavTrophyIcon from '@/components/icons/NavTrophyIcon';
-import NavPersonIcon from '@/components/icons/NavPersonIcon';
+import BowArrowIcon from '@/components/BowArrowIcon';
+import PrayingHandsIcon from '@/components/PrayingHandsIcon';
 
 // Mapeia o nome de ícone (string, em lib/constants.js) pro componente de
 // verdade — a lista em si (ordem/href/label) vem de ABAS_PRINCIPAIS, pra
 // ficar garantidamente igual à ordem usada pelo swipe (useSwipeNavigation).
-// Ícones sólidos (preenchidos), no estilo do pacote de referência do
-// usuário — cada um só é usado aqui na barra inferior.
+// Ícones do lucide-react (biblioteca de verdade) + os dois customizados que
+// já existiam no app (arco-e-flecha e mãos orando) — a mesma mão-orando
+// agora é usada aqui E na aba "Orações" do Perfil, pra ficar igual nos dois
+// lugares.
 const ICONES = {
-  home: NavHomeIcon,
-  'bow-arrow': NavBowArrowIcon,
-  'hand-heart': NavPrayingHandsIcon,
-  trophy: NavTrophyIcon,
-  user: NavPersonIcon,
+  home: Home,
+  'bow-arrow': BowArrowIcon,
+  'hand-heart': PrayingHandsIcon,
+  trophy: Trophy,
+  user: User,
 };
 
 const ITENS = ABAS_PRINCIPAIS.map((aba) => ({ ...aba, icone: ICONES[aba.icone] }));
@@ -41,10 +41,11 @@ export default function BottomNav() {
               className="flex flex-1 flex-col items-center justify-center py-3"
             >
               <Icone
-                size={23}
+                size={26}
+                strokeWidth={ativo ? 2.3 : 1.8}
                 className={ativo ? 'text-coffee-700' : 'text-coffee-300'}
               />
-              {/* Texto removido da barra (pedido do usuário) — o label
+              {/* Texto removido da barra (pedido anterior) — o label
                   continua existindo como aria-label/title, pra não perder
                   acessibilidade. */}
               <span className="sr-only">{label}</span>

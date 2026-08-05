@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import * as Icons from 'lucide-react';
-import { UserX, UserCheck } from 'lucide-react';
+import { UserX, UserCheck, LayoutGrid } from 'lucide-react';
 import PrayingHandsIcon from '@/components/PrayingHandsIcon';
-import NavPostIcon from '@/components/icons/NavPostIcon';
-import NavMedalIcon from '@/components/icons/NavMedalIcon';
 import Avatar from '@/components/Avatar';
 import StreakFogueira from '@/components/StreakFogueira';
 import AchievementBadge from '@/components/AchievementBadge';
@@ -29,6 +27,11 @@ import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
 // nome exportado; cai num ícone genérico de destaque se "Cross" não
 // existir nesta versão instalada, em vez de quebrar a tela inteira.
 const IconeProposito = Icons.Cross || Icons.Sparkle || Icons.Sparkles;
+
+// Ícone da aba "Conquistas" — mesmo padrão defensivo acima: usa "Medal" (um
+// medalhão, mais bonito e mais a cara de conquista do que o "Award"
+// genérico) e cai pro Award se essa versão do lucide-react não tiver.
+const IconeConquistas = Icons.Medal || Icons.Award;
 
 export default function ProfileView({ usuario, usuarioAtual }) {
   const [posts, setPosts] = useState(null);
@@ -195,7 +198,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
           <AbaBtn
             ativo={aba === 'posts'}
             onClick={() => setAba('posts')}
-            icone={NavPostIcon}
+            icone={LayoutGrid}
             label="Posts"
           />
           <AbaBtn
@@ -207,7 +210,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
           <AbaBtn
             ativo={aba === 'conquistas'}
             onClick={() => setAba('conquistas')}
-            icone={NavMedalIcon}
+            icone={IconeConquistas}
             label={`Conquistas (${conquistas.filter((c) => c.desbloqueada).length}/${conquistas.length})`}
           />
         </div>
@@ -268,7 +271,7 @@ function AbaBtn({ ativo, onClick, icone: Icone, label }) {
         ativo ? 'border-coffee-700 text-coffee-800' : 'border-transparent text-coffee-300'
       }`}
     >
-      <Icone size={26} strokeWidth={ativo ? 2.1 : 1.7} />
+      <Icone size={28} strokeWidth={ativo ? 2.1 : 1.7} />
     </button>
   );
 }
