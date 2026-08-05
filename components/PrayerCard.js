@@ -92,8 +92,9 @@ export default function PrayerCard({ pedido }) {
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
-        <div className="flex items-center gap-1.5 text-xs text-coffee-300">
+      <div className="mt-3 flex items-end justify-between gap-2">
+        {/* Info empilhada: data em cima, contador de orações embaixo */}
+        <div className="flex flex-col gap-0.5 text-xs text-coffee-300">
           {cumprido ? (
             <span className="flex items-center gap-1 font-medium text-green-700">
               <Check size={13} /> Atendido
@@ -103,7 +104,10 @@ export default function PrayerCard({ pedido }) {
               <Clock size={13} /> até {formatDateBR(`${pedido.prazo}T00:00:00`)}
             </span>
           )}
-          <span>· {pedido.totalOracoes || 0} orações</span>
+          <span className="flex items-center gap-1">
+            <HandHeart size={12} className="text-coffee-300" />
+            {pedido.totalOracoes || 0} orações
+          </span>
         </div>
 
         <div className="flex items-center gap-2">

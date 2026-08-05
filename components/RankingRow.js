@@ -16,8 +16,8 @@ export default function RankingRow({ posicao, usuario, souEu }) {
       {/* Medalhas do top 3 um pouco maiores que o número puro das demais
           posições, pra dar mais destaque sem exagerar. */}
       <span
-        className={`flex w-7 flex-shrink-0 items-center justify-center font-destaque font-semibold text-coffee-400 ${
-          medalha ? 'text-xl' : 'text-base'
+        className={`flex w-9 flex-shrink-0 items-center justify-center font-destaque font-semibold text-coffee-400 ${
+          medalha ? 'text-3xl' : 'text-base'
         }`}
       >
         {medalha || posicao}
