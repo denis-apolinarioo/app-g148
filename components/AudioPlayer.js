@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Play, Pause } from 'lucide-react';
 import useAudioBars from '@/lib/useAudioBars';
 
@@ -28,6 +28,27 @@ export default function AudioPlayer({ src, onTap, className = '' }) {
   const [tempoAtual, setTempoAtual] = useState(0);
   const audioRef = useRef(null);
   const duracaoRef = useRef(0);
+  const containerRef = useRef(null);
+  // BUG CORRIGIDO — quebrava a tela de Perfil: cada player baixava e
+  // decodificava seu áudio assim que era criado, mesmo fora da tela. O
+  // Perfil mostra todos os posts do usuário de uma vez (sem paginação), e
+  // com vários posts de áudio isso sobrecarregava o aparelho na hora de
+  // abrir a tela. Agora só calcula a forma de onda de verdade quando o
+  // player chega perto da tela (IntersectionObserver) — fora da tela ele
+  // fica só com a onda decorativa até o usuário rolar até ele.
+  const [visivel, setVisivel] = useState(false);
+
+  useEffect(() => {
+    if (!containerRef.current || visivel) return undefined;
+    const observer = new IntersectionObserver(
+      ([entrada]) => {
+        if (entrada.isIntersecting) setVisivel(true);
+      },
+      { rootMargin: '200px' }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [visivel]);
 
   const progresso = duracaoRef.current > 0 ? tempoAtual / duracaoRef.current : 0;
 
@@ -35,7 +56,7 @@ export default function AudioPlayer({ src, onTap, className = '' }) {
   // parte "tocada" continua sendo pintada por cima conforme progride.
   // Parado, mostra a forma de onda real do áudio inteiro (calculada uma
   // vez a partir do arquivo, com cache — ver lib/useAudioBars.js).
-  const barras = useAudioBars(audioRef, tocando, src);
+  const barras = useAudioBars(audioRef, tocando, src, visivel);
 
   function alternarPlay(e) {
     e.stopPropagation();
@@ -85,7 +106,7 @@ export default function AudioPlayer({ src, onTap, className = '' }) {
   }
 
   return (
-    <div className={`flex items-center gap-3 ${className}`} onClick={() => onTap?.()}>
+    <div ref={containerRef} className={`flex items-center gap-3 ${className}`} onClick={() => onTap?.()}>
       <button
         type="button"
         onClick={alternarPlay}

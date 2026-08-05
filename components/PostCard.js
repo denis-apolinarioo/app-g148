@@ -385,16 +385,23 @@ export default function PostCard({ post, usuarioAtual }) {
 
     if (item.tipo === 'link') {
       return (
-        <a
-          key={key}
-          href={item.valor}
-          target="_blank"
-          rel="noreferrer"
-          className="mb-2.5 flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5 text-sm text-coffee-700"
-        >
-          <Link2 size={15} className="flex-shrink-0 text-coffee-400" />
-          <span className="truncate">{item.label || item.valor}</span>
-        </a>
+        <div key={key} className="relative mb-2.5">
+          <a
+            href={item.valor}
+            target="_blank"
+            rel="noreferrer"
+            onClick={comDuploToque ? handleTapNoTexto : undefined}
+            className="flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5 text-sm text-coffee-700"
+          >
+            <Link2 size={15} className="flex-shrink-0 text-coffee-400" />
+            <span className="truncate">{item.label || item.valor}</span>
+          </a>
+          {comDuploToque && coracaoAnimado && (
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <Heart size={44} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
+            </span>
+          )}
+        </div>
       );
     }
 
@@ -504,7 +511,7 @@ export default function PostCard({ post, usuarioAtual }) {
           EditarPostModal.js) e com mais contraste/destaque que o resto do
           post, já que é o título, não um item de resposta qualquer. */}
       {post.texto && (
-        <div onClick={itensMissao ? undefined : handleTapNoTexto} className="relative">
+        <div onClick={handleTapNoTexto} className="relative">
           {ehPostDeMissao ? (
             <p className="mb-3 font-destaque text-base font-bold text-coffee-900">{post.texto}</p>
           ) : (
@@ -512,6 +519,11 @@ export default function PostCard({ post, usuarioAtual }) {
               texto={post.texto}
               className="mb-3 text-sm leading-relaxed text-coffee-700"
             />
+          )}
+          {coracaoAnimado && (
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <Heart size={44} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
+            </span>
           )}
         </div>
       )}
