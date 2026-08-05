@@ -99,8 +99,13 @@ export default function AudioPlayer({ src, className = '' }) {
           })}
           {duracao > 0 && (
             <div
-              className="pointer-events-none absolute top-1/2 z-10 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-coffee-700 shadow-md ring-2 ring-cream"
-              style={{ left: `${progresso * 100}%` }}
+              className="pointer-events-none absolute top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
+              style={{
+                left: `${progresso * 100}%`,
+                backgroundColor: '#B8863B',
+                border: '2px solid #FFFDF9',
+                boxShadow: '0 1px 4px rgba(44, 31, 20, 0.45)',
+              }}
             />
           )}
         </div>
