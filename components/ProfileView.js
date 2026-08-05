@@ -136,14 +136,10 @@ export default function ProfileView({ usuario, usuarioAtual }) {
               items-end (em vez de items-center) alinha o rótulo "X dias" da
               fogueira com o rótulo "Pontos de Comunhão" do card ao lado —
               ver o ajuste de padding equivalente em StreakFogueira.js. */}
-          {/* pr-4: a moldura dourada de cada emblema (anel/coroa) é
-              desenhada maior que o círculo de propósito e "vaza" pra fora
-              (efeito 3D pedido) — nas medalhas do meio essa sobra vaza por
-              cima da vizinha, mas na ÚLTIMA (mais à direita) não tem
-              vizinho, então ela vazava pra fora da tela mesmo, sobrando um
-              pedaço cortado na borda. Esse padding reserva o espaço certo
-              pra sobra caber sem cortar nem estourar a largura da tela. */}
-          <div className="-mt-3 ml-auto flex flex-shrink-0 flex-col items-end pr-4">
+          {/* pr-1.5: reduzido pra empurrar a vitrine mais pra direita (pedido
+              do usuário) — ainda sobra uma margem mínima pra moldura
+              dourada da última medalha não cortar na borda da tela. */}
+          <div className="-mt-3 ml-auto flex flex-shrink-0 flex-col items-end pr-1.5">
             <div className="flex items-end gap-2">
               <div className="rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-2.5 text-center shadow-card">
                 <p className="font-destaque text-lg font-bold text-coffee-800">{usuario.pontos || 0}</p>
