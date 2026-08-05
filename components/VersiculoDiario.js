@@ -84,17 +84,24 @@ export default function VersiculoDiario({ uid }) {
       {/* "Desenrola pra baixo": grid-template-rows de 0fr -> 1fr é o jeito
           mais estável de animar até altura automática sem medir nada em
           JS — o conteúdo real fica dentro de um overflow-hidden. O mt-4
-          (espaço acima da linha) também entra na transição — antes só o
-          grid-template-rows animava e o mt-4 sumia de vez ao fechar,
-          fazendo a linha "pular" pra cima de repente em vez de subir
-          suave junto com o resto. */}
+          (espaço acima da linha) também entra na transição, senão ele some
+          de vez ao fechar e a linha "pula" pra cima de repente. */}
       <div
         className={`relative grid transition-[grid-template-rows,margin-top] duration-500 ease-in-out ${
           aberto ? 'grid-rows-[1fr] mt-4' : 'grid-rows-[0fr] mt-0'
         }`}
       >
         <div className="overflow-hidden">
-          <div className="border-t border-coffee-500/50 pt-4">
+          {/* A linha (border-t) tem sua própria transição de opacidade,
+              mais rápida e sem esperar o "trem" (o bloco todo) terminar de
+              recolher — ao fechar ela some quase na hora, antes do resto
+              subir; ao abrir ela entra com uma pausa curta (delay-150),
+              depois que a caixa já começou a abrir espaço. */}
+          <div
+            className={`border-t border-coffee-500/50 pt-4 transition-opacity duration-200 ${
+              aberto ? 'opacity-100 delay-150' : 'opacity-0'
+            }`}
+          >
             <p className="font-display text-lg italic leading-relaxed text-cream">{versiculo?.texto}</p>
             <p className="mt-3 text-sm font-medium text-coffee-200">
               {versiculo?.referencia} · {versiculo?.versao || 'NAA'}
