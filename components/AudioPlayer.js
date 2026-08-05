@@ -62,11 +62,18 @@ export default function AudioPlayer({ src, className = '' }) {
   }
 
   function handleBarraClick(e) {
-    if (!audioRef.current || !duracaoRef.current) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    // Lê a duração direto do elemento (fonte da verdade do navegador) em vez
+    // de confiar só no state/ref internos — evita que o clique seja
+    // silenciosamente ignorado se o metadata ainda não tiver dado o evento
+    // (comum em mobile, que só carrega metadata depois do 1º play).
+    const dur = audio.duration && isFinite(audio.duration) ? audio.duration : duracaoRef.current;
+    if (!dur) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    audioRef.current.currentTime = pct * duracaoRef.current;
-    setTempoAtual(pct * duracaoRef.current);
+    audio.currentTime = pct * dur;
+    setTempoAtual(pct * dur);
   }
 
   function fmt(s) {
@@ -120,6 +127,7 @@ export default function AudioPlayer({ src, className = '' }) {
         src={src}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
+        onDurationChange={handleLoadedMetadata}
         onEnded={handleEnded}
         preload="metadata"
         className="hidden"

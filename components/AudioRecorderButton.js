@@ -241,12 +241,15 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   }
 
   function handleBarraClick(e) {
-    if (!audioRef.current || !duracaoRef.current) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+    const dur = audio.duration && isFinite(audio.duration) ? audio.duration : duracaoRef.current;
+    if (!dur) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    audioRef.current.currentTime = pct * duracaoRef.current;
+    audio.currentTime = pct * dur;
     setProgresso(pct);
-    setTempoAtual(pct * duracaoRef.current);
+    setTempoAtual(pct * dur);
   }
 
   function fmt(s) {
@@ -312,6 +315,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
           src={audioURL}
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
+          onDurationChange={handleLoadedMetadata}
           onEnded={handleEnded}
           preload="metadata"
           className="hidden"
