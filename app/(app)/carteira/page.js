@@ -104,7 +104,7 @@ function CarteiraPageInterna() {
   }
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar titulo="Carteira" voltarPara="/perfil" />
 
       <div className="space-y-5 px-5 py-5">

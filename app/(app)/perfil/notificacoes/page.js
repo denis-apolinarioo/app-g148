@@ -157,7 +157,7 @@ export default function NotificacoesPage() {
   const iosSemInstalar = plataforma.ios && !plataforma.standalone;
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar titulo="Notificações" voltarPara="/perfil/editar" />
 
       <div className="space-y-6 px-5 py-5">

@@ -53,7 +53,7 @@ export default function PerfilPublicoPage({ params }) {
 
   if (usuario === 'erro') {
     return (
-      <div className="mx-auto max-w-md">
+      <div className="mx-auto max-w-2xl">
         <TopBar titulo="Perfil" voltarPara="/feed" />
         <EmptyState
           icone={WifiOff}
@@ -66,7 +66,7 @@ export default function PerfilPublicoPage({ params }) {
 
   if (usuario === null) {
     return (
-      <div className="mx-auto max-w-md">
+      <div className="mx-auto max-w-2xl">
         <TopBar titulo="Perfil" voltarPara="/feed" />
         <EmptyState icone={UserX} titulo="Perfil não encontrado" />
       </div>
@@ -74,7 +74,7 @@ export default function PerfilPublicoPage({ params }) {
   }
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar titulo={`@${usuario.username}`} voltarPara="/feed" />
       <ProfileView usuario={usuario} usuarioAtual={perfil} />
     </div>

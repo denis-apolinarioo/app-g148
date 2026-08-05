@@ -91,7 +91,7 @@ export default function MissoesPage() {
   const cumpridas = todasVisiveis.filter((m) => status[m.id]?.esgotada).length;
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar titulo="Missões" />
 
       <div className="space-y-6 px-4 py-4">

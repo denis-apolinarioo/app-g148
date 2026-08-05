@@ -55,7 +55,7 @@ export default function RankingPage() {
   }, [perfil?.uid, estouEm1Lugar]);
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar titulo="Ranking" />
 
       <div className="px-4 py-4">

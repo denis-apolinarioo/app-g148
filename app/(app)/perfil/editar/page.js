@@ -111,7 +111,7 @@ export default function EditarPerfilPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar titulo="Editar perfil" voltarPara="/perfil" />
 
       <div className="space-y-5 px-5 py-5">

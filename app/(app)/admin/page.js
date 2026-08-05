@@ -44,7 +44,7 @@ export default function AdminPage() {
   if (!perfil) return <LoadingScreen />;
   if (!perfil.isAdmin) {
     return (
-      <div className="mx-auto max-w-md">
+      <div className="mx-auto max-w-2xl">
         <TopBar titulo="Painel Admin" voltarPara="/perfil" />
         <EmptyState icone={ShieldAlert} titulo="Área restrita a administradores" />
       </div>
@@ -53,7 +53,7 @@ export default function AdminPage() {
 
   if (!desbloqueado) {
     return (
-      <div className="mx-auto max-w-md">
+      <div className="mx-auto max-w-2xl">
         <TopBar titulo="Painel Admin" voltarPara="/perfil" />
         <AdminLoginGate usuarioAuth={usuarioAuth} onDesbloqueado={() => setDesbloqueado(true)} />
       </div>
@@ -61,7 +61,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar titulo="Painel Admin" voltarPara="/perfil" />
 
       <div className="flex gap-1.5 overflow-x-auto border-b border-coffee-100 px-4 pb-0.5 pt-3">

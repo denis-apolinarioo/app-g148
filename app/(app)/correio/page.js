@@ -106,7 +106,7 @@ export default function CorreioPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar
         titulo="Correio"
         voltarPara="/feed"

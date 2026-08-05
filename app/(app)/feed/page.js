@@ -59,7 +59,7 @@ export default function FeedPage() {
   )?.filter((p) => !p.oculto || p.autorId === perfil?.uid || perfil?.isAdmin);
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-coffee-100 bg-cream/95 px-5 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)]">
         <div>
           <p className="font-destaque text-lg font-semibold text-coffee-800">Geração 148</p>

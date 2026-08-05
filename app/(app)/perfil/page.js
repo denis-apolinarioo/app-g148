@@ -31,7 +31,7 @@ export default function MeuPerfilPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <header className="sticky top-0 z-30 flex items-center justify-between border-b border-coffee-100 bg-cream/95 px-5 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)]">
         <div>
           {/* Item novo (Bloco A) — acesso ao Admin movido pra ponta esquerda

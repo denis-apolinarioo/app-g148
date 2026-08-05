@@ -33,7 +33,7 @@ export default function PostIndividualPage() {
   }, [postId]);
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar titulo="Post" voltarPorHistorico />
 
       <div className="space-y-4 px-4 py-4">

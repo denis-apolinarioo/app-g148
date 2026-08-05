@@ -69,7 +69,7 @@ function ContaTravada() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6 text-center">
+    <div className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-6 text-center">
       <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-coffee-700">
         <Lock size={26} className="text-cream" />
       </div>

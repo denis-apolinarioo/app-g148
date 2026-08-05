@@ -55,7 +55,7 @@ export default function BuscarPage() {
   }, [posts, termo, perfil]);
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar titulo="Buscar" voltarPara="/feed" />
 
       <div className="space-y-4 px-4 pt-4">

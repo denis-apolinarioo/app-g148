@@ -21,7 +21,7 @@ export default function OracaoPage() {
   const listaFiltrada = pedidos?.filter((p) => (filtro === 'ativos' ? p.status === 'ativo' : true));
 
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar
         titulo="Oração"
         acao={

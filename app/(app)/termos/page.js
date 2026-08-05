@@ -2,7 +2,7 @@ import TopBar from '@/components/TopBar';
 
 export default function TermosPage() {
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-2xl">
       <TopBar titulo="Termos de Uso" voltarPara="/perfil" />
 
       <div className="space-y-5 px-5 py-6 text-sm leading-relaxed text-coffee-600">
