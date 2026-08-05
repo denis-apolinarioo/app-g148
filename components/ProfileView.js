@@ -213,22 +213,26 @@ export default function ProfileView({ usuario, usuarioAtual }) {
         {/* Propósito — último item do cabeçalho antes das abas de baixo,
             largura igual à dos posts (sem max-w), com mais destaque visual
             (faixa dourada lateral + ícone de cruz, mais alinhado ao tema da
-            comunidade do que o antigo ícone de estrelas). */}
+            comunidade do que o antigo ícone de estrelas). Fundo marrom claro
+            (coffee-100, em vez do card quase branco) pra contrastar mais com
+            o resto da tela — pedido do usuário. */}
         {usuario.proposito && (
-          <div className="relative mt-5 w-full overflow-hidden rounded-xl2 border border-coffee-100 bg-cream-card p-4 pl-5 text-left shadow-card">
+          <div className="relative mt-5 w-full overflow-hidden rounded-xl2 border border-coffee-200 bg-coffee-100 p-4 pl-5 text-left shadow-card">
             <span className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-gold to-coffee-600" />
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-coffee-500">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-coffee-600">
               <IconeProposito size={14} className="text-gold" strokeWidth={2.2} /> Propósito
             </p>
-            <p className="mt-1 text-sm italic text-coffee-600">{usuario.proposito}</p>
+            <p className="mt-1 text-sm italic text-coffee-700">{usuario.proposito}</p>
           </div>
         )}
       </div>
 
       {/* Abas em estilo "Instagram" — só ícone, sem texto (pedido do
           usuário); o label continua existindo como aria-label pra leitor de
-          tela, e o `title` mostra a contagem no hover em telas maiores. */}
-      <div className="mt-5">
+          tela, e o `title` mostra a contagem no hover em telas maiores.
+          mt-2.5 (era mt-5) — distância reduzida entre o card de Propósito
+          logo acima e os ícones das abas, pedido do usuário. */}
+      <div className="mt-2.5">
         <div className="mb-3 flex border-b border-coffee-100">
           <AbaBtn
             ativo={aba === 'posts'}
