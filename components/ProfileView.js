@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import * as Icons from 'lucide-react';
 import { UserX, UserCheck } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import StreakFogueira from '@/components/StreakFogueira';
@@ -11,6 +10,7 @@ import PostCard from '@/components/PostCard';
 import PrayerCard from '@/components/PrayerCard';
 import EmptyState from '@/components/EmptyState';
 import ImageViewerModal from '@/components/ImageViewerModal';
+import CrossIcon from '@/components/icons/CrossIcon';
 import {
   subscribeToUserPosts,
   subscribeToUserPrayers,
@@ -20,12 +20,6 @@ import {
 import { getConquistasDoUsuario, marcarConquistaVista, getVitrineConquistas } from '@/lib/achievements';
 import { useAppConfig } from '@/lib/useAppConfig';
 import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
-
-// Ícone de cruz pro card de Propósito — acesso defensivo (em vez de import
-// nomeado direto) porque nem toda versão do lucide-react garante o mesmo
-// nome exportado; cai num ícone genérico de destaque se "Cross" não
-// existir nesta versão instalada, em vez de quebrar a tela inteira.
-const IconeProposito = Icons.Cross || Icons.Sparkle || Icons.Sparkles;
 
 // Ícones das abas do Perfil (Posts/Orações/Conquistas) — PNGs recortados
 // da imagem de referência que o usuário mandou (public/icons/custom/), no
@@ -211,16 +205,16 @@ export default function ProfileView({ usuario, usuarioAtual }) {
         )}
 
         {/* Propósito — último item do cabeçalho antes das abas de baixo,
-            largura igual à dos posts (sem max-w), com mais destaque visual
-            (faixa dourada lateral + ícone de cruz, mais alinhado ao tema da
-            comunidade do que o antigo ícone de estrelas). Fundo marrom claro
-            (coffee-100, em vez do card quase branco) pra contrastar mais com
-            o resto da tela — pedido do usuário. */}
+            largura igual à dos posts (sem max-w), com destaque visual (faixa
+            marrom lateral + cruz latina sólida, no lugar do dourado usado
+            antes — pedido do usuário). Fundo marrom claro (coffee-100, em
+            vez do card quase branco) pra contrastar mais com o resto da
+            tela. */}
         {usuario.proposito && (
           <div className="relative mt-5 w-full overflow-hidden rounded-xl2 border border-coffee-200 bg-coffee-100 p-4 pl-5 text-left shadow-card">
-            <span className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-gold to-coffee-600" />
+            <span className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-coffee-400 to-coffee-700" />
             <p className="flex items-center gap-1.5 text-xs font-semibold text-coffee-600">
-              <IconeProposito size={14} className="text-gold" strokeWidth={2.2} /> Propósito
+              <CrossIcon size={14} className="text-coffee-600" /> Propósito
             </p>
             <p className="mt-1 text-sm italic text-coffee-700">{usuario.proposito}</p>
           </div>

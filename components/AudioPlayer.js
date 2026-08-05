@@ -115,6 +115,7 @@ export default function AudioPlayer({ src, onTap, className = '' }) {
       <audio
         ref={audioRef}
         src={src}
+        crossOrigin="anonymous"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={handleEnded}

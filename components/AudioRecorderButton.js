@@ -259,6 +259,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
         <audio
           ref={audioRef}
           src={audioURL}
+          crossOrigin="anonymous"
           onTimeUpdate={handleTimeUpdate}
           onLoadedMetadata={handleLoadedMetadata}
           onEnded={handleEnded}
