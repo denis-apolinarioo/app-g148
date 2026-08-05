@@ -44,14 +44,12 @@ export default function ConquistaDetalheModal({ conquista, onFechar }) {
 
           {!desbloqueada && (
             <div className="absolute inset-0 z-20 flex items-center justify-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-coffee-800 shadow-lg ring-4 ring-cream">
-                <Lock size={28} strokeWidth={2.2} className="text-cream" />
-              </div>
+              <Lock size={40} strokeWidth={1.8} className="text-coffee-500/60 drop-shadow-sm" />
             </div>
           )}
         </div>
 
-        <p className="mt-5 font-destaque text-xl font-semibold text-coffee-800">
+        <p className="mt-6 font-destaque text-xl font-semibold text-coffee-800">
           {conquista.nome}
         </p>
         <p className="mt-2 text-sm text-coffee-500">{conquista.descricao}</p>

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import { Mic, Square, Trash2, Play, Pause } from 'lucide-react';
+import useAudioBars from '@/lib/useAudioBars';
 
 export default function AudioRecorderButton({ onGravado, onLimpar }) {
   const [gravando, setGravando] = useState(false);
@@ -35,6 +36,11 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   // aqui pra poder chamar ctx.close() assim que a gravação parar (ou se o
   // componente desmontar no meio de uma gravação).
   const audioCtxRef = useRef(null);
+
+  // Barras da PRÉVIA (depois de gravado, ao dar play pra conferir) reagindo
+  // ao som de verdade — diferente das `barras` acima, que reagem ao
+  // microfone durante a gravação em si.
+  const barrasPlayback = useAudioBars(audioRef, tocando);
 
   useEffect(() => {
     return () => {
@@ -226,11 +232,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
             className="flex items-end gap-[2px] h-7 cursor-pointer"
             onClick={handleBarraClick}
           >
-            {Array(28).fill(0).map((_, i) => {
-              const altura = 3 + Math.round(
-                Math.sin((i / 27) * Math.PI) * 18 +
-                Math.sin((i / 7) * Math.PI) * 6
-              );
+            {barrasPlayback.map((altura, i) => {
               const passado = progresso > 0 && i / 28 <= progresso;
               return (
                 <div

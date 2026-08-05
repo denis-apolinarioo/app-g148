@@ -1,7 +1,8 @@
 'use client';
 
-import { useRef, useState, useMemo } from 'react';
+import { useRef, useState } from 'react';
 import { Play, Pause } from 'lucide-react';
+import useAudioBars from '@/lib/useAudioBars';
 
 // ============================================================================
 // Player de áudio dos POSTS (Feed/perfil) — antes usava o <audio controls>
@@ -30,16 +31,9 @@ export default function AudioPlayer({ src, onTap, className = '' }) {
 
   const progresso = duracaoRef.current > 0 ? tempoAtual / duracaoRef.current : 0;
 
-  // Onda decorativa fixa (mesmo formato de seno usado na prévia de
-  // gravação) — não representa o volume real do áudio, só dá a textura
-  // visual; a parte "tocada" vai sendo pintada por cima conforme progride.
-  const barras = useMemo(
-    () =>
-      Array(28)
-        .fill(0)
-        .map((_, i) => 3 + Math.round(Math.sin((i / 27) * Math.PI) * 18 + Math.sin((i / 7) * Math.PI) * 6)),
-    []
-  );
+  // Barras reagindo ao som de verdade enquanto toca (Web Audio API) — a
+  // parte "tocada" continua sendo pintada por cima conforme progride.
+  const barras = useAudioBars(audioRef, tocando);
 
   function alternarPlay(e) {
     e.stopPropagation();
@@ -121,6 +115,7 @@ export default function AudioPlayer({ src, onTap, className = '' }) {
       <audio
         ref={audioRef}
         src={src}
+        crossOrigin="anonymous"
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
         onEnded={handleEnded}

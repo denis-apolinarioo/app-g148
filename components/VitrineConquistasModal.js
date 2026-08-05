@@ -99,7 +99,7 @@ export default function VitrineConquistasModal({ desbloqueadas, selecaoAtual, on
                   )}
                 </div>
                 <p
-                  style={{ marginTop: espacoParaAnel > 0 ? espacoParaAnel + 4 : 0 }}
+                  style={{ marginTop: espacoParaAnel > 0 ? Math.round(espacoParaAnel * 0.4) : 0 }}
                   className="font-destaque text-[10px] font-semibold leading-tight text-coffee-600"
                 >
                   {c.nome}

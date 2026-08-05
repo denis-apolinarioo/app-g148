@@ -70,7 +70,7 @@ export default function AchievementBadge({ conquista, onAberta }) {
           abrindo={abrindo}
         />
         <p
-          style={{ marginTop: espacoParaAnel > 0 ? espacoParaAnel + 4 : 0 }}
+          style={{ marginTop: espacoParaAnel > 0 ? Math.round(espacoParaAnel * 0.4) : 0 }}
           className={`font-destaque text-[11px] font-semibold leading-tight ${
             desbloqueada ? 'text-coffee-600' : 'text-coffee-300'
           }`}
