@@ -62,6 +62,8 @@ function IconeConquistas({ size, ativo }) {
   );
 }
 
+const POSTS_POR_PAGINA = 8;
+
 export default function ProfileView({ usuario, usuarioAtual }) {
   const [posts, setPosts] = useState(null);
   const [pedidosAtivos, setPedidosAtivos] = useState([]);
@@ -69,6 +71,10 @@ export default function ProfileView({ usuario, usuarioAtual }) {
   const [aba, setAba] = useState('posts');
   const [fotoAberta, setFotoAberta] = useState(false);
   const [bloqueando, setBloqueando] = useState(false);
+  // Paginação local — evita montar todos os AudioPlayers de uma vez quando
+  // o usuário tem muitos posts de áudio, o que sobrecarregava o aparelho e
+  // causava o "Application error" na tela de Perfil.
+  const [quantosPostsVisiveis, setQuantosPostsVisiveis] = useState(POSTS_POR_PAGINA);
 
   // Item 12 do Bloco 5 — o Admin pode desligar a função de bloqueio pra todo
   // mundo (aba Config); enquanto o app ainda não carregou a configuração,
@@ -93,6 +99,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
 
   useEffect(() => {
     if (!usuario?.uid) return undefined;
+    setQuantosPostsVisiveis(POSTS_POR_PAGINA); // reseta ao trocar de usuário
     const unsub = subscribeToUserPosts(usuario.uid, setPosts);
     return () => unsub();
   }, [usuario?.uid]);
@@ -255,11 +262,25 @@ export default function ProfileView({ usuario, usuarioAtual }) {
             {/* Botão "Ocultar" (novo) — post oculto some do perfil de todo
                 mundo, exceto do próprio dono (placeholder, ver PostCard.js)
                 e do Admin (sempre vê tudo). */}
+            {/* slice: mostra só os primeiros N posts pra não montar todos os
+                AudioPlayers de uma vez (causa crash em perfis com muitos
+                posts de áudio — ver bug fix em AudioPlayer.js). */}
             {posts
               ?.filter((post) => !post.oculto || usuario.uid === usuarioAtual?.uid || usuarioAtual?.isAdmin)
+              .slice(0, quantosPostsVisiveis)
               .map((post) => (
                 <PostCard key={post.id} post={post} usuarioAtual={usuarioAtual} />
               ))}
+            {posts &&
+              posts.filter((post) => !post.oculto || usuario.uid === usuarioAtual?.uid || usuarioAtual?.isAdmin)
+                .length > quantosPostsVisiveis && (
+              <button
+                onClick={() => setQuantosPostsVisiveis((n) => n + POSTS_POR_PAGINA)}
+                className="w-full rounded-xl2 border border-coffee-200 py-3 text-sm font-medium text-coffee-600 hover:bg-coffee-50"
+              >
+                Ver mais posts
+              </button>
+            )}
           </div>
         )}
 
