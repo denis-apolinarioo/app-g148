@@ -159,15 +159,34 @@ export default function PostCard({ post, usuarioAtual }) {
     }
   }
 
-  // Item 19 — duplo toque curte (nunca descurte) e mostra a animação do coração
+  // ── Duplo toque centralizado ─────────────────────────────────────────────
+  // Um único ref de timestamp e um único "animando" controla tudo.
+  // Assim não importa em qual elemento os dois toques aconteceram —
+  // a janela de tempo é sempre medida a partir do último toque em
+  // qualquer parte do post, e a animação nunca duplica.
+  const animandoRef = useRef(false);
+
   function dispararCurtidaComAnimacao() {
+    if (animandoRef.current) return; // já animando — ignora clique extra
+    animandoRef.current = true;
     if (!jaCurtiuExibido) handleLike();
     setCoracaoAnimado(true);
-    setTimeout(() => setCoracaoAnimado(false), 700);
+    setTimeout(() => {
+      setCoracaoAnimado(false);
+      animandoRef.current = false;
+    }, 700);
   }
 
-  // Toque na FOTO precisa distinguir toque único (abre a foto em tela cheia)
-  // de duplo toque (curte) — por isso espera um instante antes de decidir.
+  // Usado em áreas sem ação concorrente (texto, áudio, check, link…)
+  function handleDuploToque() {
+    const agora = Date.now();
+    if (agora - ultimoTapRef.current < JANELA_DUPLO_TOQUE) {
+      dispararCurtidaComAnimacao();
+    }
+    ultimoTapRef.current = agora;
+  }
+
+  // Foto distingue toque único (abre em tela cheia) de duplo (curte).
   function handleTapNaFoto() {
     const agora = Date.now();
     const desdeUltimoTap = agora - ultimoTapRef.current;
@@ -185,16 +204,6 @@ export default function PostCard({ post, usuarioAtual }) {
         timeoutTapRef.current = null;
       }, JANELA_DUPLO_TOQUE);
     }
-  }
-
-  // Toque no TEXTO só precisa reconhecer o duplo toque (não tem ação de
-  // toque único concorrendo, então não precisa de delay/timeout)
-  function handleTapNoTexto() {
-    const agora = Date.now();
-    if (agora - ultimoTapRef.current < JANELA_DUPLO_TOQUE) {
-      dispararCurtidaComAnimacao();
-    }
-    ultimoTapRef.current = agora;
   }
 
   // Item 18 — segurar o botão de curtir mostra quem curtiu, sem curtir/descurtir
@@ -354,8 +363,8 @@ export default function PostCard({ post, usuarioAtual }) {
 
     if (item.tipo === 'audio') {
       return (
-        <div key={key} className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3 py-3">
-          <AudioPlayer src={item.url} onTap={comDuploToque ? handleTapNoTexto : undefined} />
+        <div key={key} className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3 py-3" onClick={comDuploToque ? handleDuploToque : undefined}>
+          <AudioPlayer src={item.url} />
           {comDuploToque && coracaoAnimado && (
             <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <Heart size={56} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
@@ -369,7 +378,7 @@ export default function PostCard({ post, usuarioAtual }) {
       return (
         <div
           key={key}
-          onClick={comDuploToque ? handleTapNoTexto : undefined}
+          onClick={comDuploToque ? handleDuploToque : undefined}
           className="relative mb-2.5 flex items-center gap-2 rounded-xl bg-green-50 px-3.5 py-2.5 text-sm text-green-800"
         >
           <CheckCircle2 size={16} className="flex-shrink-0 text-green-600" />
@@ -390,7 +399,7 @@ export default function PostCard({ post, usuarioAtual }) {
             href={item.valor}
             target="_blank"
             rel="noreferrer"
-            onClick={comDuploToque ? handleTapNoTexto : undefined}
+            onClick={comDuploToque ? handleDuploToque : undefined}
             className="flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5 text-sm text-coffee-700"
           >
             <Link2 size={15} className="flex-shrink-0 text-coffee-400" />
@@ -409,7 +418,7 @@ export default function PostCard({ post, usuarioAtual }) {
     return (
       <div
         key={key}
-        onClick={comDuploToque ? handleTapNoTexto : undefined}
+        onClick={comDuploToque ? handleDuploToque : undefined}
         className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5"
       >
         {item.label && <p className="mb-0.5 text-[11px] font-medium text-coffee-400">{item.label}</p>}
@@ -511,7 +520,7 @@ export default function PostCard({ post, usuarioAtual }) {
           EditarPostModal.js) e com mais contraste/destaque que o resto do
           post, já que é o título, não um item de resposta qualquer. */}
       {post.texto && (
-        <div onClick={handleTapNoTexto} className="relative">
+        <div onClick={handleDuploToque} className="relative">
           {ehPostDeMissao ? (
             <p className="mb-3 font-destaque text-base font-bold text-coffee-900">{post.texto}</p>
           ) : (
@@ -578,8 +587,8 @@ export default function PostCard({ post, usuarioAtual }) {
           duplo toque pra curtir em qualquer parte dele (play, onda, ou o
           espaço vazio ao redor). */}
       {!itensMissao && post.tipo === 'audio' && post.midiaURL && (
-        <div className="relative mb-3 rounded-xl border border-coffee-100 bg-cream px-3 py-3">
-          <AudioPlayer src={post.midiaURL} onTap={handleTapNoTexto} />
+        <div className="relative mb-3 rounded-xl border border-coffee-100 bg-cream px-3 py-3" onClick={handleDuploToque}>
+          <AudioPlayer src={post.midiaURL} />
           {coracaoAnimado && (
             <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
               <Heart size={56} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />

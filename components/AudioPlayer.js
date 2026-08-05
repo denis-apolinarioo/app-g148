@@ -5,24 +5,18 @@ import { Play, Pause } from 'lucide-react';
 import useAudioBars from '@/lib/useAudioBars';
 
 // ============================================================================
-// Player de áudio dos POSTS (Feed/perfil) — antes usava o <audio controls>
-// nativo do navegador (feio, cara de Android/Chrome, sem nada do visual do
-// app). Agora usa o mesmo padrão de onda + play/pause já testado na prévia
-// de gravação (components/AudioRecorderButton.js), sem botão de mudo.
+// Player de áudio dos POSTS (Feed/perfil) — usa o mesmo padrão de onda +
+// play/pause da prévia de gravação (AudioRecorderButton.js), sem botão de mudo.
 //
-// O progresso segue o áudio de verdade via eventos nativos do <audio>
-// (onTimeUpdate/onLoadedMetadata/onEnded) — o elemento <audio> em si fica
-// escondido (só toca o som), quem aparece na tela é a onda + play/pause.
+// O progresso segue o áudio via eventos nativos do <audio>
+// (onTimeUpdate/onLoadedMetadata/onEnded) — o <audio> fica escondido.
 //
-// CURTIDA POR DUPLO TOQUE: este componente não decide sozinho o que é
-// "duplo toque" — só avisa o pai (via `onTap`) toda vez que a pessoa clica
-// em QUALQUER parte dele (play, onda, ou o espaço vazio ao redor). Isso
-// funciona por causa do "bubbling" normal do clique no navegador — não
-// precisa de nenhum código extra pra isso "chegar" no botão de play/na onda,
-// já que nenhum deles usa stopPropagation. Assim o toque duplo funciona no
-// player inteiro, não só numa faixa em volta dele.
+// DUPLO TOQUE: este componente não gerencia o duplo toque. O pai (PostCard)
+// envolve o player num div com onClick={handleDuploToque}, e os cliques em
+// qualquer parte do player sobem normalmente pelo bubbling até esse div.
+// O play e a barra NÃO chamam stopPropagation pra não bloquear esse bubbling.
 // ============================================================================
-export default function AudioPlayer({ src, onTap, className = '' }) {
+export default function AudioPlayer({ src, className = '' }) {
   const [tocando, setTocando] = useState(false);
   const [duracao, setDuracao] = useState(0);
   const [tempoAtual, setTempoAtual] = useState(0);
@@ -37,8 +31,7 @@ export default function AudioPlayer({ src, onTap, className = '' }) {
   // vez a partir do arquivo, com cache — ver lib/useAudioBars.js).
   const barras = useAudioBars(audioRef, tocando, src);
 
-  function alternarPlay(e) {
-    e.stopPropagation();
+  function alternarPlay() {
     if (!audioRef.current) return;
     if (tocando) {
       audioRef.current.pause();
@@ -47,7 +40,6 @@ export default function AudioPlayer({ src, onTap, className = '' }) {
       audioRef.current.play();
       setTocando(true);
     }
-    onTap?.();
   }
 
   function handleTimeUpdate() {
@@ -70,13 +62,11 @@ export default function AudioPlayer({ src, onTap, className = '' }) {
   }
 
   function handleBarraClick(e) {
-    e.stopPropagation();
     if (!audioRef.current || !duracaoRef.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     audioRef.current.currentTime = pct * duracaoRef.current;
     setTempoAtual(pct * duracaoRef.current);
-    onTap?.();
   }
 
   function fmt(s) {
@@ -85,7 +75,7 @@ export default function AudioPlayer({ src, onTap, className = '' }) {
   }
 
   return (
-    <div className={`flex items-center gap-3 ${className}`} onClick={() => onTap?.()}>
+    <div className={`flex items-center gap-3 ${className}`}>
       <button
         type="button"
         onClick={alternarPlay}
