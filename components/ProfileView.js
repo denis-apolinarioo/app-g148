@@ -103,7 +103,13 @@ export default function ProfileView({ usuario, usuarioAtual }) {
         {/* Cabeçalho em duas colunas: identidade à esquerda, métricas à
             direita — pedido do usuário pra imitar a disposição de um
             layout de referência que ele mandou. */}
-        <div className="flex w-full items-start justify-between gap-3">
+        {/* flex-wrap (em vez de só justify-between): em telas bem estreitas
+            o bloco da direita (pontos+fogueira+vitrine) não cabe do lado do
+            avatar/nome e ESPREME tudo, ficando desalinhado — com flex-wrap
+            ele desce inteiro pra baixo, numa linha própria, em vez de
+            estourar a largura. ml-auto no bloco da direita (mais abaixo)
+            mantém ele alinhado à direita tanto numa linha quanto na outra. */}
+        <div className="flex w-full flex-wrap items-start gap-x-3 gap-y-3">
           {/* Esquerda: foto, nome, usuário e função */}
           <div className="flex min-w-0 flex-1 flex-col items-start text-left">
             {/* FIX: foto de perfil clicável abre em tela cheia */}
@@ -130,7 +136,7 @@ export default function ProfileView({ usuario, usuarioAtual }) {
               items-end (em vez de items-center) alinha o rótulo "X dias" da
               fogueira com o rótulo "Pontos de Comunhão" do card ao lado —
               ver o ajuste de padding equivalente em StreakFogueira.js. */}
-          <div className="-mt-3 flex flex-shrink-0 flex-col items-end">
+          <div className="-mt-3 ml-auto flex flex-shrink-0 flex-col items-end">
             <div className="flex items-end gap-2">
               <div className="rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-2.5 text-center shadow-card">
                 <p className="font-destaque text-lg font-bold text-coffee-800">{usuario.pontos || 0}</p>
