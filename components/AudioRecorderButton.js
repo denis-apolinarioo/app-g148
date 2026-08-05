@@ -39,8 +39,10 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
 
   // Barras da PRÉVIA (depois de gravado, ao dar play pra conferir) reagindo
   // ao som de verdade — diferente das `barras` acima, que reagem ao
-  // microfone durante a gravação em si.
-  const barrasPlayback = useAudioBars(audioRef, tocando);
+  // microfone durante a gravação em si. Parada, mostra a forma de onda
+  // real do que foi gravado (audioURL é um blob: local, mesma origem —
+  // não depende do CORS do Storage).
+  const barrasPlayback = useAudioBars(audioRef, tocando, audioURL);
 
   useEffect(() => {
     return () => {

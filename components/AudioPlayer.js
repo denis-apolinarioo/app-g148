@@ -33,7 +33,9 @@ export default function AudioPlayer({ src, onTap, className = '' }) {
 
   // Barras reagindo ao som de verdade enquanto toca (Web Audio API) — a
   // parte "tocada" continua sendo pintada por cima conforme progride.
-  const barras = useAudioBars(audioRef, tocando);
+  // Parado, mostra a forma de onda real do áudio inteiro (calculada uma
+  // vez a partir do arquivo, com cache — ver lib/useAudioBars.js).
+  const barras = useAudioBars(audioRef, tocando, src);
 
   function alternarPlay(e) {
     e.stopPropagation();
