@@ -86,7 +86,7 @@ export default function AudioPlayer({ src, className = '' }) {
       </button>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <div className="flex h-7 cursor-pointer items-end gap-[2px]" onClick={handleBarraClick}>
+        <div className="relative flex h-7 cursor-pointer items-end gap-[2px]" onClick={handleBarraClick}>
           {barras.map((altura, i) => {
             const passado = progresso > 0 && i / 28 <= progresso;
             return (
@@ -97,6 +97,12 @@ export default function AudioPlayer({ src, className = '' }) {
               />
             );
           })}
+          {duracaoRef.current > 0 && (
+            <div
+              className="pointer-events-none absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-coffee-700 shadow-sm"
+              style={{ left: `${progresso * 100}%` }}
+            />
+          )}
         </div>
         <div className="flex justify-between text-[10px] text-coffee-400">
           <span>{fmt(tempoAtual)}</span>

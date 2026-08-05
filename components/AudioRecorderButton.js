@@ -269,7 +269,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
 
         <div className="flex flex-1 flex-col gap-1.5 min-w-0">
           <div
-            className="flex items-end gap-[2px] h-7 cursor-pointer"
+            className="relative flex items-end gap-[2px] h-7 cursor-pointer"
             onClick={handleBarraClick}
           >
             {barrasPlayback.map((altura, i) => {
@@ -285,6 +285,12 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
                 />
               );
             })}
+            {duracaoRef.current > 0 && (
+              <div
+                className="pointer-events-none absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-coffee-700 shadow-sm"
+                style={{ left: `${progresso * 100}%` }}
+              />
+            )}
           </div>
           <div className="flex justify-between text-[10px] text-coffee-400">
             <span>{fmt(tempoAtual)}</span>
