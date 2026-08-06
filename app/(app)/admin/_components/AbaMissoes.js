@@ -26,6 +26,7 @@ import { statusDaMissao } from '@/lib/missionCycles';
 import { getAllUsers } from '@/lib/firestore-helpers';
 import { todayBrasilia, formatDateTimeBR } from '@/lib/dateUtils';
 import { slugify } from '@/lib/slug';
+import { notificarNovaMissao } from '@/lib/notificacoes';
 import { useAuth } from '@/components/AuthProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import Avatar from '@/components/Avatar';
@@ -373,6 +374,10 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
   const [usuarios, setUsuarios] = useState([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
+  // Item novo — pra criar não vira spam sem querer, o padrão é ligado só ao
+  // CRIAR uma missão nova; ao editar uma já existente, o Admin decide se
+  // quer avisar de novo (ex.: reabriu a missão, mudou o prazo).
+  const [notificarUsuarios, setNotificarUsuarios] = useState(!missaoInicial);
 
   useEffect(() => {
     getAllUsers().then(setUsuarios);
@@ -475,10 +480,17 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
     dados.destinatarios = destinatarios && destinatarios.length > 0 ? destinatarios : null;
 
     try {
+      let idDaMissao = missaoInicial?.id;
       if (editando) {
         await atualizarMissao(missaoInicial.id, dados, perfil);
       } else {
-        await criarMissao(dados, undefined, perfil);
+        idDaMissao = await criarMissao(dados, undefined, perfil);
+      }
+      // Item novo — dispara depois do salvar dar certo, e nunca trava a
+      // tela nem impede o fechamento do modal se a notificação falhar (ver
+      // try/catch interno de notificarNovaMissao em lib/notificacoes.js).
+      if (notificarUsuarios && ativa && idDaMissao) {
+        notificarNovaMissao({ ...dados, id: idDaMissao }, perfil, usuarios);
       }
       onSalvo?.();
     } catch (err) {
@@ -744,6 +756,22 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
             <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} />
             Ativa (aparece pra quem usa o app)
           </label>
+
+          {/* Item novo — dispara notificação no Correio + push (categoria
+              "Novas missões" nas preferências) pra quem a missão alcançar.
+              Se "Destinatários" abaixo estiver preenchido, avisa só quem
+              foi marcado; vazio, avisa todo mundo. */}
+          {ativa && (
+            <label className="flex items-center gap-2 text-xs text-coffee-500">
+              <input
+                type="checkbox"
+                checked={notificarUsuarios}
+                onChange={(e) => setNotificarUsuarios(e.target.checked)}
+              />
+              Notificar {categoria === 'exclusiva' ? 'os destinatários' : 'a todos'} sobre esta missão
+              (Correio + push)
+            </label>
+          )}
 
           <div>
             <span className="mb-1.5 block text-xs font-medium text-coffee-500">

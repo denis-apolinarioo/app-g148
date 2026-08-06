@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, Loader2, Pin, Search, Trash2, X } from 'lucide-react';
+import { Check, Coins, Gift, Loader2, Pin, Search, Trash2, X } from 'lucide-react';
 import Avatar from '@/components/Avatar';
+import DracmaIcon from '@/components/DracmaIcon';
 import { useAuth } from '@/components/AuthProvider';
 import {
   getAllUsers,
@@ -14,6 +15,7 @@ import {
 import { uploadFotoCorreioComThumb } from '@/lib/storage';
 import { combinaComBusca } from '@/lib/searchUtils';
 import { formatDateTimeBR } from '@/lib/dateUtils';
+import { formatarDracma } from '@/lib/dracma';
 import { useConfirm } from '@/components/ConfirmProvider';
 
 export default function AbaCorreio() {
@@ -27,6 +29,9 @@ export default function AbaCorreio() {
   const [previewFoto, setPreviewFoto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [anexarRecompensa, setAnexarRecompensa] = useState(false);
+  const [pontosAnexados, setPontosAnexados] = useState('');
+  const [dracmasAnexados, setDracmasAnexados] = useState('');
   const { perfil } = useAuth();
   const inputFotoRef = useRef(null);
 
@@ -82,7 +87,13 @@ export default function AbaCorreio() {
         fotoURL = resultado.url;
         fotoThumbURL = resultado.thumbURL;
       }
-      const opts = { fotoURL, fotoThumbURL, fixada };
+      const opts = {
+        fotoURL,
+        fotoThumbURL,
+        fixada,
+        pontosAnexados: anexarRecompensa ? Number(pontosAnexados) || 0 : 0,
+        dracmasAnexados: anexarRecompensa ? Number(dracmasAnexados) || 0 : 0,
+      };
       if (selecionados.length === 1) {
         await sendMailMessage(perfil.uid, selecionados[0], texto.trim(), opts);
       } else {
@@ -92,6 +103,9 @@ export default function AbaCorreio() {
       setArquivoFoto(null);
       setPreviewFoto('');
       setFixada(false);
+      setAnexarRecompensa(false);
+      setPontosAnexados('');
+      setDracmasAnexados('');
       setSelecionados([]);
       setEnviado(true);
       setTimeout(() => setEnviado(false), 2000);
@@ -213,6 +227,54 @@ export default function AbaCorreio() {
         <input type="checkbox" checked={fixada} onChange={(e) => setFixada(e.target.checked)} />
         Fixar no topo do Correio de quem receber
       </label>
+
+      {/* Item novo — anexar pontos e/ou Dracma à mensagem. Quando marcado, a
+          pessoa que receber vê um botão "Receber" no Correio e só ganha o
+          valor no momento em que toca nele (ver resgatarRecompensaCorreio
+          em lib/notificacoes.js). */}
+      <div className="rounded-lg border border-coffee-100 bg-cream-card p-3">
+        <label className="flex items-center gap-2 text-sm font-semibold text-coffee-700">
+          <input
+            type="checkbox"
+            checked={anexarRecompensa}
+            onChange={(e) => setAnexarRecompensa(e.target.checked)}
+          />
+          <Gift size={15} className="text-coffee-500" />
+          Anexar Pontos/Dracma (a pessoa recebe ao clicar em &quot;Receber&quot;)
+        </label>
+        {anexarRecompensa && (
+          <div className="mt-3 flex gap-3">
+            <label className="flex-1">
+              <span className="mb-1 flex items-center gap-1 text-xs text-coffee-400">
+                <Coins size={12} /> Pontos de Comunhão
+              </span>
+              <input
+                type="number"
+                min="0"
+                inputMode="numeric"
+                value={pontosAnexados}
+                onChange={(e) => setPontosAnexados(e.target.value)}
+                placeholder="0"
+                className="w-full rounded-lg border border-coffee-100 bg-cream px-3 py-2 text-sm text-coffee-800"
+              />
+            </label>
+            <label className="flex-1">
+              <span className="mb-1 flex items-center gap-1 text-xs text-coffee-400">
+                <DracmaIcon size={12} /> Dracma
+              </span>
+              <input
+                type="number"
+                min="0"
+                inputMode="decimal"
+                value={dracmasAnexados}
+                onChange={(e) => setDracmasAnexados(e.target.value)}
+                placeholder="0"
+                className="w-full rounded-lg border border-coffee-100 bg-cream px-3 py-2 text-sm text-coffee-800"
+              />
+            </label>
+          </div>
+        )}
+      </div>
 
       <button
         onClick={handleEnviar}
@@ -372,6 +434,16 @@ function HistoricoMensagens({ usuarios }) {
                   {modo === 'geral' && (
                     <p className="mt-0.5 text-[11px] text-coffee-300">
                       {msg.createdAt ? formatDateTimeBR(msg.createdAt) : 'agora'}
+                    </p>
+                  )}
+                  {(msg.pontosAnexados > 0 || msg.dracmasAnexados > 0) && (
+                    <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-coffee-500">
+                      <Gift size={11} />
+                      {msg.pontosAnexados > 0 && `${msg.pontosAnexados} pts`}
+                      {msg.pontosAnexados > 0 && msg.dracmasAnexados > 0 && ' + '}
+                      {msg.dracmasAnexados > 0 && `${formatarDracma(msg.dracmasAnexados)} dracmas`}
+                      {' — '}
+                      {msg.resgatado ? 'já recebido' : 'ainda não recebido'}
                     </p>
                   )}
                 </div>

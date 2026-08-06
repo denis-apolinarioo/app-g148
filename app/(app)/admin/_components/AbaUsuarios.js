@@ -11,6 +11,7 @@ import { ajustarPontosManualmente } from '@/lib/points';
 import { ajustarDracmaManualmente, formatarDracma } from '@/lib/dracma';
 import { combinaComBusca } from '@/lib/searchUtils';
 import { getTodasAsFuncoes } from '@/lib/funcoesRepo';
+import { notificarGanhoPontos, notificarGanhoDracma } from '@/lib/notificacoes';
 
 // A migração que ativava o campo `dracmas` pra quem já estava cadastrado
 // antes da 2ª moeda existir já rodou e não é mais necessária — o botão
@@ -285,6 +286,16 @@ function AjustePopup({ usuario, tipo, onFechar, onAplicado }) {
       const depois = ehPontos
         ? await ajustarPontosManualmente(usuario.id, delta, perfil, motivo.trim())
         : await ajustarDracmaManualmente(usuario.id, delta, perfil, motivo.trim());
+      // Notifica só em GANHOS (delta > 0) — as funções abaixo já ignoram
+      // sozinhas valores <= 0, então não precisa de "if" aqui. Não usa
+      // await de propósito: se a notificação falhar (ex.: sem internet no
+      // exato instante), o ajuste em si (que já foi salvo acima) não deve
+      // ficar pendurado esperando por isso.
+      if (ehPontos) {
+        notificarGanhoPontos(usuario.id, perfil, delta);
+      } else {
+        notificarGanhoDracma(usuario.id, perfil, delta);
+      }
       onAplicado(ehPontos ? { pontos: depois } : { dracmas: depois });
       onFechar();
     } catch (err) {

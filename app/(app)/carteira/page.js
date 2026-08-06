@@ -35,6 +35,7 @@ const ROTULO_TIPO = {
   oracao: 'Orou por um pedido',
   post: 'Post no Feed',
   ajuste_admin: 'Ajuste do administrador',
+  correio: 'Recompensa recebida no Correio',
 };
 
 // CORREÇÃO: useSearchParams() (usado pra ler ?modo=recuperar_solicitar,

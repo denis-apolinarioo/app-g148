@@ -381,14 +381,38 @@ service cloud.firestore {
       allow read: if isSignedIn() &&
         (resource.data.destinatarioId == request.auth.uid || resource.data.remetenteId == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && request.resource.data.remetenteId == request.auth.uid && (
-        (isAdmin() && request.resource.data.tipo == 'mensagem') ||
+        // 'mensagem' cobre tanto o texto livre do Admin quanto (item novo)
+        // uma mensagem com pontos/dracma anexados — o valor em si não é
+        // validado aqui, mas só o Admin pode criar esse tipo, então é o
+        // mesmo nível de confiança que já existe pra qualquer outro campo
+        // de uma mensagem do Admin (ex.: fixada, fotoURL).
+        // missao_nova/missao_especial/pontos_admin/dracma_admin (itens
+        // novos) são avisos automáticos que só o Admin dispara.
+        (isAdmin() &&
+          request.resource.data.tipo in
+            ['mensagem', 'missao_nova', 'missao_especial', 'pontos_admin', 'dracma_admin']) ||
         (!usuarioTravado() &&
           request.resource.data.tipo in ['curtida', 'comentario', 'curtida_comentario', 'mencao'] &&
-          request.resource.data.destinatarioId != request.auth.uid)
+          request.resource.data.destinatarioId != request.auth.uid) ||
+        // Item novo — notificação de conquista desbloqueada: a pessoa avisa
+        // a si mesma (remetenteId == destinatarioId == quem desbloqueou),
+        // diferente das notificações sociais acima que são sempre sobre
+        // outra pessoa.
+        (!usuarioTravado() &&
+          request.resource.data.tipo == 'conquista' &&
+          request.resource.data.destinatarioId == request.auth.uid)
       );
       allow update: if isSignedIn() && (
         (resource.data.destinatarioId == request.auth.uid && apenasEstesCamposMudaram(['lida'])) ||
-        (isAdmin() && apenasEstesCamposMudaram(['fixada']))
+        (isAdmin() && apenasEstesCamposMudaram(['fixada'])) ||
+        // Item novo — resgatar pontos/dracma anexados no Correio: só quem
+        // recebeu, só nesses dois campos, e só no sentido "ainda não
+        // resgatado" → "resgatado" (nunca o contrário, nunca resgatar de
+        // novo). Ver resgatarRecompensaCorreio em lib/notificacoes.js.
+        (resource.data.destinatarioId == request.auth.uid &&
+          apenasEstesCamposMudaram(['resgatado', 'resgatadoEm']) &&
+          resource.data.get('resgatado', false) == false &&
+          request.resource.data.resgatado == true)
       );
       // Item 14º — admin pode apagar qualquer mensagem do histórico.
       // Item 15º — quem recebeu pode fechar (apagar) suas próprias

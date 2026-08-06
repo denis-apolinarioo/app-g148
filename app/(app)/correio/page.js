@@ -3,10 +3,26 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Mailbox, Circle, Heart, MessageCircle, Pin, X, Trash2, Loader2 } from 'lucide-react';
+import {
+  Mailbox,
+  Circle,
+  Heart,
+  MessageCircle,
+  Pin,
+  X,
+  Trash2,
+  Loader2,
+  Trophy,
+  ListChecks,
+  Sparkles,
+  Gift,
+  Coins,
+  ChevronRight,
+} from 'lucide-react';
 import TopBar from '@/components/TopBar';
 import EmptyState from '@/components/EmptyState';
 import Avatar from '@/components/Avatar';
+import DracmaIcon from '@/components/DracmaIcon';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import { useAuth } from '@/components/AuthProvider';
 import {
@@ -18,6 +34,8 @@ import {
 import { getCachedImageURL } from '@/lib/imageCache';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { useAcaoOtimista } from '@/lib/useAcaoOtimista';
+import { resgatarRecompensaCorreio } from '@/lib/notificacoes';
+import { formatarDracma } from '@/lib/dracma';
 
 const QUANTIDADE_BASE_VISIVEL = 20;
 const QUANTIDADE_INCREMENTO_VISIVEL = 20;
@@ -261,6 +279,88 @@ function ConfirmarLimparTudoModal({ quantidade, limpando, erro, onCancelar, onCo
   );
 }
 
+// Item novo — tipos "de sistema" (não são mais uma interação social de
+// outra pessoa, e sim um aviso automático sobre você mesmo: conquista,
+// missão nova, ganho de pontos/dracma pelo Admin). Cada um tem ícone e
+// destino de clique próprios (ver ICONE_SISTEMA e handleClique abaixo).
+const TIPOS_SISTEMA = ['conquista', 'missao_nova', 'missao_especial', 'pontos_admin', 'dracma_admin'];
+const ICONE_SISTEMA = {
+  conquista: Trophy,
+  missao_nova: ListChecks,
+  missao_especial: Sparkles,
+  pontos_admin: Coins,
+  dracma_admin: DracmaIcon,
+};
+
+/**
+ * Item novo — botão "Receber" pra mensagens do Correio com pontos/dracma
+ * anexados (ver AbaCorreio.js). Cuida do próprio estado de carregando/erro
+ * e nunca deixa clicar duas vezes (o próprio resgatarRecompensaCorreio já é
+ * atômico do lado do banco, isso aqui é só pra não deixar a pessoa achar
+ * que travou).
+ */
+function BlocoRecompensaCorreio({ msg }) {
+  const { perfil } = useAuth();
+  const [estado, setEstado] = useState('idle'); // 'idle' | 'resgatando' | 'erro' | 'feito'
+
+  const jaResgatado = !!msg.resgatado || estado === 'feito';
+  const pontos = Number(msg.pontosAnexados) || 0;
+  const dracmas = Number(msg.dracmasAnexados) || 0;
+
+  async function handleReceber(e) {
+    e.stopPropagation();
+    if (jaResgatado || estado === 'resgatando' || !perfil?.uid) return;
+    setEstado('resgatando');
+    try {
+      await resgatarRecompensaCorreio(msg.id, perfil.uid);
+      setEstado('feito');
+    } catch (err) {
+      console.error('Erro ao resgatar recompensa do Correio:', err);
+      setEstado('erro');
+    }
+  }
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className={`mt-2 flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${
+        jaResgatado ? 'border-coffee-100 bg-cream' : 'border-gold/50 bg-gold/10'
+      }`}
+    >
+      <span className="flex items-center gap-2 text-xs font-semibold text-coffee-700">
+        {pontos > 0 && (
+          <span className="flex items-center gap-1">
+            <Coins size={13} className="text-gold" /> {pontos} pts
+          </span>
+        )}
+        {dracmas > 0 && (
+          <span className="flex items-center gap-1">
+            <DracmaIcon size={13} className="text-gold" /> {formatarDracma(dracmas)}
+          </span>
+        )}
+      </span>
+
+      {jaResgatado ? (
+        <span className="text-xs font-semibold text-coffee-400">Recebido ✓</span>
+      ) : (
+        <button
+          type="button"
+          onClick={handleReceber}
+          disabled={estado === 'resgatando'}
+          className="flex items-center gap-1 rounded-full bg-gold px-3 py-1.5 text-xs font-bold text-coffee-900 disabled:opacity-60"
+        >
+          {estado === 'resgatando' ? <Loader2 size={13} className="animate-spin" /> : <Gift size={13} />}
+          Receber
+        </button>
+      )}
+
+      {estado === 'erro' && (
+        <p className="w-full text-[11px] text-red-500">Não deu pra receber agora. Toque de novo.</p>
+      )}
+    </div>
+  );
+}
+
 function LinhaMensagem({ msg, onVerFoto, onAbrirTelaCheia, onFechar }) {
   const router = useRouter();
   const TIPOS_NOTIFICACAO = ['curtida', 'comentario', 'curtida_comentario', 'mencao'];
@@ -271,6 +371,9 @@ function LinhaMensagem({ msg, onVerFoto, onAbrirTelaCheia, onFechar }) {
       : msg.tipo === 'comentario' || msg.tipo === 'mencao'
         ? MessageCircle
         : null;
+  const ehSistema = TIPOS_SISTEMA.includes(msg.tipo);
+  const IconeSistema = ICONE_SISTEMA[msg.tipo] || null;
+  const temRecompensa = (Number(msg.pontosAnexados) || 0) > 0 || (Number(msg.dracmasAnexados) || 0) > 0;
   // Item 15º — fixadas não podem ser fechadas/arrastadas.
   const podeFechar = !msg.fixada;
 
@@ -291,11 +394,21 @@ function LinhaMensagem({ msg, onVerFoto, onAbrirTelaCheia, onFechar }) {
 
   // Item 15º — clique leva pro lugar certo: post curtido/comentado, mensagem
   // em tela cheia, ou (via os links de nome/foto abaixo, que já têm
-  // stopPropagation) o perfil de quem curtiu/comentou.
+  // stopPropagation) o perfil de quem curtiu/comentou. Item novo — tipos de
+  // sistema levam direto pra onde fazem sentido (mesmos destinos usados no
+  // push, ver montarUrlDestino em functions/index.js).
   function handleClique() {
     marcarComoLida();
     if (ehNotificacao && msg.postId) {
       router.push(`/post/${msg.postId}`);
+    } else if (msg.tipo === 'conquista') {
+      router.push(`/perfil?conquista=${encodeURIComponent(msg.achievementId || '')}`);
+    } else if (msg.tipo === 'missao_nova' || msg.tipo === 'missao_especial') {
+      router.push('/missoes');
+    } else if (msg.tipo === 'pontos_admin') {
+      router.push('/perfil');
+    } else if (msg.tipo === 'dracma_admin') {
+      router.push('/carteira');
     } else if (!ehNotificacao) {
       onAbrirTelaCheia(msg);
     }
@@ -362,6 +475,14 @@ function LinhaMensagem({ msg, onVerFoto, onAbrirTelaCheia, onFechar }) {
         </Link>
       )}
 
+      {/* Item novo — tipos de sistema ganham um círculo de ícone no lugar
+          do avatar, já que não são uma interação de outra pessoa. */}
+      {ehSistema && IconeSistema && (
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold">
+          <IconeSistema size={16} />
+        </div>
+      )}
+
       <div className="min-w-0 flex-1 pr-5">
         {msg.fixada && (
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-gold">Fixado</p>
@@ -376,6 +497,13 @@ function LinhaMensagem({ msg, onVerFoto, onAbrirTelaCheia, onFechar }) {
               {msg.remetenteNome || 'Alguém'}
             </Link>{' '}
             <span className={lidaExibida ? 'text-coffee-600' : 'font-semibold'}>{msg.texto}</span>
+          </p>
+        ) : ehSistema ? (
+          <p className="flex items-center gap-1 text-sm">
+            <span className={lidaExibida ? 'text-coffee-600' : 'font-semibold text-coffee-800'}>
+              {msg.texto}
+            </span>
+            <ChevronRight size={14} className="flex-shrink-0 text-coffee-300" />
           </p>
         ) : (
           <p
@@ -400,6 +528,11 @@ function LinhaMensagem({ msg, onVerFoto, onAbrirTelaCheia, onFechar }) {
             <FotoMensagemCacheada url={msg.fotoURL} thumbUrl={msg.fotoThumbURL} />
           </button>
         )}
+
+        {/* Item novo — recompensa anexada (pontos/dracma), com botão de
+            receber. Só aparece em mensagens comuns do Admin que tiverem
+            algum valor anexado (ver AbaCorreio.js). */}
+        {temRecompensa && <BlocoRecompensaCorreio msg={msg} />}
 
         <p className="mt-1.5 flex items-center gap-1.5 text-[11px] text-coffee-300">
           {/* Item 15º — ícones preenchidos em vez de vazados */}

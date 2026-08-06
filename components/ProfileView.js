@@ -10,6 +10,7 @@ import PostCard from '@/components/PostCard';
 import PrayerCard from '@/components/PrayerCard';
 import EmptyState from '@/components/EmptyState';
 import ImageViewerModal from '@/components/ImageViewerModal';
+import ConquistaDetalheModal from '@/components/ConquistaDetalheModal';
 import CrossIcon from '@/components/icons/CrossIcon';
 import {
   subscribeToUserPosts,
@@ -64,7 +65,7 @@ function IconeConquistas({ size, ativo }) {
 
 const POSTS_POR_PAGINA = 8;
 
-export default function ProfileView({ usuario, usuarioAtual }) {
+export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId }) {
   const [posts, setPosts] = useState(null);
   const [pedidosAtivos, setPedidosAtivos] = useState([]);
   const [conquistas, setConquistas] = useState([]);
@@ -75,6 +76,10 @@ export default function ProfileView({ usuario, usuarioAtual }) {
   // o usuário tem muitos posts de áudio, o que sobrecarregava o aparelho e
   // causava o "Application error" na tela de Perfil.
   const [quantosPostsVisiveis, setQuantosPostsVisiveis] = useState(POSTS_POR_PAGINA);
+  // Item novo — deep link vindo de uma notificação de conquista (Correio ou
+  // push, ver lib/achievements.js e functions/index.js). Só o próprio dono
+  // consegue abrir assim, já que conquista é algo pessoal.
+  const [conquistaAlvoFechada, setConquistaAlvoFechada] = useState(false);
 
   // Item 12 do Bloco 5 — o Admin pode desligar a função de bloqueio pra todo
   // mundo (aba Config); enquanto o app ainda não carregou a configuração,
@@ -116,6 +121,22 @@ export default function ProfileView({ usuario, usuarioAtual }) {
     if (!usuario?.uid) return;
     getConquistasDoUsuario(usuario.uid).then(setConquistas);
   }, [usuario?.uid]);
+
+  // Item novo — ao chegar em /perfil?conquista=<id>, já abre direto na aba
+  // certa. A troca só acontece uma vez (não força de volta se a pessoa sair
+  // da aba Conquistas manualmente depois).
+  const donoEhUsuarioAtual = !!usuarioAtual?.uid && usuarioAtual.uid === usuario?.uid;
+  useEffect(() => {
+    if (abrirConquistaId && donoEhUsuarioAtual) {
+      setAba('conquistas');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abrirConquistaId, donoEhUsuarioAtual]);
+
+  const conquistaAlvo =
+    abrirConquistaId && donoEhUsuarioAtual && !conquistaAlvoFechada
+      ? conquistas.find((c) => c.id === abrirConquistaId && c.desbloqueada)
+      : null;
 
   // Chamado pela AchievementBadge depois que a animação do cadeado abrindo
   // termina — marca como vista no Firestore e atualiza a tela na hora, sem
@@ -309,6 +330,20 @@ export default function ProfileView({ usuario, usuarioAtual }) {
           src={usuario.fotoURL}
           alt={usuario.nome}
           onClose={() => setFotoAberta(false)}
+        />
+      )}
+
+      {/* Item novo — conquista aberta via notificação (?conquista=id).
+          Reaproveita o mesmo "marcar como vista" do toque normal no
+          emblema (handleAbrirConquista), pra não deixar o cadeado
+          pendurado esperando um segundo toque. */}
+      {conquistaAlvo && (
+        <ConquistaDetalheModal
+          conquista={conquistaAlvo}
+          onFechar={() => {
+            if (!conquistaAlvo.visto) handleAbrirConquista(conquistaAlvo.id);
+            setConquistaAlvoFechada(true);
+          }}
         />
       )}
     </div>

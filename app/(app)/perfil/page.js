@@ -1,7 +1,9 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { signOut } from 'firebase/auth';
+import { useSearchParams } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/components/AuthProvider';
 import ProfileView from '@/components/ProfileView';
@@ -12,10 +14,24 @@ import { limparTokenAoSair } from '@/lib/push';
 import { useTema } from '@/lib/theme';
 import { useConfirm } from '@/components/ConfirmProvider';
 
+// Item novo — useSearchParams() exige um <Suspense> em volta (Next 14),
+// mesmo padrão já usado em app/(app)/carteira/page.js.
 export default function MeuPerfilPage() {
+  return (
+    <Suspense fallback={<LoadingScreen />}>
+      <MeuPerfilConteudo />
+    </Suspense>
+  );
+}
+
+function MeuPerfilConteudo() {
   const { perfil } = useAuth();
   const [tema, alternarTema] = useTema();
   const confirmar = useConfirm();
+  // Item novo — chegando de uma notificação de conquista (?conquista=id),
+  // já abre a aba certa com o emblema em destaque (ver ProfileView.js).
+  const searchParams = useSearchParams();
+  const conquistaId = searchParams.get('conquista');
 
   if (!perfil) return <LoadingScreen />;
 
@@ -66,7 +82,7 @@ export default function MeuPerfilPage() {
         </div>
       </header>
 
-      <ProfileView usuario={perfil} usuarioAtual={perfil} />
+      <ProfileView usuario={perfil} usuarioAtual={perfil} abrirConquistaId={conquistaId} />
     </div>
   );
 }

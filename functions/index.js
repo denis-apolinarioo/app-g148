@@ -35,6 +35,11 @@ const TITULOS_POR_TIPO = {
   curtida_comentario: 'Nova curtida em comentário',
   mencao: 'Você foi mencionado',
   mensagem: 'Nova mensagem da G148',
+  conquista: 'Nova conquista desbloqueada!',
+  missao_nova: 'Nova missão disponível',
+  missao_especial: 'Nova missão exclusiva',
+  pontos_admin: 'Você recebeu Pontos de Comunhão',
+  dracma_admin: 'Você recebeu Dracmas',
 };
 
 // Item 22 — agrupamento: curtida/comentário caem sob a mesma "tag" (viram
@@ -46,20 +51,43 @@ const TAG_POR_TIPO = {
   curtida_comentario: 'g148-social',
   mencao: 'g148-social',
   mensagem: 'g148-mensagens',
+  conquista: 'g148-conquistas',
+  missao_nova: 'g148-missoes',
+  missao_especial: 'g148-missoes',
+  pontos_admin: 'g148-recompensas',
+  dracma_admin: 'g148-recompensas',
 };
 
-// curtida_comentario e mencao são "subtipos" que ainda não têm um toggle
-// próprio na tela de preferências (item 23) — pra não precisar de UI nova,
-// eles respeitam o toggle da categoria mais parecida: curtida em comentário
-// segue o mesmo toggle de "curtida", menção segue o mesmo toggle de
-// "comentario" (é dentro de um comentário que ela acontece).
+// curtida_comentario ainda não tem um toggle próprio na tela de preferências
+// (item 23) — pra não precisar de UI nova, segue o mesmo toggle de "curtida".
+// mencao agora TEM toggle próprio ('mencao'), separado de "comentario".
 const CATEGORIA_DE_PREFERENCIA_POR_TIPO = {
   curtida: 'curtida',
   curtida_comentario: 'curtida',
   comentario: 'comentario',
-  mencao: 'comentario',
+  mencao: 'mencao',
   mensagem: 'mensagem',
+  conquista: 'conquista',
+  missao_nova: 'missao_nova',
+  missao_especial: 'missao_nova',
+  pontos_admin: 'pontos',
+  dracma_admin: 'pontos',
 };
+
+// Item novo — pra onde a notificação leva ao ser tocada. Antes era sempre
+// '/correio'; agora cada tipo pode abrir direto no lugar que faz sentido
+// (ex.: conquista abre o perfil já com o emblema em destaque). O Service
+// Worker (public/firebase-messaging-sw.js) já sabia ler essa URL do payload
+// — só não recebia nada além de '/correio' até agora.
+function montarUrlDestino(tipo, msg) {
+  if (tipo === 'conquista') {
+    return `/perfil?conquista=${encodeURIComponent(msg.achievementId || '')}`;
+  }
+  if (tipo === 'missao_nova' || tipo === 'missao_especial') return '/missoes';
+  if (tipo === 'pontos_admin') return '/perfil';
+  if (tipo === 'dracma_admin') return '/carteira';
+  return '/correio';
+}
 
 /**
  * Item 26 — horário de silêncio. `quietHours` vem de users/{uid}.notifQuietHours
@@ -108,10 +136,20 @@ exports.enviarPushMailbox = functions
     if (!usuarioSnap.exists) return null;
     const usuario = usuarioSnap.data() || {};
 
+    // Item novo — mensagem do Correio com pontos/dracmas anexados (o usuário
+    // precisa abrir e clicar em "Receber" pra ganhar). Continua sendo tipo
+    // 'mensagem' no banco (não muda nada da lógica de envio existente), mas
+    // pra notificação em si merece um título e categoria de preferência
+    // próprios, senão fica indistinguível de uma mensagem comum.
+    const temRecompensaAnexada =
+      tipo === 'mensagem' && ((Number(msg.pontosAnexados) || 0) > 0 || (Number(msg.dracmasAnexados) || 0) > 0);
+
     // Item 23 — preferência por categoria (padrão: tudo ligado, só desliga
     // se a pessoa explicitamente marcou false).
     const prefs = usuario.notifPrefs || {};
-    const categoriaPref = CATEGORIA_DE_PREFERENCIA_POR_TIPO[tipo] || tipo;
+    const categoriaPref = temRecompensaAnexada
+      ? 'correio_recompensa'
+      : CATEGORIA_DE_PREFERENCIA_POR_TIPO[tipo] || tipo;
     if (prefs[categoriaPref] === false) return null;
 
     // Item 26 — horário de silêncio. O Correio continua recebendo a
@@ -131,9 +169,10 @@ exports.enviarPushMailbox = functions
       .where('lida', '==', false)
       .get();
 
-    const titulo = TITULOS_POR_TIPO[tipo] || 'G148';
+    const titulo = temRecompensaAnexada ? 'Você recebeu uma recompensa no Correio!' : TITULOS_POR_TIPO[tipo] || 'G148';
     const textoBase = (msg.texto || '').slice(0, 120);
     const corpo = msg.remetenteNome ? `${msg.remetenteNome}: ${textoBase}` : textoBase || 'Toque para ver.';
+    const urlDestino = montarUrlDestino(tipo, msg);
 
     const resposta = await messaging.sendEachForMulticast({
       tokens,
@@ -141,7 +180,7 @@ exports.enviarPushMailbox = functions
       data: {
         // Item 21 — deep link: o Service Worker usa essa URL pra abrir a
         // tela certa ao tocar na notificação.
-        url: '/correio',
+        url: urlDestino,
         tipo,
         mailboxId: context.params.messageId,
         badgeCount: String(naoLidasSnap.size),
@@ -150,10 +189,10 @@ exports.enviarPushMailbox = functions
         notification: {
           icon: '/icons/icon-192.png',
           badge: '/icons/icon-badge-monochrome.png',
-          tag: TAG_POR_TIPO[tipo] || 'g148-geral',
+          tag: temRecompensaAnexada ? 'g148-recompensas' : TAG_POR_TIPO[tipo] || 'g148-geral',
           renotify: true,
         },
-        fcmOptions: { link: '/correio' },
+        fcmOptions: { link: urlDestino },
       },
     });
 
