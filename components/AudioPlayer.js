@@ -113,16 +113,13 @@ export default function AudioPlayer({ src, className = '' }) {
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="relative flex h-7 cursor-pointer items-center justify-between" onClick={handleBarraClick}>
-          {barras.map((altura, i) => {
-            const passado = progresso > 0 && i / barras.length <= progresso;
-            return (
-              <div
-                key={i}
-                className="w-[2px] flex-shrink-0 rounded-full transition-colors duration-75"
-                style={{ height: `${altura}px`, backgroundColor: passado ? '#3F2C1C' : '#D4C4B0' }}
-              />
-            );
-          })}
+          {barras.map((altura, i) => (
+            <div
+              key={i}
+              className="w-[2px] flex-shrink-0 rounded-full bg-coffee-700"
+              style={{ height: `${altura}px` }}
+            />
+          ))}
           {duracao > 0 && (
             <div
               className="pointer-events-none absolute top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
@@ -135,7 +132,7 @@ export default function AudioPlayer({ src, className = '' }) {
             />
           )}
         </div>
-        <div className="flex justify-between text-[10px] text-coffee-400">
+        <div className="flex justify-between text-[10px] text-coffee-400 mt-1">
           <span>{fmt(tempoAtual)}</span>
           <span>{fmt(duracao)}</span>
         </div>

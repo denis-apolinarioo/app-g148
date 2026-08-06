@@ -296,19 +296,13 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
             className="relative flex items-center justify-between h-7 cursor-pointer"
             onClick={handleBarraClick}
           >
-            {barrasPlayback.map((altura, i) => {
-              const passado = progresso > 0 && i / barrasPlayback.length <= progresso;
-              return (
-                <div
-                  key={i}
-                  className="w-[2px] flex-shrink-0 rounded-full transition-colors duration-75"
-                  style={{
-                    height: `${altura}px`,
-                    backgroundColor: passado ? '#3F2C1C' : '#D4C4B0',
-                  }}
-                />
-              );
-            })}
+            {barrasPlayback.map((altura, i) => (
+              <div
+                key={i}
+                className="w-[2px] flex-shrink-0 rounded-full bg-coffee-700"
+                style={{ height: `${altura}px` }}
+              />
+            ))}
             {duracao > 0 && (
               <div
                 className="pointer-events-none absolute top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
@@ -321,7 +315,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
               />
             )}
           </div>
-          <div className="flex justify-between text-[10px] text-coffee-400">
+          <div className="flex justify-between text-[10px] text-coffee-400 mt-1">
             <span>{fmt(tempoAtual)}</span>
             <span>{fmt(duracao || segundos)}</span>
           </div>
