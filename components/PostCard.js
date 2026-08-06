@@ -363,7 +363,7 @@ export default function PostCard({ post, usuarioAtual }) {
 
     if (item.tipo === 'audio') {
       return (
-        <div key={key} className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3 pt-2.5 pb-1" onClick={comDuploToque ? handleDuploToque : undefined}>
+        <div key={key} className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3 pt-1 pb-1" onClick={comDuploToque ? handleDuploToque : undefined}>
           <AudioPlayer src={item.url} />
           {comDuploToque && coracaoAnimado && (
             <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -587,7 +587,7 @@ export default function PostCard({ post, usuarioAtual }) {
           duplo toque pra curtir em qualquer parte dele (play, onda, ou o
           espaço vazio ao redor). */}
       {!itensMissao && post.tipo === 'audio' && post.midiaURL && (
-        <div className="relative mb-3 rounded-xl border border-coffee-100 bg-cream px-3 pt-2.5 pb-1" onClick={handleDuploToque}>
+        <div className="relative mb-3 rounded-xl border border-coffee-100 bg-cream px-3 pt-1 pb-1" onClick={handleDuploToque}>
           <AudioPlayer src={post.midiaURL} />
           {coracaoAnimado && (
             <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
