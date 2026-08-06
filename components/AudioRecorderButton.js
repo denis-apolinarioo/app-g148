@@ -311,8 +311,8 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
             })}
             {duracao > 0 && (
               <div
-                className="pointer-events-none absolute top-1/2 z-10 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold"
-                style={{ left: `${progresso * 100}%` }}
+                className="pointer-events-none absolute z-10 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-coffee-700"
+                style={{ left: `${progresso * 100}%`, top: 'calc(50% + 6px)' }}
               />
             )}
           </div>
