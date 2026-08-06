@@ -101,7 +101,7 @@ export default function AudioPlayer({ src, className = '' }) {
   }
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div className={`flex items-center gap-5 ${className}`}>
       <button
         type="button"
         onClick={alternarPlay}
@@ -126,7 +126,7 @@ export default function AudioPlayer({ src, className = '' }) {
             return (
               <div
                 key={i}
-                className="w-[1.5px] flex-shrink-0 rounded-full transition-colors duration-75"
+                className="w-[2px] flex-shrink-0 rounded-full transition-colors duration-75"
                 style={{ height: `${altura}px`, backgroundColor: passado ? '#3F2C1C' : '#D4C4B0' }}
               />
             );
