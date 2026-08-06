@@ -23,6 +23,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   const analyserRef = useRef(null);
   const animFrameRef = useRef(null);
   const duracaoRef = useRef(0);
+  const corrigindoDuracaoRef = useRef(false);
   // Espelha `segundos` (contador visível durante a gravação) num ref, pra
   // poder ler o valor exato assim que a gravação para (recorder.onstop) —
   // nesse momento o state `segundos` capturado no closure de
@@ -223,12 +224,32 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   }
 
   function handleLoadedMetadata() {
-    if (!audioRef.current) return;
-    const dur = audioRef.current.duration;
+    const audio = audioRef.current;
+    if (!audio) return;
+    const dur = audio.duration;
+    if ((dur === Infinity || Number.isNaN(dur)) && !corrigindoDuracaoRef.current) {
+      // Bug conhecido do Chrome com áudio gravado (MediaRecorder/webm): o
+      // arquivo não guarda a duração no cabeçalho, então o navegador só
+      // consegue calcular depois de "varrer" o arquivo inteiro uma vez.
+      corrigindoDuracaoRef.current = true;
+      audio.currentTime = 1e101;
+      const aoVarrer = () => {
+        audio.removeEventListener('timeupdate', aoVarrer);
+        const durReal = audio.duration && isFinite(audio.duration) ? audio.duration : segundos;
+        duracaoRef.current = durReal;
+        setDuracao(durReal);
+        audio.currentTime = 0;
+        setProgresso(0);
+        setTempoAtual(0);
+        corrigindoDuracaoRef.current = false;
+      };
+      audio.addEventListener('timeupdate', aoVarrer);
+      return;
+    }
     const durFinal = dur && isFinite(dur) ? dur : segundos;
     duracaoRef.current = durFinal;
     setDuracao(durFinal);
-    audioRef.current.currentTime = 0;
+    audio.currentTime = 0;
     setProgresso(0);
     setTempoAtual(0);
   }
