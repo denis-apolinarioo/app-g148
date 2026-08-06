@@ -111,7 +111,7 @@ export default function AudioPlayer({ src, className = '' }) {
         {tocando ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
       </button>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 px-2">
+      <div className="flex min-w-0 flex-1 flex-col px-2">
         <div className="relative flex h-7 cursor-pointer items-center justify-between mt-1.5" onClick={handleBarraClick}>
           {barras.map((altura, i) => {
             const passado = progresso > 0 && i / barras.length <= progresso;
@@ -130,7 +130,7 @@ export default function AudioPlayer({ src, className = '' }) {
             />
           )}
         </div>
-        <div className="flex justify-between text-[10px] text-coffee-400 mt-1.5">
+        <div className="flex justify-between text-[10px] text-coffee-400 mt-1">
           <span>{fmt(tempoAtual)}</span>
           <span>{fmt(duracao)}</span>
         </div>
