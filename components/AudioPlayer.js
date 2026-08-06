@@ -116,7 +116,7 @@ export default function AudioPlayer({ src, className = '' }) {
           continua com h-10 normal, só fica levemente dentro dessa faixa).
           Tempos ficam colados na base dessa mesma faixa, sem depender do
           fluxo normal — assim não competem por espaço com a onda. */}
-      <div className="relative min-w-0 flex-1 h-11 px-2">
+      <div className="relative min-w-0 flex-1 h-14 px-2">
         <div
           className="absolute inset-x-0 top-1/2 flex h-7 -translate-y-1/2 cursor-pointer items-center justify-between"
           onClick={handleBarraClick}
