@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { HandHeart, Check, Clock } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import TextoComLinks from '@/components/TextoComLinks';
 import { useAuth } from '@/components/AuthProvider';
 import { useUsuarioAtual } from '@/lib/useUsuarioAtual';
-import { registerPrayerInteraction, markPrayerAsDone } from '@/lib/firestore-helpers';
+import { registerPrayerInteraction, markPrayerAsDone, jaOrouHoje } from '@/lib/firestore-helpers';
 import { pontuarOracao } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
 import { formatDateBR, isPastDeadline } from '@/lib/dateUtils';
@@ -17,14 +17,30 @@ import { enfileirarAcaoOffline } from '@/lib/offlineQueue';
 
 export default function PrayerCard({ pedido }) {
   const { perfil } = useAuth();
-  // 4º — "Orei por isso" na hora. Não existe um campo do servidor que diga
-  // "esta pessoa já orou hoje" (só a subcoleção de interações, que não é
-  // lida aqui), então usamos o hook com valor de servidor fixo em `false`:
-  // ele muda pra `true` na hora do toque e nunca é sobreposto de volta —
-  // exatamente o comportamento de sessão que a tela já tinha, só que sem
-  // esperar o Firestore confirmar antes de mudar o botão.
-  const [jaOrouExibido, dispararOracao, orando] = useAcaoOtimista(false);
+  // BUG CORRIGIDO — antes o valor de servidor era fixo em `false`, então
+  // sair da tela de Oração e voltar (remonta o componente, perde o estado)
+  // fazia o botão "esquecer" que a pessoa já tinha orado hoje. Agora, ao
+  // montar, checamos de verdade (jaOrouHoje) se já existe o registro de
+  // hoje pra esse pedido+pessoa, e usamos isso como valor real de servidor
+  // do hook otimista — assim o botão mostra o estado certo mesmo depois de
+  // sair e voltar da tela, e um clique depois de já ter orado não faz mais
+  // nada (não desconta ponto nem contador, porque nunca chega a rodar de
+  // novo: o botão já nasce desabilitado como "Orou hoje").
+  const [jaOrouServidor, setJaOrouServidor] = useState(null); // null = checando ainda
+  const [jaOrouExibido, dispararOracao, orando] = useAcaoOtimista(jaOrouServidor === true);
   const [marcandoFeito, setMarcandoFeito] = useState(false);
+
+  useEffect(() => {
+    let cancelado = false;
+    if (perfil?.uid && pedido?.id) {
+      jaOrouHoje(pedido.id, perfil.uid).then((resultado) => {
+        if (!cancelado) setJaOrouServidor(resultado);
+      });
+    }
+    return () => {
+      cancelado = true;
+    };
+  }, [pedido?.id, perfil?.uid]);
 
   // CORREÇÃO DE BUG: nome/foto sempre atuais em vez do dado congelado.
   const autor = useUsuarioAtual(pedido.autorId, {
@@ -38,7 +54,7 @@ export default function PrayerCard({ pedido }) {
   const cumprido = pedido.status === 'cumprido';
 
   async function handleOrar() {
-    if (orando || jaOrouExibido) return;
+    if (orando || jaOrouExibido || jaOrouServidor === null) return;
     try {
       await dispararOracao(true, async () => {
         if (estaOffline()) {
@@ -123,7 +139,7 @@ export default function PrayerCard({ pedido }) {
           {!cumprido && (
             <button
               onClick={handleOrar}
-              disabled={orando || jaOrouExibido}
+              disabled={orando || jaOrouExibido || jaOrouServidor === null}
               className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold ${
                 jaOrouExibido
                   ? 'bg-coffee-100 text-coffee-400'
