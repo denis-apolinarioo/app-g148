@@ -94,23 +94,23 @@ export default function PrayerCard({ pedido }) {
 
   return (
     <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-4 shadow-card">
-      <div className="flex items-start gap-3">
-        <Link href={`/u/${autor.username}`}>
-          <Avatar src={autor.fotoURL} nome={autor.nome} tamanho="sm" />
-        </Link>
-        <div className="min-w-0 flex-1">
-          <Link href={`/u/${autor.username}`} className="text-sm font-semibold text-coffee-800">
-            {autor.nome}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <Link href={`/u/${autor.username}`}>
+            <Avatar src={autor.fotoURL} nome={autor.nome} tamanho="sm" />
           </Link>
-          <p className="mt-0.5 whitespace-pre-wrap text-sm leading-relaxed text-coffee-600">
-            <TextoComLinks texto={pedido.descricao} />
-          </p>
+          <div className="min-w-0 flex-1">
+            <Link href={`/u/${autor.username}`} className="text-sm font-semibold text-coffee-800">
+              {autor.nome}
+            </Link>
+            <p className="mt-0.5 whitespace-pre-wrap text-sm leading-relaxed text-coffee-600">
+              <TextoComLinks texto={pedido.descricao} />
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-3 flex items-end justify-between gap-2">
-        {/* Info empilhada: data em cima, contador de orações embaixo */}
-        <div className="flex flex-col gap-0.5 text-xs text-coffee-300">
+        {/* Data/status no canto superior direito */}
+        <div className="shrink-0 pt-0.5 text-xs text-coffee-300">
           {cumprido ? (
             <span className="flex items-center gap-1 font-medium text-green-700">
               <Check size={13} /> Atendido
@@ -120,11 +120,15 @@ export default function PrayerCard({ pedido }) {
               <Clock size={13} /> até {formatDateBR(`${pedido.prazo}T00:00:00`)}
             </span>
           )}
-          <span className="flex items-center gap-1">
-            <HandHeart size={12} className="text-coffee-300" />
-            {pedido.totalOracoes || 0} orações
-          </span>
         </div>
+      </div>
+
+      <div className="mt-3 flex items-end justify-between gap-2">
+        {/* Só a quantidade de orações no canto inferior esquerdo */}
+        <span className="flex items-center gap-1 text-xs text-coffee-300">
+          <HandHeart size={12} className="text-coffee-300" />
+          {pedido.totalOracoes || 0} orações
+        </span>
 
         <div className="flex items-center gap-2">
           {ehAutor && !cumprido && (
