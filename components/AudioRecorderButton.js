@@ -280,7 +280,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
 
   if (audioURL) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-coffee-100 bg-cream-card px-4 py-3">
+      <div className="flex items-start gap-3 rounded-2xl border border-coffee-100 bg-cream-card px-4 py-3">
         <button
           type="button"
           onClick={alternarPlay}
@@ -291,9 +291,9 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
             : <Play size={15} fill="currentColor" className="ml-0.5" />}
         </button>
 
-        <div className="flex flex-1 flex-col justify-center gap-1.5 min-w-0 px-2">
+        <div className="flex flex-1 flex-col gap-1.5 min-w-0 px-2">
           <div
-            className="relative flex items-center justify-between h-7 cursor-pointer"
+            className="relative flex items-center justify-between h-7 cursor-pointer mt-1.5"
             onClick={handleBarraClick}
           >
             {barrasPlayback.map((altura, i) => {
@@ -311,8 +311,8 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
             })}
             {duracao > 0 && (
               <div
-                className="pointer-events-none absolute z-10 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-coffee-700"
-                style={{ left: `${progresso * 100}%`, top: 'calc(50% + 6px)' }}
+                className="pointer-events-none absolute top-1/2 z-10 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-coffee-700"
+                style={{ left: `${progresso * 100}%` }}
               />
             )}
           </div>

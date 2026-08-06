@@ -101,7 +101,7 @@ export default function AudioPlayer({ src, className = '' }) {
   }
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div className={`flex items-start gap-3 ${className}`}>
       <button
         type="button"
         onClick={alternarPlay}
@@ -111,8 +111,8 @@ export default function AudioPlayer({ src, className = '' }) {
         {tocando ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
       </button>
 
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 px-2">
-        <div className="relative flex h-7 cursor-pointer items-center justify-between" onClick={handleBarraClick}>
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 px-2">
+        <div className="relative flex h-7 cursor-pointer items-center justify-between mt-1.5" onClick={handleBarraClick}>
           {barras.map((altura, i) => {
             const passado = progresso > 0 && i / barras.length <= progresso;
             return (
@@ -125,8 +125,8 @@ export default function AudioPlayer({ src, className = '' }) {
           })}
           {duracao > 0 && (
             <div
-              className="pointer-events-none absolute z-10 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-coffee-700"
-              style={{ left: `${progresso * 100}%`, top: 'calc(50% + 6px)' }}
+              className="pointer-events-none absolute top-1/2 z-10 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-coffee-700"
+              style={{ left: `${progresso * 100}%` }}
             />
           )}
         </div>
