@@ -111,18 +111,22 @@ export default function AudioPlayer({ src, className = '' }) {
         {tocando ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
       </button>
 
-      {/* py aqui é a MESMA medida em cima e embaixo por construção (1 só
-          classe controla os 2 lados) — referência única de espaço em
-          relação ao player, sem depender de margens separadas que podem
-          desalinhar uma da outra. */}
-      <div className="flex min-w-0 flex-1 flex-col px-2 py-1">
-        <div className="relative flex h-7 cursor-pointer items-center justify-between" onClick={handleBarraClick}>
+      {/* Onda+bolinha ficam absolutas, travadas no centro vertical exato do
+          player (h-11 aqui = mesma altura de referência pros dois; o botão
+          continua com h-10 normal, só fica levemente dentro dessa faixa).
+          Tempos ficam colados na base dessa mesma faixa, sem depender do
+          fluxo normal — assim não competem por espaço com a onda. */}
+      <div className="relative min-w-0 flex-1 h-11 px-2">
+        <div
+          className="absolute inset-x-0 top-1/2 flex h-7 -translate-y-1/2 cursor-pointer items-center justify-between"
+          onClick={handleBarraClick}
+        >
           {barras.map((altura, i) => {
             const passado = progresso > 0 && i / barras.length <= progresso;
             return (
               <div
                 key={i}
-                className="w-[2px] flex-shrink-0 rounded-full transition-colors duration-75"
+                className="w-[1.5px] flex-shrink-0 rounded-full transition-colors duration-75"
                 style={{ height: `${altura}px`, backgroundColor: passado ? '#3F2C1C' : '#D4C4B0' }}
               />
             );
@@ -134,7 +138,7 @@ export default function AudioPlayer({ src, className = '' }) {
             />
           )}
         </div>
-        <div className="flex justify-between text-[10px] leading-tight text-coffee-400 mt-1">
+        <div className="absolute inset-x-0 bottom-0 flex justify-between text-[10px] leading-none text-coffee-400">
           <span>{fmt(tempoAtual)}</span>
           <span>{fmt(duracao)}</span>
         </div>
