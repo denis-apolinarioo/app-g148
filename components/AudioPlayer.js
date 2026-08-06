@@ -111,28 +111,26 @@ export default function AudioPlayer({ src, className = '' }) {
         {tocando ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
       </button>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 px-2">
         <div className="relative flex h-7 cursor-pointer items-center justify-between" onClick={handleBarraClick}>
-          {barras.map((altura, i) => (
-            <div
-              key={i}
-              className="w-[2px] flex-shrink-0 rounded-full bg-coffee-700"
-              style={{ height: `${altura}px` }}
-            />
-          ))}
+          {barras.map((altura, i) => {
+            const passado = progresso > 0 && i / barras.length <= progresso;
+            return (
+              <div
+                key={i}
+                className="w-[2px] flex-shrink-0 rounded-full transition-colors duration-75"
+                style={{ height: `${altura}px`, backgroundColor: passado ? '#3F2C1C' : '#D4C4B0' }}
+              />
+            );
+          })}
           {duracao > 0 && (
             <div
-              className="pointer-events-none absolute top-1/2 z-10 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full"
-              style={{
-                left: `${progresso * 100}%`,
-                backgroundColor: '#B8863B',
-                border: '2px solid #FFFDF9',
-                boxShadow: '0 1px 4px rgba(44, 31, 20, 0.45)',
-              }}
+              className="pointer-events-none absolute top-1/2 z-10 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold"
+              style={{ left: `${progresso * 100}%` }}
             />
           )}
         </div>
-        <div className="flex justify-between text-[10px] text-coffee-400 mt-1">
+        <div className="flex justify-between text-[10px] text-coffee-400 mt-1.5">
           <span>{fmt(tempoAtual)}</span>
           <span>{fmt(duracao)}</span>
         </div>
