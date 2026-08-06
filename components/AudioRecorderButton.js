@@ -280,7 +280,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
 
   if (audioURL) {
     return (
-      <div className="flex items-start gap-3 rounded-2xl border border-coffee-100 bg-cream-card px-4 py-2">
+      <div className="flex items-center gap-3 rounded-2xl border border-coffee-100 bg-cream-card px-4 py-2">
         <button
           type="button"
           onClick={alternarPlay}
@@ -291,9 +291,10 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
             : <Play size={15} fill="currentColor" className="ml-0.5" />}
         </button>
 
-        <div className="flex flex-1 flex-col min-w-0 px-2">
+        {/* py aqui é a MESMA medida em cima e embaixo por construção. */}
+        <div className="flex flex-1 flex-col min-w-0 px-2 py-1">
           <div
-            className="relative flex items-center justify-between h-7 cursor-pointer mt-1.5"
+            className="relative flex items-center justify-between h-7 cursor-pointer"
             onClick={handleBarraClick}
           >
             {barrasPlayback.map((altura, i) => {
@@ -316,7 +317,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
               />
             )}
           </div>
-          <div className="flex justify-between text-[10px] text-coffee-400 mt-1">
+          <div className="flex justify-between text-[10px] leading-tight text-coffee-400 mt-1">
             <span>{fmt(tempoAtual)}</span>
             <span>{fmt(duracao || segundos)}</span>
           </div>
