@@ -66,6 +66,17 @@ module.exports = {
           '0%': { transform: 'translateY(0) scale(0.85)', opacity: '1' },
           '100%': { transform: 'translateY(-38px) scale(0.4)', opacity: '0' },
         },
+        // Faísca avulsa do clique na fogueira do streak (StreakFogueira.js) —
+        // direção/distância aleatórias por faísca, vindas de --faisca-tx/ty
+        // (custom properties setadas inline em cada faísca).
+        faiscaVoa: {
+          '0%': { transform: 'translate(0, 0) scale(0.9)', opacity: '1' },
+          '70%': { opacity: '1' },
+          '100%': {
+            transform: 'translate(var(--faisca-tx, 0px), var(--faisca-ty, -34px)) scale(0.3)',
+            opacity: '0',
+          },
+        },
         // Flutuação bem sutil dos medalhões da vitrine, pra dar sensação de
         // "peça de mostruário" viva, sem exagerar.
         vitrineFlutuar: {
@@ -85,6 +96,7 @@ module.exports = {
         conquistaRevelada: 'conquistaRevelada 0.45s ease-out 0.25s both',
         chamaFlutuar: 'chamaFlutuar 1.1s ease-in-out infinite',
         faiscaSobe: 'faiscaSobe 0.7s ease-out forwards',
+        faiscaVoa: 'faiscaVoa 0.65s ease-out forwards',
         vitrineFlutuar: 'vitrineFlutuar 3.2s ease-in-out infinite',
         popupFlutuante: 'popupFlutuante 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) both',
       },

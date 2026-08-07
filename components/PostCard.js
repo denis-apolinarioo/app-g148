@@ -522,7 +522,7 @@ export default function PostCard({ post, usuarioAtual }) {
       {post.texto && (
         <div onClick={handleDuploToque} className="relative">
           {ehPostDeMissao ? (
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-coffee-500">{post.texto}</p>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-coffee-500">{post.texto}</p>
           ) : (
             <TextoComLinks
               texto={post.texto}

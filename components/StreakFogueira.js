@@ -1,137 +1,84 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+import Lottie from 'lottie-react';
 import { Flame } from 'lucide-react';
 import { vibrarToqueLeve } from '@/lib/haptics';
+import fireAnimation from '@/lib/lottie/fire.json';
 
 let proximoIdFaisca = 0;
 
-// Duração do "segurar" antes de entrar em modo pré-visualização (ms) e o
-// intervalo entre cada nível subindo automaticamente durante o long press.
-const ATRASO_LONG_PRESS = 350;
-const INTERVALO_PREVIEW = 550;
-const NIVEL_MIN = 1;
-const NIVEL_MAX = 7;
-
-// Fogueira em 7 estágios reais (fotos do usuário, ver
-// public/icons/streak/fogueira-1.png a fogueira-7.png), cada arquivo já
-// com o fogo + lenha cruzada prontos — não é mais desenhado com ícones.
-const IMAGEM_POR_NIVEL = {
-  1: '/icons/streak/fogueira-1.png',
-  2: '/icons/streak/fogueira-2.png',
-  3: '/icons/streak/fogueira-3.png',
-  4: '/icons/streak/fogueira-4.png',
-  5: '/icons/streak/fogueira-5.png',
-  6: '/icons/streak/fogueira-6.png',
-  7: '/icons/streak/fogueira-7.png',
-};
-
-// Dias de streak → nível (1 a 7), cortes definidos pelo usuário.
-function nivelParaDias(dias) {
-  if (dias >= 40) return 7;
-  if (dias >= 28) return 6;
-  if (dias >= 21) return 5;
-  if (dias >= 14) return 4;
-  if (dias >= 7) return 3;
-  if (dias >= 3) return 2;
-  return 1; // 0 e 1 dia caem no nível 1 (não existe estágio "sem fogo" nas fotos)
-}
-
 /**
- * Fogueira do streak de constância — usa as 7 fotos reais mandadas pelo
- * usuário (fogueira-1.png a fogueira-7.png), cada uma já pronta (fogo +
- * lenha cruzada). As imagens ficam ancoradas embaixo (items-end) num
- * container de altura fixa, pra lenha de todos os níveis alinhar na mesma
- * base enquanto só a chama cresce pra cima.
+ * Fogueira do streak de constância — usa a animação Lottie fire.json (fogo
+ * vetorial, looping) em vez das fotos estáticas por nível de antes.
  *
- * Toque rápido: solta faíscas subindo (quantidade cresce com o nível
- * atual), só efeito visual, não mexe em nada no Firestore.
+ * Não cresce mais em estágios por quantidade de dias. Fica ACESA sempre que
+ * a pessoa já completou pelo menos 1 missão HOJE — controlado por
+ * `usuario.ultimoDiaAtivo === hoje` (fuso Brasília, ver lib/dateUtils.js),
+ * calculado no componente pai (ProfileView.js) e passado aqui como `aceso`.
+ * Se a pessoa ainda não entrou/não fez nada hoje, fica vazia (sem fogo) —
+ * mesmo que o contador de dias (`dias`/streakAtual) ainda mostre um número,
+ * já que o streak só reseta de fato na próxima ação fora da sequência (ver
+ * atualizarStreak em lib/points.js).
  *
- * Segurar (long press): depois de ~350ms, entra em modo pré-visualização e
- * vai passando pelos níveis seguintes automaticamente, pra dar pra ver
- * como cada estágio fica — solta o dedo/botão e ela volta pro nível real.
+ * Interação: cada clique solta 1 faísca avulsa, com direção e distância
+ * aleatórias — só efeito visual, não mexe em nada no Firestore. Só reage a
+ * clique quando está acesa (sem fogo, não tem o que faiscar).
  */
-export default function StreakFogueira({ dias = 0 }) {
+export default function StreakFogueira({ dias = 0, aceso = false }) {
   const [faiscas, setFaiscas] = useState([]);
-  const [nivelPreview, setNivelPreview] = useState(null);
-  const holdTimeoutRef = useRef(null);
-  const previewIntervalRef = useRef(null);
-  const houvePreviewRef = useRef(false);
-
-  const nivelReal = nivelParaDias(dias);
-  const nivelExibido = nivelPreview ?? nivelReal;
-
-  function iniciarPreview() {
-    let atual = Math.min(NIVEL_MAX, nivelReal + 1);
-    if (atual <= nivelReal) return; // já está no máximo, nada pra pré-visualizar
-    houvePreviewRef.current = true;
-    setNivelPreview(atual);
-    previewIntervalRef.current = setInterval(() => {
-      atual = Math.min(NIVEL_MAX, atual + 1);
-      setNivelPreview(atual);
-      if (atual >= NIVEL_MAX) clearInterval(previewIntervalRef.current);
-    }, INTERVALO_PREVIEW);
-  }
-
-  function handlePointerDown() {
-    holdTimeoutRef.current = setTimeout(iniciarPreview, ATRASO_LONG_PRESS);
-  }
-
-  function pararPreview() {
-    clearTimeout(holdTimeoutRef.current);
-    clearInterval(previewIntervalRef.current);
-    setNivelPreview(null);
-  }
 
   function handleClick() {
-    // Se acabou de segurar (pré-visualização), esse toque só serve pra
-    // "soltar" o preview — não deve também disparar faísca.
-    if (houvePreviewRef.current) {
-      houvePreviewRef.current = false;
-      return;
-    }
+    if (!aceso) return;
     vibrarToqueLeve();
-    const qtd = Math.max(1, nivelReal - NIVEL_MIN + 1);
-    for (let i = 0; i < qtd; i++) {
-      const id = proximoIdFaisca++;
-      const desvio = qtd > 1 ? (i - (qtd - 1) / 2) * 6 : 0;
-      setFaiscas((atual) => [...atual, { id, desvio, atraso: i * 90 }]);
-      setTimeout(() => {
-        setFaiscas((atual) => atual.filter((f) => f.id !== id));
-      }, 700 + i * 90);
-    }
+
+    const id = proximoIdFaisca++;
+    // Ângulo e distância aleatórios pra cada faísca sair "pra qualquer lado",
+    // com viés leve pra cima (ty sempre negativo) pra parecer faísca subindo,
+    // não caindo.
+    const anguloGraus = 200 + Math.random() * 140; // ~200°–340°: leque voltado pra cima
+    const distancia = 22 + Math.random() * 20;
+    const tx = Math.cos((anguloGraus * Math.PI) / 180) * distancia;
+    const ty = Math.sin((anguloGraus * Math.PI) / 180) * distancia;
+
+    setFaiscas((atual) => [...atual, { id, tx, ty }]);
+    setTimeout(() => {
+      setFaiscas((atual) => atual.filter((f) => f.id !== id));
+    }, 650);
   }
 
   return (
     <button
       type="button"
       onClick={handleClick}
-      onPointerDown={handlePointerDown}
-      onPointerUp={pararPreview}
-      onPointerLeave={pararPreview}
-      onPointerCancel={pararPreview}
       // translate-y-2: desce a fogueira (pedido do usuário), quase na base
       // do balão de Pontos de Comunhão ao lado — o translate não mexe no
       // fluxo do layout, só empurra o visual pra baixo. items-end no pai
       // (ProfileView.js) já alinha as duas bases antes desse ajuste extra.
       className="flex translate-y-2 flex-col items-center gap-1 px-1 pb-2.5"
-      aria-label={`Streak de ${dias} ${dias === 1 ? 'dia' : 'dias'}`}
+      aria-label={
+        aceso
+          ? `Streak de ${dias} ${dias === 1 ? 'dia' : 'dias'}`
+          : `Streak de ${dias} ${dias === 1 ? 'dia' : 'dias'} — ainda sem missão concluída hoje`
+      }
     >
       <div className="relative flex h-14 w-14 items-end justify-center">
-        <img
-          src={IMAGEM_POR_NIVEL[nivelExibido]}
-          alt=""
-          className="max-h-14 w-auto max-w-full object-contain"
-          draggable={false}
-        />
+        {aceso && (
+          <Lottie
+            animationData={fireAnimation}
+            loop
+            autoplay
+            className="h-14 w-14"
+          />
+        )}
 
         {faiscas.map((f) => (
           <div
             key={f.id}
-            className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2"
-            style={{ marginLeft: f.desvio, animationDelay: `${f.atraso}ms` }}
+            className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 animate-faiscaVoa"
+            style={{ '--faisca-tx': `${f.tx}px`, '--faisca-ty': `${f.ty}px` }}
           >
-            <Flame size={11} fill="currentColor" className="text-orange-400 animate-faiscaSobe" />
+            <Flame size={11} fill="currentColor" className="text-orange-400" />
           </div>
         ))}
       </div>

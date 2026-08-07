@@ -21,6 +21,7 @@ import {
 import { getConquistasDoUsuario, marcarConquistaVista, getVitrineConquistas } from '@/lib/achievements';
 import { useAppConfig } from '@/lib/useAppConfig';
 import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
+import { todayBrasilia } from '@/lib/dateUtils';
 
 // Ícones das abas do Perfil (Posts/Orações/Conquistas) — PNGs recortados
 // da imagem de referência que o usuário mandou (public/icons/custom/), no
@@ -213,7 +214,10 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
                 <p className="font-destaque text-lg font-bold text-coffee-800">{usuario.pontos || 0}</p>
                 <p className="text-[11px] text-coffee-500">Pontos de Comunhão</p>
               </div>
-              <StreakFogueira dias={usuario.streakAtual || 0} />
+              <StreakFogueira
+                dias={usuario.streakAtual || 0}
+                aceso={!!usuario.ultimoDiaAtivo && usuario.ultimoDiaAtivo === todayBrasilia()}
+              />
             </div>
 
             <VitrineConquistas
