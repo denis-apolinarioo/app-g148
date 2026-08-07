@@ -263,7 +263,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
           tela, e o `title` mostra a contagem no hover em telas maiores.
           mt-2.5 (era mt-5) — distância reduzida entre o card de Propósito
           logo acima e os ícones das abas, pedido do usuário. */}
-      <div className="mt-2.5">
+      <div className="mt-2">
         <div className="mb-3 flex border-b border-coffee-100">
           <AbaBtn
             ativo={aba === 'posts'}
@@ -324,7 +324,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
         )}
 
         {aba === 'conquistas' && (
-          <div className="grid grid-cols-5 gap-x-3 gap-y-4 pt-1">
+          <div className="grid grid-cols-5 gap-x-3 gap-y-4 pt-0.5">
             {conquistas.length === 0 && <div className="h-24 animate-pulse rounded-xl2 bg-coffee-100/60" />}
             {conquistas.map((c) => (
               <AchievementBadge key={c.id} conquista={c} onAberta={handleAbrirConquista} />
