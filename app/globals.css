@@ -288,11 +288,21 @@ html.dark .placeholder\:text-coffee-300::placeholder {
 
 .entrada-aba-frente,
 .entrada-aba-voltar {
+  /* SEM animation-fill-mode aqui (de propósito). Com `both`/`forwards`, o
+     `transform` do fim da animação (translateX(0)) continuava aplicado na
+     div pra sempre depois que a troca de aba acabava — e QUALQUER transform
+     num ancestral, mesmo "zerado", faz todo popup `position: fixed` lá
+     dentro (foto, editar post, conquista, etc.) parar de se posicionar em
+     relação à tela e passar a se posicionar em relação a essa div (que é do
+     tamanho da página inteira, rolável) — o popup nascia lá no fim dela,
+     de baixo, exigindo rolar a tela pra ver. Sem fill-mode, o transform só
+     existe durante os ~0.26s da animação e some completo depois, sem mudar
+     em nada como o deslize entre abas se parece.
+     Bug relatado + causa raiz encontrados em conversa com o usuário. */
   position: relative;
   background-color: #FAF6EF;
   animation-duration: 0.26s;
   animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
-  animation-fill-mode: both;
 }
 
 .entrada-aba-frente {
