@@ -5,9 +5,9 @@ import { X, Lock } from 'lucide-react';
 import EmblemaConquista from '@/components/EmblemaConquista';
 import { getProgressoConquista } from '@/lib/achievements';
 
-// Era 132 — aumentado pra dar mais destaque à conquista em si no topo do
-// pop-up (pedido do usuário).
-const TAMANHO_DETALHE = 168;
+// Era 132, depois 168 — aumentado de novo (pedido do usuário) pra dar ainda
+// mais destaque à conquista em si no topo do pop-up.
+const TAMANHO_DETALHE = 190;
 
 /**
  * Modal de detalhe de uma conquista — abre ao tocar em qualquer badge
@@ -67,7 +67,7 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
           <X size={18} />
         </button>
 
-        <div className="relative mx-auto" style={{ width: TAMANHO_DETALHE, height: TAMANHO_DETALHE }}>
+        <div className="relative mx-auto mt-3" style={{ width: TAMANHO_DETALHE, height: TAMANHO_DETALHE }}>
           <EmblemaConquista conquista={conquista} size={TAMANHO_DETALHE} mostrarCadeado={false} />
 
           {!desbloqueada && (
