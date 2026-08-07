@@ -62,22 +62,21 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
       onClick={onFechar}
     >
       <div
-        // p-7 vira px-7 pt-7 pb-[25px]: só o padding de baixo encolhe 3px,
-        // empurrando o bloco de texto (nome/descrição/contador) 3px pra
-        // baixo — sem mudar w-[300px]/min-h-[400px] do balão.
-        className="relative flex min-h-[400px] w-[300px] max-w-full animate-popupFlutuante flex-col items-center justify-between rounded-3xl bg-cream px-7 pt-7 pb-[25px] text-center shadow-2xl"
+        // Balão aumentado em 10px de cada lado (320px de largura, 420px de
+        // altura mínima — era 300x400) e padding padronizado em 10px nos
+        // 4 lados (topo, base, esquerda, direita), travando título, arte,
+        // contador e descrição dentro dessa margem uniforme.
+        className="relative flex min-h-[420px] w-[320px] max-w-full animate-popupFlutuante flex-col items-center justify-between rounded-3xl bg-cream p-[10px] text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
           onClick={onFechar}
-          className="absolute right-4 top-4 rounded-full p-1 text-coffee-400"
+          className="absolute right-3 top-3 rounded-full p-1 text-coffee-400"
         >
           <X size={18} />
         </button>
 
-        {/* mt-3 (12px) virou mt-[9px]: sobe a arte 3px, afastando ela do
-            nome logo abaixo. */}
-        <div className="relative mx-auto mt-[9px]" style={{ width: TAMANHO_DETALHE, height: TAMANHO_DETALHE }}>
+        <div className="relative mx-auto mt-[10px]" style={{ width: TAMANHO_DETALHE, height: TAMANHO_DETALHE }}>
           <EmblemaConquista conquista={conquista} size={TAMANHO_DETALHE} mostrarCadeado={false} />
 
           {!desbloqueada && (
