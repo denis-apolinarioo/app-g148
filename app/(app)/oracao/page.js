@@ -6,9 +6,11 @@ import TopBar from '@/components/TopBar';
 import PrayerCard from '@/components/PrayerCard';
 import CreatePrayerModal from '@/components/CreatePrayerModal';
 import EmptyState from '@/components/EmptyState';
+import { useAuth } from '@/components/AuthProvider';
 import { subscribeToPrayers } from '@/lib/firestore-helpers';
 
 export default function OracaoPage() {
+  const { perfil } = useAuth();
   const [pedidos, setPedidos] = useState(null);
   const [criando, setCriando] = useState(false);
   const [filtro, setFiltro] = useState('ativos'); // ativos | todos
@@ -18,7 +20,12 @@ export default function OracaoPage() {
     return () => unsub();
   }, []);
 
-  const listaFiltrada = pedidos?.filter((p) => (filtro === 'ativos' ? p.status === 'ativo' : true));
+  // Mesmo padrão do Feed (app/(app)/feed/page.js) — pedido oculto some do
+  // mural de todo mundo, exceto do próprio dono (placeholder, ver
+  // PrayerCard.js) e do Admin (sempre vê tudo).
+  const listaFiltrada = pedidos
+    ?.filter((p) => !p.oculto || p.autorId === perfil?.uid || perfil?.isAdmin)
+    .filter((p) => (filtro === 'ativos' ? p.status === 'ativo' : true));
 
   return (
     <div className="mx-auto max-w-2xl">

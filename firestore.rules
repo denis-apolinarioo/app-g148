@@ -93,6 +93,13 @@ service cloud.firestore {
         request.time < resource.data.createdAt + duration.value(24, 'h');
     }
 
+    // Mesma regra de 24h acima, só que pro pedido de oração (botão "Editar"
+    // em components/EditarOracaoModal.js).
+    function podeEditarConteudoDoPrayer() {
+      return resource.data.createdAt is timestamp &&
+        request.time < resource.data.createdAt + duration.value(24, 'h');
+    }
+
     // ------------------------------------------------------------------------
     // USUÁRIOS
     // ------------------------------------------------------------------------
@@ -197,6 +204,13 @@ service cloud.firestore {
       allow update: if isSignedIn() && (
         (resource.data.autorId == request.auth.uid && apenasEstesCamposMudaram(['status'])) ||
         (apenasEstesCamposMudaram(['totalOracoes']) && !usuarioTravado()) ||
+        (resource.data.autorId == request.auth.uid && !usuarioTravado() && (
+          // Botão "Ocultar"/"Reexibir" — sempre permitido pro dono, sem
+          // limite de 24h, e só mexe nesses 3 campos (mesmo padrão do post).
+          apenasEstesCamposMudaram(['oculto', 'ocultoPor', 'ocultoEm']) ||
+          // Botão "Editar" — só dentro da janela de 24h.
+          (podeEditarConteudoDoPrayer() && apenasEstesCamposMudaram(['descricao', 'prazo', 'editadoEm']))
+        )) ||
         isAdmin()
       );
       allow delete: if isSignedIn() && (resource.data.autorId == request.auth.uid || isAdmin());
@@ -209,7 +223,12 @@ service cloud.firestore {
         allow create: if isSignedIn() && !usuarioTravado() &&
           request.resource.data.uid == request.auth.uid &&
           interacaoId == request.auth.uid + '_' + request.resource.data.data;
-        allow update, delete: if false;
+        // DESCLIQUE — a própria pessoa pode apagar o registro de hoje (é o
+        // que desfaz a oração ao clicar de novo em "Orou hoje", ver
+        // desfazerOracao em lib/firestore-helpers.js). Só o próprio dono,
+        // nunca de outra pessoa.
+        allow delete: if isSignedIn() && resource.data.uid == request.auth.uid && !usuarioTravado();
+        allow update: if false;
       }
     }
 
@@ -315,7 +334,15 @@ service cloud.firestore {
     match /pointsLog/{logId} {
       allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
       allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || isAdmin());
-      allow update, delete: if false;
+      // DESCLIQUE DE ORAÇÃO — a própria pessoa pode apagar uma entrada dela
+      // mesma (usado por desfazerPontosOracao em lib/points.js, pra
+      // reverter exatamente os pontos ganhos ao "desorar" — sem isso, o
+      // histórico ficava com uma entrada fantasma que continuava contando
+      // pra conquistas do tipo 'oracao' mesmo depois do desclique). Mesmo
+      // risco já aceito de sempre pra esta coleção (comunidade pequena e de
+      // confiança).
+      allow delete: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if false;
     }
 
     // ------------------------------------------------------------------------

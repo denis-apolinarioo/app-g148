@@ -21,7 +21,6 @@ import {
 import { getConquistasDoUsuario, marcarConquistaVista, getVitrineConquistas } from '@/lib/achievements';
 import { useAppConfig } from '@/lib/useAppConfig';
 import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
-import { todayBrasilia } from '@/lib/dateUtils';
 
 // Ícones das abas do Perfil (Posts/Orações/Conquistas) — PNGs recortados
 // da imagem de referência que o usuário mandou (public/icons/custom/), no
@@ -210,14 +209,11 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
               dourada da última medalha não cortar na borda da tela. */}
           <div className="-mt-3 ml-auto flex flex-shrink-0 flex-col items-end pr-1.5">
             <div className="flex items-end gap-2">
-              <div className="rounded-xl2 border border-coffee-200 bg-coffee-100 px-4 py-3.5 text-center shadow-card">
+              <div className="rounded-xl2 border border-coffee-200 bg-coffee-100 px-4 py-2.5 text-center shadow-card">
                 <p className="font-destaque text-lg font-bold text-coffee-800">{usuario.pontos || 0}</p>
                 <p className="text-[11px] text-coffee-500">Pontos de Comunhão</p>
               </div>
-              <StreakFogueira
-                dias={usuario.streakAtual || 0}
-                aceso={!!usuario.ultimoDiaAtivo && usuario.ultimoDiaAtivo === todayBrasilia()}
-              />
+              <StreakFogueira dias={usuario.streakAtual || 0} />
             </div>
 
             <VitrineConquistas
@@ -250,7 +246,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
         {usuario.proposito && (
           <div className="relative mt-5 w-full overflow-hidden rounded-xl2 border border-coffee-200 bg-coffee-100 p-4 pl-5 text-left shadow-card">
             <span className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-coffee-400 to-coffee-700" />
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-coffee-600">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-coffee-600">
               <CrossIcon size={14} className="text-coffee-600" /> Propósito
             </p>
             <p className="mt-1 text-sm italic text-coffee-700">{usuario.proposito}</p>
@@ -263,7 +259,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
           tela, e o `title` mostra a contagem no hover em telas maiores.
           mt-2.5 (era mt-5) — distância reduzida entre o card de Propósito
           logo acima e os ícones das abas, pedido do usuário. */}
-      <div className="mt-2">
+      <div className="mt-2.5">
         <div className="mb-3 flex border-b border-coffee-100">
           <AbaBtn
             ativo={aba === 'posts'}
@@ -317,17 +313,22 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
         {aba === 'oracoes' && (
           <div className="space-y-3">
             {pedidosOracao.length === 0 && <EmptyState titulo="Nenhum pedido ainda" />}
-            {pedidosOracao.map((p) => (
-              <PrayerCard key={p.id} pedido={p} />
-            ))}
+            {/* Mesmo padrão do Botão "Ocultar" dos posts acima — pedido
+                oculto some da lista pra todo mundo, exceto o próprio dono
+                (placeholder, ver PrayerCard.js) e o Admin. */}
+            {pedidosOracao
+              .filter((p) => !p.oculto || usuario.uid === usuarioAtual?.uid || usuarioAtual?.isAdmin)
+              .map((p) => (
+                <PrayerCard key={p.id} pedido={p} />
+              ))}
           </div>
         )}
 
         {aba === 'conquistas' && (
-          <div className="grid grid-cols-5 gap-x-3 gap-y-4 pt-0.5">
+          <div className="grid grid-cols-5 gap-x-3 gap-y-4 pt-1">
             {conquistas.length === 0 && <div className="h-24 animate-pulse rounded-xl2 bg-coffee-100/60" />}
             {conquistas.map((c) => (
-              <AchievementBadge key={c.id} conquista={c} uid={usuario.uid} onAberta={handleAbrirConquista} />
+              <AchievementBadge key={c.id} conquista={c} onAberta={handleAbrirConquista} />
             ))}
           </div>
         )}
@@ -349,7 +350,6 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
       {conquistaAlvo && (
         <ConquistaDetalheModal
           conquista={conquistaAlvo}
-          uid={usuario.uid}
           onFechar={() => {
             if (!conquistaAlvo.visto) handleAbrirConquista(conquistaAlvo.id);
             setConquistaAlvoFechada(true);
