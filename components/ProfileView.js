@@ -67,7 +67,7 @@ const POSTS_POR_PAGINA = 8;
 
 export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId }) {
   const [posts, setPosts] = useState(null);
-  const [pedidosAtivos, setPedidosAtivos] = useState([]);
+  const [pedidosOracao, setPedidosOracao] = useState([]);
   const [conquistas, setConquistas] = useState([]);
   const [aba, setAba] = useState('posts');
   const [fotoAberta, setFotoAberta] = useState(false);
@@ -112,7 +112,12 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
   useEffect(() => {
     if (!usuario?.uid) return undefined;
     const unsub = subscribeToUserPrayers(usuario.uid, (todos) => {
-      setPedidosAtivos(todos.filter((p) => p.status === 'ativo'));
+      // Todos os pedidos do usuário, com os ativos primeiro (dentro de cada
+      // grupo mantém a ordem que já vem de subscribeToUserPrayers — mais
+      // recente primeiro).
+      const ativos = todos.filter((p) => p.status === 'ativo');
+      const outros = todos.filter((p) => p.status !== 'ativo');
+      setPedidosOracao([...ativos, ...outros]);
     });
     return () => unsub();
   }, [usuario?.uid]);
@@ -266,7 +271,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
             ativo={aba === 'oracoes'}
             onClick={() => setAba('oracoes')}
             icone={IconeOracoesPerfil}
-            label={`Orações${pedidosAtivos.length ? ` (${pedidosAtivos.length})` : ''}`}
+            label={`Orações${pedidosOracao.length ? ` (${pedidosOracao.length})` : ''}`}
           />
           <AbaBtn
             ativo={aba === 'conquistas'}
@@ -307,8 +312,8 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
 
         {aba === 'oracoes' && (
           <div className="space-y-3">
-            {pedidosAtivos.length === 0 && <EmptyState titulo="Nenhum pedido ativo" />}
-            {pedidosAtivos.map((p) => (
+            {pedidosOracao.length === 0 && <EmptyState titulo="Nenhum pedido ainda" />}
+            {pedidosOracao.map((p) => (
               <PrayerCard key={p.id} pedido={p} />
             ))}
           </div>
