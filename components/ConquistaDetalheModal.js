@@ -62,16 +62,23 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
       onClick={onFechar}
     >
       <div
-        // Balão aumentado em 10px de cada lado (320px de largura, 440px de
-        // altura FIXA — era 300x400, min-h) e padding padronizado em 10px
-        // nos 4 lados. Antes o miolo usava justify-between: numa conquista
-        // de texto curto a arte "flutuava" isolada no topo (sobrava vão
-        // até o texto), e numa de nome longo (2 linhas) tudo ficava
-        // espremido. Agora são 3 zonas de tamanho FIXO — arte sempre no
-        // mesmo lugar, bloco de texto com altura reservada e centralizada,
-        // contador sempre na mesma posição embaixo — então toda conquista
-        // usa exatamente o mesmo layout, só o preenchimento do texto muda.
-        className="relative flex h-[440px] w-[320px] max-w-full animate-popupFlutuante flex-col items-center rounded-3xl bg-cream p-[10px] text-center shadow-2xl"
+        // Balão 340px de largura, 420px de altura mínima. Padding lateral
+        // de 20px. Duas "cabeças" independentes dentro do card:
+        //
+        // 1) Cabeça da arte — pt-[35px] garante 35px entre a borda de
+        //    cima do popup e essa cabeça; o emblema fica numa área de
+        //    tamanho fixo (TAMANHO_DETALHE) e centralizada, sempre no
+        //    mesmo lugar, não importa qual conquista/arte é mostrada.
+        // 2) Cabeça de texto — começa exatos 35px depois do fim da
+        //    cabeça da arte (mt-[35px] no bloco de texto). Dentro dela,
+        //    a lógica de sempre: título → mt-2 → legenda, fluindo
+        //    naturalmente de cima pra baixo (nome sempre no mesmo ponto,
+        //    1 ou 2 linhas, sem depender de justify-between).
+        //
+        // O contador NÃO faz parte de nenhuma das duas cabeças: fica
+        // ancorado via position absolute a 25px fixos da borda de baixo
+        // do popup, sempre — não se move com o tamanho do texto acima.
+        className="relative flex min-h-[420px] w-[340px] max-w-full animate-popupFlutuante flex-col items-center rounded-3xl bg-cream px-[20px] pb-[20px] pt-[35px] text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -81,11 +88,8 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
           <X size={18} />
         </button>
 
-        {/* zona 1: arte — altura fixa, sempre na mesma posição a partir do topo */}
-        <div
-          className="relative mx-auto mt-[10px] shrink-0"
-          style={{ width: TAMANHO_DETALHE, height: TAMANHO_DETALHE }}
-        >
+        {/* Cabeça 1: arte — área fixa, sempre no mesmo lugar */}
+        <div className="relative mx-auto" style={{ width: TAMANHO_DETALHE, height: TAMANHO_DETALHE }}>
           <EmblemaConquista conquista={conquista} size={TAMANHO_DETALHE} mostrarCadeado={false} />
 
           {!desbloqueada && (
@@ -95,23 +99,18 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
           )}
         </div>
 
-        {/* zona 2: texto — ocupa o espaço restante e centraliza o conteúdo
-            nela, com limite de linhas (nome até 2, descrição até 3) pra
-            nenhuma conquista esticar o balão nem quebrar o layout */}
-        <div className="flex w-full flex-1 flex-col items-center justify-center overflow-hidden px-1">
-          <p className="line-clamp-2 font-destaque text-xl font-semibold text-coffee-800">{conquista.nome}</p>
-          <p className="mt-2 line-clamp-3 text-sm text-coffee-500">{conquista.descricao}</p>
+        {/* Cabeça 2: texto — começa 35px depois do fim da cabeça da arte */}
+        <div className="mt-[35px]">
+          <p className="font-destaque text-xl font-semibold text-coffee-800">{conquista.nome}</p>
+          <p className="mt-2 text-sm text-coffee-500">{conquista.descricao}</p>
         </div>
 
-        {/* zona 3: contador — altura fixa reservada, mesmo quando vazia
-            (conquista manual sem meta), pra manter o balão sempre igual */}
-        <div className="flex h-[18px] shrink-0 items-center justify-center">
-          {temContador && (
-            <p className="text-xs font-semibold tracking-wider text-coffee-300">
-              {progresso ? `${progresso.atual}/${progresso.meta}` : '\u00A0'}
-            </p>
-          )}
-        </div>
+        {temContador && (
+          // Fixo, sempre a 25px da borda de baixo — nunca se move.
+          <p className="absolute bottom-[25px] left-0 right-0 text-xs font-semibold tracking-wider text-coffee-300">
+            {progresso ? `${progresso.atual}/${progresso.meta}` : '\u00A0'}
+          </p>
+        )}
       </div>
     </div>
   );
