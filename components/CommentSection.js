@@ -322,7 +322,7 @@ export default function CommentSection({ postId, postAutorId }) {
   }
 
   return (
-    <div className="border-t border-coffee-100 px-4 py-3">
+    <div className="mt-3 border-t border-coffee-100 px-4 py-3">
       {comentarios.length > 0 && (
         <ul className="mb-3 space-y-3">
           {comentarios.map((c) => (
