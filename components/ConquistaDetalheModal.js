@@ -34,9 +34,14 @@ const TAMANHO_DETALHE = 190;
  */
 export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
   const desbloqueada = !!conquista.desbloqueada;
-  // null tanto enquanto carrega quanto quando a conquista não tem contador
-  // (ex.: conquista manual) — nos dois casos o pop-up simplesmente não
-  // mostra a linha do contador.
+  // Se essa conquista TEM contador é algo que já sabemos na hora, sem
+  // precisar esperar rede nenhuma (vem do catálogo, junto com o resto de
+  // `conquista`) — só o VALOR do contador (`progresso`) depende do
+  // Firestore. Por isso a linha do contador já nasce reservada (co
+  // `temContador`) mesmo antes do valor chegar: sem isso, ela aparecia do
+  // nada assim que a busca terminava e empurrava nome/texto pra cima —
+  // esse pulo era o "lag" ao abrir o pop-up.
+  const temContador = !!conquista?.contadorTipo && conquista.contadorTipo !== 'manual' && conquista.meta != null;
   const [progresso, setProgresso] = useState(null);
 
   useEffect(() => {
@@ -57,7 +62,10 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
       onClick={onFechar}
     >
       <div
-        className="relative flex min-h-[400px] w-[300px] max-w-full animate-popupFlutuante flex-col items-center justify-between rounded-3xl bg-cream p-7 text-center shadow-2xl"
+        // p-7 vira px-7 pt-7 pb-[25px]: só o padding de baixo encolhe 3px,
+        // empurrando o bloco de texto (nome/descrição/contador) 3px pra
+        // baixo — sem mudar w-[300px]/min-h-[400px] do balão.
+        className="relative flex min-h-[400px] w-[300px] max-w-full animate-popupFlutuante flex-col items-center justify-between rounded-3xl bg-cream px-7 pt-7 pb-[25px] text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -67,7 +75,9 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
           <X size={18} />
         </button>
 
-        <div className="relative mx-auto mt-3" style={{ width: TAMANHO_DETALHE, height: TAMANHO_DETALHE }}>
+        {/* mt-3 (12px) virou mt-[9px]: sobe a arte 3px, afastando ela do
+            nome logo abaixo. */}
+        <div className="relative mx-auto mt-[9px]" style={{ width: TAMANHO_DETALHE, height: TAMANHO_DETALHE }}>
           <EmblemaConquista conquista={conquista} size={TAMANHO_DETALHE} mostrarCadeado={false} />
 
           {!desbloqueada && (
@@ -81,9 +91,9 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
           <p className="font-destaque text-xl font-semibold text-coffee-800">{conquista.nome}</p>
           <p className="mt-2 text-sm text-coffee-500">{conquista.descricao}</p>
 
-          {progresso && (
+          {temContador && (
             <p className="mt-4 text-xs font-semibold tracking-wider text-coffee-300">
-              {progresso.atual}/{progresso.meta}
+              {progresso ? `${progresso.atual}/${progresso.meta}` : '\u00A0'}
             </p>
           )}
         </div>
