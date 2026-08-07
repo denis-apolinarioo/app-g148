@@ -57,7 +57,7 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
       onClick={onFechar}
     >
       <div
-        className="relative flex min-h-[400px] w-[300px] max-w-full animate-popupFlutuante flex-col items-center justify-center rounded-3xl bg-cream p-7 text-center shadow-2xl"
+        className="relative flex min-h-[400px] w-[300px] max-w-full animate-popupFlutuante flex-col items-center justify-between rounded-3xl bg-cream p-7 text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -77,16 +77,16 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
           )}
         </div>
 
-        <p className="mt-6 font-destaque text-xl font-semibold text-coffee-800">
-          {conquista.nome}
-        </p>
-        <p className="mt-2 text-sm text-coffee-500">{conquista.descricao}</p>
+        <div>
+          <p className="font-destaque text-xl font-semibold text-coffee-800">{conquista.nome}</p>
+          <p className="mt-2 text-sm text-coffee-500">{conquista.descricao}</p>
 
-        {progresso && (
-          <p className="mt-4 text-xs font-semibold tracking-wider text-coffee-300">
-            {progresso.atual}/{progresso.meta}
-          </p>
-        )}
+          {progresso && (
+            <p className="mt-4 text-xs font-semibold tracking-wider text-coffee-300">
+              {progresso.atual}/{progresso.meta}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );
