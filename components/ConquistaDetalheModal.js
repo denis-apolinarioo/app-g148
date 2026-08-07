@@ -80,7 +80,7 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
         // O contador NÃO faz parte de nenhuma das duas cabeças: fica
         // ancorado via position absolute a 25px fixos da borda de baixo
         // do popup, sempre — não se move com o tamanho do texto acima.
-        className="relative flex min-h-[450px] w-[340px] max-w-full animate-popupFlutuante flex-col items-center rounded-3xl bg-cream px-[20px] pb-[20px] pt-[35px] text-center shadow-2xl"
+        className="relative flex min-h-[450px] w-[340px] max-w-full animate-popupFlutuante flex-col items-center rounded-3xl bg-cream px-[20px] pb-[20px] pt-[50px] text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -102,7 +102,7 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
         </div>
 
         {/* Cabeça 2: texto — começa 70px depois do fim da cabeça da arte */}
-        <div className="mt-[70px]">
+        <div className="mt-[55px]">
           <p className="font-destaque text-xl font-semibold text-coffee-800">{conquista.nome}</p>
           <p className="mt-2 text-sm text-coffee-500">{conquista.descricao}</p>
         </div>
