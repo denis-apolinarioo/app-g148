@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Play, Pause } from 'lucide-react';
 import useAudioBars from '@/lib/useAudioBars';
 
@@ -23,6 +23,9 @@ export default function AudioPlayer({ src, className = '' }) {
   const audioRef = useRef(null);
   const duracaoRef = useRef(0);
   const corrigindoDuracaoRef = useRef(false);
+  const barraRef = useRef(null);
+  const arrastandoRef = useRef(false);
+  const inicioXRef = useRef(null);
 
   const progresso = duracaoRef.current > 0 ? tempoAtual / duracaoRef.current : 0;
 
@@ -80,19 +83,62 @@ export default function AudioPlayer({ src, className = '' }) {
     if (audioRef.current) audioRef.current.currentTime = 0;
   }
 
-  function handleBarraClick(e) {
+  // Arrastar a bolinha (ou qualquer ponto da barra) pra escolher onde ouvir.
+  // Feito com Pointer Events (funciona igual pra dedo e mouse) + pointer
+  // capture, então o gesto continua sendo seguido mesmo que o dedo saia um
+  // pouco da faixa da barra durante o arraste.
+  const seekParaX = useCallback((clientX) => {
     const audio = audioRef.current;
-    if (!audio) return;
+    const barra = barraRef.current;
+    if (!audio || !barra) return;
     // Lê a duração direto do elemento (fonte da verdade do navegador) em vez
-    // de confiar só no state/ref internos — evita que o clique seja
+    // de confiar só no state/ref internos — evita que o toque seja
     // silenciosamente ignorado se o metadata ainda não tiver dado o evento
     // (comum em mobile, que só carrega metadata depois do 1º play).
     const dur = audio.duration && isFinite(audio.duration) ? audio.duration : duracaoRef.current;
     if (!dur) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const rect = barra.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
     audio.currentTime = pct * dur;
     setTempoAtual(pct * dur);
+  }, []);
+
+  function handleBarraPointerDown(e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    inicioXRef.current = e.clientX;
+    arrastandoRef.current = false;
+    seekParaX(e.clientX);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+
+  function handleBarraPointerMove(e) {
+    if (inicioXRef.current === null) return;
+    // Só considera "arrastando" depois de um pequeno limiar de movimento,
+    // pra um toque parado (tap normal) continuar se comportando como antes.
+    if (!arrastandoRef.current && Math.abs(e.clientX - inicioXRef.current) > 3) {
+      arrastandoRef.current = true;
+    }
+    if (arrastandoRef.current) {
+      e.preventDefault();
+      seekParaX(e.clientX);
+    }
+  }
+
+  function handleBarraPointerUp() {
+    inicioXRef.current = null;
+  }
+
+  // Um toque simples (sem arraste) já seekou no pointerDown acima e deve
+  // continuar subindo pro post pra contar como parte do duplo toque de
+  // curtir (ver comentário no topo do arquivo). Só quando o gesto foi
+  // realmente um ARRASTE que a gente intercepta o clique sintético gerado
+  // depois do pointerUp, pra ele não contar como um toque de curtir.
+  function handleBarraClickCapture(e) {
+    if (arrastandoRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    arrastandoRef.current = false;
   }
 
   function fmt(s) {
@@ -118,8 +164,15 @@ export default function AudioPlayer({ src, className = '' }) {
           fluxo normal — assim não competem por espaço com a onda. */}
       <div className="relative min-w-0 flex-1 h-14 px-2">
         <div
+          ref={barraRef}
+          data-swipe-ignore
           className="absolute inset-x-0 top-1/2 flex h-7 -translate-y-1/2 cursor-pointer items-center justify-between"
-          onClick={handleBarraClick}
+          style={{ touchAction: 'none' }}
+          onPointerDown={handleBarraPointerDown}
+          onPointerMove={handleBarraPointerMove}
+          onPointerUp={handleBarraPointerUp}
+          onPointerCancel={handleBarraPointerUp}
+          onClickCapture={handleBarraClickCapture}
         >
           {barras.map((altura, i) => {
             const passado = progresso > 0 && i / barras.length <= progresso;

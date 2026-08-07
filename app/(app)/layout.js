@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
@@ -10,6 +10,7 @@ import BottomNav from '@/components/BottomNav';
 import ConexaoBanner from '@/components/ConexaoBanner';
 import { processarFilaOffline } from '@/lib/offlineQueue';
 import { useSwipeNavigation } from '@/lib/useSwipeNavigation';
+import { ABAS_PRINCIPAIS } from '@/lib/constants';
 import { Lock } from 'lucide-react';
 
 export default function AppLayout({ children }) {
@@ -17,6 +18,27 @@ export default function AppLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const swipeHandlers = useSwipeNavigation();
+
+  // Compara o pathname anterior com o atual DURANTE a renderização (padrão
+  // recomendado pelo React pra "ajustar estado quando uma prop muda", em vez
+  // de useEffect) pra decidir o lado de onde a próxima tela desliza: se as
+  // duas telas são abas principais, "pra frente" (índice maior na
+  // BottomNav) desliza da direita, "pra trás" desliza da esquerda. Fora das
+  // abas principais (detalhe de post, Admin, Correio etc.) cai na animação
+  // antiga (fade).
+  const [pathnameAnterior, setPathnameAnterior] = useState(pathname);
+  const [classeEntrada, setClasseEntrada] = useState('entrada-aba');
+
+  if (pathname !== pathnameAnterior) {
+    const indiceAnterior = ABAS_PRINCIPAIS.findIndex((aba) => aba.href === pathnameAnterior);
+    const indiceAtual = ABAS_PRINCIPAIS.findIndex((aba) => aba.href === pathname);
+    setClasseEntrada(
+      indiceAnterior !== -1 && indiceAtual !== -1
+        ? (indiceAtual > indiceAnterior ? 'entrada-aba-frente' : 'entrada-aba-voltar')
+        : 'entrada-aba'
+    );
+    setPathnameAnterior(pathname);
+  }
 
   useEffect(() => {
     if (carregando) return;
@@ -49,13 +71,15 @@ export default function AppLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-cream pb-20" {...swipeHandlers}>
+    <div className="min-h-screen overflow-x-hidden bg-cream pb-20" {...swipeHandlers}>
       <ConexaoBanner />
       {/* `key={pathname}` força o React a remontar esse wrapper a cada troca
-          de aba — é o que faz a animação `entrada-aba` (definida em
+          de aba — é o que faz a animação de entrada (definida em
           globals.css) tocar de novo em toda navegação, seja por swipe ou
-          pelo toque normal na BottomNav. */}
-      <div key={pathname} className="entrada-aba">
+          pelo toque normal na BottomNav. Entre as 5 abas principais a classe
+          é escolhida acima (entrada-aba-frente/-voltar) pra deslizar do lado
+          certo; fora delas cai no fade antigo (entrada-aba). */}
+      <div key={pathname} className={classeEntrada}>
         {children}
       </div>
       <BottomNav />

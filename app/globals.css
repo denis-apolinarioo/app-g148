@@ -244,6 +244,14 @@ html.dark .placeholder\:text-coffee-300::placeholder {
    Entrada leve (fade + um pequeno deslize), sem depender de nenhuma lib de
    animação — só pra não parecer um corte seco de tela.
    Ver: lib/useSwipeNavigation.js, app/(app)/layout.js
+
+   Entre as 5 abas principais, a entrada agora é uma "janela deslizante" de
+   verdade: quem entra vem da direita (indo pra frente na ordem das abas) ou
+   da esquerda (indo pra trás), com um fundo sólido (bg-cream) atrás pra não
+   deixar transparecer a tela anterior por baixo enquanto desliza. Fora das
+   abas principais (detalhe de post, Admin, Correio etc.) continua a entrada
+   antiga (fade + deslize vertical leve).
+   Ver: lib/useSwipeNavigation.js, app/(app)/layout.js
    ---------------------------------------------------------------------- */
 @keyframes entrada-aba {
   from {
@@ -260,8 +268,45 @@ html.dark .placeholder\:text-coffee-300::placeholder {
   animation: entrada-aba 0.18s ease-out;
 }
 
+@keyframes entrada-aba-frente {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes entrada-aba-voltar {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.entrada-aba-frente,
+.entrada-aba-voltar {
+  position: relative;
+  background-color: #FAF6EF;
+  animation-duration: 0.26s;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  animation-fill-mode: both;
+}
+
+.entrada-aba-frente {
+  animation-name: entrada-aba-frente;
+}
+
+.entrada-aba-voltar {
+  animation-name: entrada-aba-voltar;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .entrada-aba {
+  .entrada-aba,
+  .entrada-aba-frente,
+  .entrada-aba-voltar {
     animation: none;
   }
 }
