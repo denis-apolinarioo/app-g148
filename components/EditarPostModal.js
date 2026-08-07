@@ -186,16 +186,6 @@ export default function EditarPostModal({ post, onFechar }) {
         </div>
 
         <div className="space-y-4 px-5 py-5">
-          {ehPostDeMissao && (
-            <div>
-              <p className="mb-1 text-xs font-medium text-coffee-400">Título da missão</p>
-              <p className="rounded-xl border border-coffee-100 bg-coffee-50 px-3.5 py-3 text-sm font-bold text-coffee-900">
-                {post.texto}
-              </p>
-              <p className="mt-1 text-[11px] text-coffee-300">O título da missão não pode ser alterado.</p>
-            </div>
-          )}
-
           {!ehPostDeMissao && (
             <div>
               <p className="mb-1.5 text-xs font-medium text-coffee-500">Legenda</p>
