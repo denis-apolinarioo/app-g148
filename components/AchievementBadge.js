@@ -28,7 +28,7 @@ const TAMANHO_BADGE = 56;
  * vibração longa, marca como vista, e só então abre o modal de detalhe. O
  * toque em qualquer outra (já vista ou ainda bloqueada) abre o modal direto.
  */
-export default function AchievementBadge({ conquista, onAberta }) {
+export default function AchievementBadge({ conquista, uid, onAberta }) {
   const [abrindo, setAbrindo] = useState(false);
   const [detalheAberto, setDetalheAberto] = useState(false);
 
@@ -80,7 +80,7 @@ export default function AchievementBadge({ conquista, onAberta }) {
       </button>
 
       {detalheAberto && (
-        <ConquistaDetalheModal conquista={conquista} onFechar={() => setDetalheAberto(false)} />
+        <ConquistaDetalheModal conquista={conquista} uid={uid} onFechar={() => setDetalheAberto(false)} />
       )}
     </>
   );

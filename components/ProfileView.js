@@ -327,7 +327,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
           <div className="grid grid-cols-5 gap-x-3 gap-y-4 pt-0.5">
             {conquistas.length === 0 && <div className="h-24 animate-pulse rounded-xl2 bg-coffee-100/60" />}
             {conquistas.map((c) => (
-              <AchievementBadge key={c.id} conquista={c} onAberta={handleAbrirConquista} />
+              <AchievementBadge key={c.id} conquista={c} uid={usuario.uid} onAberta={handleAbrirConquista} />
             ))}
           </div>
         )}
@@ -349,6 +349,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
       {conquistaAlvo && (
         <ConquistaDetalheModal
           conquista={conquistaAlvo}
+          uid={usuario.uid}
           onFechar={() => {
             if (!conquistaAlvo.visto) handleAbrirConquista(conquistaAlvo.id);
             setConquistaAlvoFechada(true);

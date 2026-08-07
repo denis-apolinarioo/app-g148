@@ -116,7 +116,7 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
       )}
 
       {conquistaDetalhe && (
-        <ConquistaDetalheModal conquista={conquistaDetalhe} onFechar={() => setConquistaDetalhe(null)} />
+        <ConquistaDetalheModal conquista={conquistaDetalhe} uid={usuario.uid} onFechar={() => setConquistaDetalhe(null)} />
       )}
     </div>
   );
