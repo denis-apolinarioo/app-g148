@@ -70,8 +70,8 @@ export default function MissionCard({ missao, concluida, onClick, bloqueada, pro
       </span>
       <span className="min-w-0 flex-1">
         <span
-          className={`block font-destaque text-sm font-semibold ${
-            concluida ? 'text-coffee-400 line-through' : 'text-coffee-800'
+          className={`block text-xs font-semibold uppercase tracking-wider ${
+            concluida ? 'text-coffee-400 line-through' : 'text-coffee-600'
           } ${mostrarEncaminhar ? 'pr-7' : ''}`}
         >
           {missao.titulo}

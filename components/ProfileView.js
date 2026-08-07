@@ -250,7 +250,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
         {usuario.proposito && (
           <div className="relative mt-5 w-full overflow-hidden rounded-xl2 border border-coffee-200 bg-coffee-100 p-4 pl-5 text-left shadow-card">
             <span className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-coffee-400 to-coffee-700" />
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-coffee-600">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-coffee-600">
               <CrossIcon size={14} className="text-coffee-600" /> Propósito
             </p>
             <p className="mt-1 text-sm italic text-coffee-700">{usuario.proposito}</p>
