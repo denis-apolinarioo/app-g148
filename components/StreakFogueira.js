@@ -1,12 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Lottie from 'lottie-react';
 import { Flame } from 'lucide-react';
 import { vibrarToqueLeve } from '@/lib/haptics';
 import fireAnimation from '@/lib/lottie/fire.json';
 
 let proximoIdFaisca = 0;
+
+// Velocidade da chama Lottie — 1 é o ritmo original do arquivo, 2 é o
+// dobro da velocidade (pedido do usuário, "quero a animação rodando mais
+// rápido"). Setado via lottieRef.setSpeed porque a versão do lottie-react
+// usada aqui não tem prop `speed` direta.
+const VELOCIDADE_CHAMA = 2.0;
 
 /**
  * Fogueira do streak de constância — usa a animação Lottie fire.json (fogo
@@ -27,6 +33,15 @@ let proximoIdFaisca = 0;
  */
 export default function StreakFogueira({ dias = 0, aceso = false }) {
   const [faiscas, setFaiscas] = useState([]);
+  const lottieRef = useRef(null);
+
+  // setSpeed precisa ser chamado depois que o player carrega — o próprio
+  // callback onDOMLoaded do lottie-react garante isso; o efeito é só um
+  // reforço caso `aceso` mude (fogo apaga e acende de novo no dia
+  // seguinte) e o player seja remontado.
+  useEffect(() => {
+    lottieRef.current?.setSpeed(VELOCIDADE_CHAMA);
+  }, [aceso]);
 
   function handleClick() {
     if (!aceso) return;
@@ -65,10 +80,11 @@ export default function StreakFogueira({ dias = 0, aceso = false }) {
       <div className="relative flex h-14 w-14 items-end justify-center">
         {aceso && (
           <Lottie
+            lottieRef={lottieRef}
             animationData={fireAnimation}
             loop
             autoplay
-            speed={1.5}
+            onDOMLoaded={() => lottieRef.current?.setSpeed(VELOCIDADE_CHAMA)}
             className="h-14 w-14"
           />
         )}
