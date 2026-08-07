@@ -124,7 +124,7 @@ function LinhaComentario({ postId, comentario, uidAtual, reportador, podeExcluir
           com a linha do nome dentro do balão (px-3 py-2). */}
       <div className="flex-shrink-0 mt-1.5">
         <Link href={`/u/${autor.username || comentario.autorId}`}>
-          <Avatar src={autor.fotoURL} nome={autor.nome} tamanho={28} />
+          <Avatar src={autor.fotoURL} nome={autor.nome} tamanho={30} />
         </Link>
       </div>
       <div className="min-w-0 flex-1">
@@ -340,7 +340,7 @@ export default function CommentSection({ postId, postAutorId }) {
       )}
 
       <form onSubmit={handleEnviar} className="flex items-center gap-2">
-        <Avatar src={perfil?.fotoURL} nome={perfil?.nome || ''} tamanho={28} />
+        <Avatar src={perfil?.fotoURL} nome={perfil?.nome || ''} tamanho={30} />
         <div className="relative flex-1">
           <input
             ref={inputRef}

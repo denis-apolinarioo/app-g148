@@ -471,7 +471,7 @@ export default function PostCard({ post, usuarioAtual }) {
       {/* Cabeçalho — nome e avatar levam ao perfil do autor */}
       <div className="mb-3 flex items-center gap-2.5">
         <Link href={`/u/${autor?.username || post.autorId}`} className="flex-shrink-0">
-          <Avatar src={autor?.fotoURL} nome={autor?.nome || ''} tamanho={36} />
+          <Avatar src={autor?.fotoURL} nome={autor?.nome || ''} tamanho={38} />
         </Link>
         <div className="flex-1 min-w-0">
           <Link
