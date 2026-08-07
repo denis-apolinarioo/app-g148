@@ -35,7 +35,7 @@ body {
 
 html.dark,
 html.dark body {
-  background-color: #17110b;
+  background-color: #0d0906;
   color: #f3ece0;
 }
 
@@ -103,13 +103,13 @@ html.dark ::-webkit-scrollbar-thumb {
 
 /* Fundos de página, cartão e superfícies claras (viravam escuras) */
 html.dark .bg-cream {
-  background-color: #17110b;
+  background-color: #0d0906;
 }
 html.dark .bg-cream\/95 {
-  background-color: rgb(23 17 11 / 0.95);
+  background-color: rgb(13 9 6 / 0.95);
 }
 html.dark .bg-cream\/10 {
-  background-color: rgb(23 17 11 / 0.1);
+  background-color: rgb(13 9 6 / 0.1);
 }
 html.dark .bg-cream-card {
   background-color: #241a11;
@@ -303,6 +303,14 @@ html.dark .placeholder\:text-coffee-300::placeholder {
   background-color: #FAF6EF;
   animation-duration: 0.26s;
   animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* Fix: essa cor de fundo era fixa (só modo claro), então trocar de aba no
+   modo escuro mostrava um flash branco por trás durante a animação — ver
+   comentário acima de .entrada-aba-frente/.entrada-aba-voltar. */
+html.dark .entrada-aba-frente,
+html.dark .entrada-aba-voltar {
+  background-color: #0d0906;
 }
 
 .entrada-aba-frente {
