@@ -104,6 +104,14 @@ export default function EditarPostModal({ post, onFechar }) {
 
   async function handleSalvar() {
     if (salvando) return;
+    // Pode excluir os itens livremente, mas não dá pra salvar um post de
+    // missão sem nenhum item restante — trava aqui, na hora de salvar (a
+    // exclusão em si continua livre, sem nenhum aviso ou bloqueio na hora
+    // de excluir).
+    if (itens && itens.length === 0) {
+      setErro('Não é possível salvar sem nenhum item. Deixe pelo menos 1.');
+      return;
+    }
     setSalvando(true);
     setErro('');
     try {
@@ -383,7 +391,7 @@ export default function EditarPostModal({ post, onFechar }) {
 
           <button
             onClick={handleSalvar}
-            disabled={salvando}
+            disabled={salvando || (itens && itens.length === 0)}
             className="flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-3.5 text-sm font-semibold text-cream disabled:opacity-50"
           >
             {salvando && <Loader2 size={16} className="animate-spin" />}

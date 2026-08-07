@@ -532,7 +532,7 @@ export default function PostCard({ post, usuarioAtual }) {
           ) : (
             <TextoComLinks
               texto={post.texto}
-              className="mb-3 text-sm leading-relaxed text-coffee-700"
+              className="mb-4 text-sm leading-relaxed text-coffee-700"
             />
           )}
           {zonaCurtida === 'titulo' && (
