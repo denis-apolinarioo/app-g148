@@ -68,6 +68,7 @@ export default function StreakFogueira({ dias = 0, aceso = false }) {
             animationData={fireAnimation}
             loop
             autoplay
+            speed={1.5}
             className="h-14 w-14"
           />
         )}
