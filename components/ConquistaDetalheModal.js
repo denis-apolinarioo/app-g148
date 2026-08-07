@@ -62,14 +62,14 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
       onClick={onFechar}
     >
       <div
-        // Balão 340px de largura, 450px de altura mínima. Padding lateral
+        // Balão 340px de largura, 480px de altura mínima. Padding lateral
         // de 20px. Duas "cabeças" independentes dentro do card:
         //
-        // 1) Cabeça da arte — pt-[35px] garante 35px entre a borda de
+        // 1) Cabeça da arte — pt-[50px] garante 50px entre a borda de
         //    cima do popup e essa cabeça; o emblema fica numa área de
         //    tamanho fixo (TAMANHO_DETALHE) e centralizada, sempre no
         //    mesmo lugar, não importa qual conquista/arte é mostrada.
-        // 2) Cabeça de texto — começa 70px depois do fim da cabeça da
+        // 2) Cabeça de texto — começa 55px depois do fim da cabeça da
         //    arte (mt-[70px] no bloco de texto: os 35px originais + mais
         //    35px, absorvendo os 30px de altura extra do balão nessa
         //    borda inferior da cabeça da arte — e só nela). Dentro dela,
@@ -80,7 +80,7 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
         // O contador NÃO faz parte de nenhuma das duas cabeças: fica
         // ancorado via position absolute a 25px fixos da borda de baixo
         // do popup, sempre — não se move com o tamanho do texto acima.
-        className="relative flex min-h-[450px] w-[340px] max-w-full animate-popupFlutuante flex-col items-center rounded-3xl bg-cream px-[20px] pb-[20px] pt-[50px] text-center shadow-2xl"
+        className="relative flex min-h-[480px] w-[340px] max-w-full animate-popupFlutuante flex-col items-center rounded-3xl bg-cream px-[20px] pb-[20px] pt-[50px] text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -101,7 +101,7 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
           )}
         </div>
 
-        {/* Cabeça 2: texto — começa 70px depois do fim da cabeça da arte */}
+        {/* Cabeça 2: texto — começa 55px depois do fim da cabeça da arte */}
         <div className="mt-[55px]">
           <p className="font-destaque text-xl font-semibold text-coffee-800">{conquista.nome}</p>
           <p className="mt-2 text-sm text-coffee-500">{conquista.descricao}</p>
