@@ -66,7 +66,7 @@ export default function VitrineConquistas({ usuario, usuarioAtual, conquistas, v
   }
 
   return (
-    <div className="mt-5 flex flex-wrap items-center justify-end gap-4">
+    <div className="mt-6 flex flex-wrap items-center justify-end gap-4">
       {espacos.map((conquista, i) => {
         // Atraso escalonado por posição pra a flutuação de cada medalhão
         // não ficar toda em sincronia — fica mais orgânico.

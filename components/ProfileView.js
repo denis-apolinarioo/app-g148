@@ -216,7 +216,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
               </div>
               <StreakFogueira
                 dias={usuario.streakAtual || 0}
-                aceso={usuario.ultimoDiaAtivo === todayBrasilia()}
+                aceso={!!usuario.ultimoDiaAtivo && usuario.ultimoDiaAtivo === todayBrasilia()}
               />
             </div>
 
@@ -250,7 +250,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
         {usuario.proposito && (
           <div className="relative mt-5 w-full overflow-hidden rounded-xl2 border border-coffee-200 bg-coffee-100 p-4 pl-5 text-left shadow-card">
             <span className="absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-coffee-400 to-coffee-700" />
-            <p className="flex items-center gap-1.5 text-xs font-semibold text-coffee-600">
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-coffee-600">
               <CrossIcon size={14} className="text-coffee-600" /> Propósito
             </p>
             <p className="mt-1 text-sm italic text-coffee-700">{usuario.proposito}</p>
@@ -317,14 +317,9 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
         {aba === 'oracoes' && (
           <div className="space-y-3">
             {pedidosOracao.length === 0 && <EmptyState titulo="Nenhum pedido ainda" />}
-            {/* Mesmo padrão do Botão "Ocultar" dos posts acima — pedido
-                oculto some da lista pra todo mundo, exceto o próprio dono
-                (placeholder, ver PrayerCard.js) e o Admin. */}
-            {pedidosOracao
-              .filter((p) => !p.oculto || usuario.uid === usuarioAtual?.uid || usuarioAtual?.isAdmin)
-              .map((p) => (
-                <PrayerCard key={p.id} pedido={p} />
-              ))}
+            {pedidosOracao.map((p) => (
+              <PrayerCard key={p.id} pedido={p} />
+            ))}
           </div>
         )}
 
@@ -332,7 +327,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
           <div className="grid grid-cols-5 gap-x-3 gap-y-4 pt-1">
             {conquistas.length === 0 && <div className="h-24 animate-pulse rounded-xl2 bg-coffee-100/60" />}
             {conquistas.map((c) => (
-              <AchievementBadge key={c.id} conquista={c} onAberta={handleAbrirConquista} />
+              <AchievementBadge key={c.id} conquista={c} uid={usuario.uid} onAberta={handleAbrirConquista} />
             ))}
           </div>
         )}
@@ -354,6 +349,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
       {conquistaAlvo && (
         <ConquistaDetalheModal
           conquista={conquistaAlvo}
+          uid={usuario.uid}
           onFechar={() => {
             if (!conquistaAlvo.visto) handleAbrirConquista(conquistaAlvo.id);
             setConquistaAlvoFechada(true);
