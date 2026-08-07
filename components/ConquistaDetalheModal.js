@@ -62,11 +62,16 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
       onClick={onFechar}
     >
       <div
-        // Balão aumentado em 10px de cada lado (320px de largura, 420px de
-        // altura mínima — era 300x400) e padding padronizado em 10px nos
-        // 4 lados (topo, base, esquerda, direita), travando título, arte,
-        // contador e descrição dentro dessa margem uniforme.
-        className="relative flex min-h-[420px] w-[320px] max-w-full animate-popupFlutuante flex-col items-center justify-between rounded-3xl bg-cream p-[10px] text-center shadow-2xl"
+        // Balão aumentado em 10px de cada lado (320px de largura, 440px de
+        // altura FIXA — era 300x400, min-h) e padding padronizado em 10px
+        // nos 4 lados. Antes o miolo usava justify-between: numa conquista
+        // de texto curto a arte "flutuava" isolada no topo (sobrava vão
+        // até o texto), e numa de nome longo (2 linhas) tudo ficava
+        // espremido. Agora são 3 zonas de tamanho FIXO — arte sempre no
+        // mesmo lugar, bloco de texto com altura reservada e centralizada,
+        // contador sempre na mesma posição embaixo — então toda conquista
+        // usa exatamente o mesmo layout, só o preenchimento do texto muda.
+        className="relative flex h-[440px] w-[320px] max-w-full animate-popupFlutuante flex-col items-center rounded-3xl bg-cream p-[10px] text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <button
@@ -76,7 +81,11 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
           <X size={18} />
         </button>
 
-        <div className="relative mx-auto mt-[10px]" style={{ width: TAMANHO_DETALHE, height: TAMANHO_DETALHE }}>
+        {/* zona 1: arte — altura fixa, sempre na mesma posição a partir do topo */}
+        <div
+          className="relative mx-auto mt-[10px] shrink-0"
+          style={{ width: TAMANHO_DETALHE, height: TAMANHO_DETALHE }}
+        >
           <EmblemaConquista conquista={conquista} size={TAMANHO_DETALHE} mostrarCadeado={false} />
 
           {!desbloqueada && (
@@ -86,12 +95,19 @@ export default function ConquistaDetalheModal({ conquista, uid, onFechar }) {
           )}
         </div>
 
-        <div>
-          <p className="font-destaque text-xl font-semibold text-coffee-800">{conquista.nome}</p>
-          <p className="mt-2 text-sm text-coffee-500">{conquista.descricao}</p>
+        {/* zona 2: texto — ocupa o espaço restante e centraliza o conteúdo
+            nela, com limite de linhas (nome até 2, descrição até 3) pra
+            nenhuma conquista esticar o balão nem quebrar o layout */}
+        <div className="flex w-full flex-1 flex-col items-center justify-center overflow-hidden px-1">
+          <p className="line-clamp-2 font-destaque text-xl font-semibold text-coffee-800">{conquista.nome}</p>
+          <p className="mt-2 line-clamp-3 text-sm text-coffee-500">{conquista.descricao}</p>
+        </div>
 
+        {/* zona 3: contador — altura fixa reservada, mesmo quando vazia
+            (conquista manual sem meta), pra manter o balão sempre igual */}
+        <div className="flex h-[18px] shrink-0 items-center justify-center">
           {temContador && (
-            <p className="mt-4 text-xs font-semibold tracking-wider text-coffee-300">
+            <p className="text-xs font-semibold tracking-wider text-coffee-300">
               {progresso ? `${progresso.atual}/${progresso.meta}` : '\u00A0'}
             </p>
           )}
