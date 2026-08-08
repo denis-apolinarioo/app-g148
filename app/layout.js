@@ -50,7 +50,7 @@ export default function RootLayout({ children }) {
         */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('g148_tema');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'escuro':'claro';}if(t==='escuro'){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('g148_tema');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'escuro':'claro';}if(t==='escuro'){document.documentElement.classList.add('dark');var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content','#0D0906');}}catch(e){}})();`,
           }}
         />
       </head>
