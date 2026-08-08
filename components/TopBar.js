@@ -13,7 +13,9 @@ export default function TopBar({ titulo, voltarPara, voltarPorHistorico, acao })
   const router = useRouter();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-2 bg-cream/95 px-4 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)]">
+    // transition-colors: ver comentário em app/globals.css sobre a linha
+    // fina embaixo da barra de notificação ao trocar de tema.
+    <header className="sticky top-0 z-30 flex items-center gap-2 bg-cream/95 px-4 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)] transition-colors duration-300">
       {voltarPorHistorico ? (
         <button
           type="button"

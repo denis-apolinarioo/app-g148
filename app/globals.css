@@ -32,6 +32,15 @@ body {
   color: #3f2c1c;
   font-family: var(--font-body);
   overscroll-behavior-y: none;
+  /* CORREÇÃO DE BUG (linha fina embaixo da barra de notificação ao trocar
+     de tema, só no Android/PWA instalado): o Android anima nativamente a
+     cor da barra de status quando ela muda (é o próprio sistema fazendo
+     isso, não dá pra desligar) — mas o fundo da página, sem isso aqui,
+     trocava de cor instantaneamente. Um lado animado e o outro instantâneo
+     é o que sobrava como linha por uma fração de segundo. Com os dois no
+     mesmo ritmo (~300ms), a transição fica sincronizada em vez de um
+     "pulando" na frente do outro. */
+  transition: background-color 300ms ease-out;
 }
 
 html.dark,

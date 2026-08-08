@@ -60,7 +60,9 @@ export default function FeedPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <header className="sticky top-0 z-30 flex items-center justify-between bg-cream/95 px-5 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)]">
+      {/* transition-colors: ver comentário em app/globals.css sobre a
+          linha fina embaixo da barra de notificação ao trocar de tema. */}
+      <header className="sticky top-0 z-30 flex items-center justify-between bg-cream/95 px-5 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)] transition-colors duration-300">
         <div>
           <p className="font-destaque text-lg font-semibold text-coffee-800">Geração 148</p>
         </div>
