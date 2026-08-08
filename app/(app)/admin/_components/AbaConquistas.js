@@ -11,7 +11,6 @@ import {
   GripVertical,
   Users,
   UserCheck,
-  UploadCloud,
   X,
 } from 'lucide-react';
 import {
@@ -21,7 +20,6 @@ import {
   apagarConquista,
   trocarOrdem,
   reordenarConquistas,
-  migrarConquistasNovasParaFirestore,
 } from '@/lib/conquistasRepo';
 import { getTodasAsMissoes } from '@/lib/missionsRepo';
 import { getTodasAsCategoriasAcao } from '@/lib/categoriasAcaoRepo';
@@ -189,8 +187,6 @@ export default function AbaConquistas() {
   const [apagando, setApagando] = useState(null);
   const [mostrarBuscaPessoa, setMostrarBuscaPessoa] = useState(false);
   const [mostrarAprovarManual, setMostrarAprovarManual] = useState(false);
-  const [migrandoNovas, setMigrandoNovas] = useState(false);
-  const [resultadoMigracaoNovas, setResultadoMigracaoNovas] = useState(null);
 
   const carregar = useCallback(() => {
     getTodasAsConquistas().then(setConquistas);
@@ -204,26 +200,6 @@ export default function AbaConquistas() {
 
   const missoesPorId = Object.fromEntries(missoes.map((m) => [m.id, m]));
   const categoriasPorId = Object.fromEntries(categoriasAcao.map((c) => [c.id, c]));
-
-  async function handleMigrarNovas() {
-    if (migrandoNovas) return;
-    setMigrandoNovas(true);
-    setResultadoMigracaoNovas(null);
-    try {
-      const criadas = await migrarConquistasNovasParaFirestore();
-      setResultadoMigracaoNovas(
-        criadas > 0
-          ? `${criadas} conquista(s) nova(s) criada(s) com sucesso.`
-          : 'Nada pra criar — as 25 conquistas novas já estavam aqui.'
-      );
-      carregar();
-    } catch (err) {
-      console.error('Erro na migração das conquistas novas:', err);
-      setResultadoMigracaoNovas('Não foi possível criar agora. Tente de novo em instantes.');
-    } finally {
-      setMigrandoNovas(false);
-    }
-  }
 
   async function handleApagar(conquista) {
     const ok = await confirmar({
@@ -264,26 +240,6 @@ export default function AbaConquistas() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-4">
-        <p className="text-xs text-coffee-500">
-          Clique aqui pra criar de uma vez as 25 conquistas novas (com os níveis I/II/III de cada
-          uma — 65 no total). Depois de criadas, edite ou apague à vontade aqui embaixo, igual
-          qualquer outra conquista. Seguro clicar mais de uma vez — só cria o que ainda não
-          existir.
-        </p>
-        <button
-          onClick={handleMigrarNovas}
-          disabled={migrandoNovas}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-coffee-200 py-2.5 text-sm font-semibold text-coffee-700 disabled:opacity-40"
-        >
-          {migrandoNovas ? <Loader2 size={14} className="animate-spin" /> : <UploadCloud size={14} />}
-          Criar as 25 conquistas novas
-        </button>
-        {resultadoMigracaoNovas && (
-          <p className="mt-2 text-center text-xs text-coffee-500">{resultadoMigracaoNovas}</p>
-        )}
-      </div>
-
       <div>
         <div className="mb-1 flex items-center justify-between">
           <h3 className="font-destaque text-sm font-semibold text-coffee-700">Conquistas</h3>

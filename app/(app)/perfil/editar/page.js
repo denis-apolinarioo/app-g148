@@ -180,8 +180,7 @@ export default function EditarPerfilPage() {
             className="input"
           />
           <p className="mt-1 text-[11px] text-coffee-300">
-            Aparece em 1 linha só no perfil — se o nome completo não couber, ele é cortado
-            (ex.: &quot;Maria Eduarda Nascimento…&quot;). Se preferir, abrevie aqui mesmo.
+            Aparece em 1 linha só no perfil — nomes longos são cortados.
           </p>
         </Campo>
 
