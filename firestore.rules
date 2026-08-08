@@ -1,0 +1,511 @@
+rules_version = '2';
+
+// ============================================================================
+// REGRAS DE SEGURANÇA DO FIRESTORE — App G148
+// ----------------------------------------------------------------------------
+// Como aplicar: Firebase Console → Firestore Database → aba "Regras" →
+// colar o conteúdo deste arquivo inteiro → "Publicar".
+//
+// LIMITAÇÃO CONHECIDA E ACEITA DE PROPÓSITO: como o app não usa Cloud
+// Functions (o que exigiria linha de comando pra publicar, incompatível
+// com o fluxo 100% "arrastar e soltar" combinado), a pontuação (campo
+// `pontos` em users/{uid}) é escrita diretamente pelo aplicativo do
+// próprio usuário. Isso significa que uma pessoa tecnicamente habilidosa,
+// usando ferramentas de desenvolvedor do navegador, poderia tentar alterar
+// a própria pontuação. Para uma comunidade pequena e de confiança (25-50
+// pessoas conhecidas), esse é um risco aceitável — o item de segurança
+// mais forte (Cloud Functions validando cada ponto no servidor) fica
+// como evolução natural de v2, quando fizer sentido introduzir uma etapa
+// de deploy via terminal.
+// ============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Reforço do travamento de usuário (Admin → Usuários → travar/destravar):
+    // até agora `travado` só derrubava a experiência no app (tela de bloqueio
+    // em app/(app)/layout.js) e impedia a PRÓPRIA pessoa de se destravar —
+    // mas não impedia escrever em outras coleções direto no Firestore. Esta
+    // função é usada abaixo, adicionada com `&&` nas regras que já existiam,
+    // sem remover nenhuma condição anterior.
+    function usuarioTravado() {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('travado', false) == true;
+    }
+
+    function apenasEstesCamposMudaram(campos) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos);
+    }
+
+    // Permite alterar o array `curtidas` (em posts ou comentários) somente
+    // pra adicionar ou remover o PRÓPRIO uid — nunca sobrescrever o array
+    // inteiro nem mexer na curtida de outra pessoa.
+    //
+    // CORREÇÃO DEFINITIVA (curtida em comentário): posts sempre nascem com
+    // `curtidas: []` (lib/firestore-helpers.js -> createPost), mas
+    // comentários NUNCA tinham esse campo inicializado (addComment não
+    // gravava `curtidas`). Ler um campo que não existe no documento com
+    // notação de ponto (`resource.data.curtidas`) lança um ERRO na
+    // avaliação da regra do Firestore — não retorna `null` como em
+    // JavaScript — e um erro na regra é tratado como permissão negada.
+    // Ou seja: TODO primeiro "curtir" em QUALQUER comentário (o campo
+    // ainda não existindo) caía nesse erro e era silenciosamente negado,
+    // sempre, pra qualquer comentário, novo ou antigo. É por isso que
+    // funcionava pra posts (sempre tem o campo) e nunca pra comentários.
+    // A forma segura de ler um campo que pode não existir é
+    // `resource.data.get('campo', valorPadrao)`, usada abaixo.
+    function apenasProprioCurtiuMudou() {
+      let antes = resource.data.get('curtidas', []);
+      let depois = request.resource.data.get('curtidas', []);
+      let adicionados = depois.removeAll(antes);
+      let removidos = antes.removeAll(depois);
+      return !usuarioTravado()
+        && apenasEstesCamposMudaram(['curtidas'])
+        && (adicionados.size() + removidos.size()) == 1
+        && (adicionados.size() == 0 || adicionados.hasOnly([request.auth.uid]))
+        && (removidos.size() == 0 || removidos.hasOnly([request.auth.uid]));
+    }
+
+    // Permite alterar `comentariosCount` só em +1 ou -1 por vez. Sem Cloud
+    // Functions não dá pra validar se o número reflete a contagem real de
+    // comentários, mas isso impede pular o valor pra qualquer número.
+    function comentariosCountMudouEmUm() {
+      return apenasEstesCamposMudaram(['comentariosCount']) &&
+        (request.resource.data.comentariosCount == resource.data.comentariosCount + 1 ||
+         request.resource.data.comentariosCount == resource.data.comentariosCount - 1);
+    }
+
+    // Botão "Editar" do post (components/EditarPostModal.js): só o próprio
+    // dono, e só até 24h depois da criação — depois disso, nenhuma edição
+    // de conteúdo é aceita, mesmo tentando direto pelo Firestore (a tela já
+    // esconde o botão, mas isso reforça no servidor).
+    function podeEditarConteudoDoPost() {
+      return resource.data.createdAt is timestamp &&
+        request.time < resource.data.createdAt + duration.value(24, 'h');
+    }
+
+    // Mesma regra de 24h acima, só que pro pedido de oração (botão "Editar"
+    // em components/EditarOracaoModal.js).
+    function podeEditarConteudoDoPrayer() {
+      return resource.data.createdAt is timestamp &&
+        request.time < resource.data.createdAt + duration.value(24, 'h');
+    }
+
+    // ------------------------------------------------------------------------
+    // USUÁRIOS
+    // ------------------------------------------------------------------------
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && userId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        // A própria pessoa pode editar seu perfil, MENOS os campos isAdmin
+        // e travado (impede autopromoção a admin e autodesbloqueio).
+        (userId == request.auth.uid &&
+          request.resource.data.isAdmin == resource.data.isAdmin &&
+          request.resource.data.get('travado', false) == resource.data.get('travado', false)) ||
+        // Um admin pode ajustar os pontos, o Dracma, o travamento OU a
+        // função (tagFuncao) de outra pessoa (usado ao aprovar um desafio
+        // individual, ao ajustar saldo manualmente — lib/dracma.js ->
+        // ajustarDracmaManualmente —, ao travar/destravar acesso —
+        // lib/firestore-helpers.js -> toggleTravarUsuario — e ao trocar a
+        // função de alguém pela aba Usuários do Admin). PACOTE 2: `dracmas`
+        // adicionado; leva de Funções: `tagFuncao` adicionado.
+        (isAdmin() && (apenasEstesCamposMudaram(['pontos']) || apenasEstesCamposMudaram(['dracmas']) || apenasEstesCamposMudaram(['travado']) || apenasEstesCamposMudaram(['tagFuncao']))) ||
+        // PACOTE 3 — Transferência de Dracma entre usuários: permite que
+        // QUALQUER pessoa logada e não travada credite Dracma em OUTRO
+        // usuário (o destinatário da transferência que ela mesma iniciou),
+        // mexendo só no campo `dracmas`. Mesma limitação já aceita pra
+        // `pontos`/`dracmas` no topo deste arquivo (comunidade pequena e de
+        // confiança) — sem Cloud Functions não dá pra validar aqui, na
+        // regra, se essa alteração corresponde de fato a uma transferência
+        // legítima (isso é validado no app: chave de recebimento + PIN,
+        // antes de chamar transferirDracma() em lib/dracma.js).
+        (!usuarioTravado() && apenasEstesCamposMudaram(['dracmas']))
+      );
+      allow delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // SEGREDOS DA CARTEIRA (PIN) — hash+salt do PIN de 4 dígitos, tentativas,
+    // bloqueio e código de recuperação (lib/dracma.js).
+    // ------------------------------------------------------------------------
+    // CORREÇÃO DE SEGURANÇA: esses campos ficavam antes direto em
+    // users/{uid}, que tem `allow read: if isSignedIn()` acima (necessário
+    // pra Feed/Ranking/@menções funcionarem) — ou seja, QUALQUER pessoa
+    // logada conseguia ler o hash+salt do PIN de QUALQUER outra pessoa e
+    // testar as 10.000 combinações offline, sem passar pelo bloqueio de 5
+    // tentativas. Coleção separada, só o próprio dono lê ou grava — nenhuma
+    // outra parte do app precisa ler o PIN de outra pessoa, então isso não
+    // tira nenhuma funcionalidade.
+    match /walletSecrets/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Reserva de nomes de usuário — impede dois perfis com o mesmo @usuario.
+    match /usernames/{username} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // MURAL
+    // ------------------------------------------------------------------------
+    match /posts/{postId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && !usuarioTravado() && request.resource.data.autorId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        apenasProprioCurtiuMudou() ||
+        comentariosCountMudouEmUm() ||
+        (resource.data.autorId == request.auth.uid && !usuarioTravado() && (
+          // Botão "Ocultar"/"Reexibir" (item novo) — sempre permitido pro
+          // dono, sem limite de 24h, e só mexe nesses 3 campos.
+          apenasEstesCamposMudaram(['oculto', 'ocultoPor', 'ocultoEm']) ||
+          // Botão "Editar" — só dentro da janela de 24h, e nunca alterando
+          // `texto` quando o post veio de uma missão (nesse caso `texto` é
+          // o título da missão, e o título nunca é editável).
+          (podeEditarConteudoDoPost() && (
+            resource.data.origemMissaoId == null ||
+            resource.data.texto == request.resource.data.texto
+          ))
+        ))
+      );
+      allow delete: if isSignedIn() && (resource.data.autorId == request.auth.uid || isAdmin());
+
+      match /comentarios/{commentId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && !usuarioTravado() && request.resource.data.autorId == request.auth.uid;
+        // CORREÇÃO: antes bloqueava qualquer alteração, o que impedia
+        // inclusive a curtida em comentário. Agora, qualquer pessoa logada
+        // pode adicionar ou remover só o PRÓPRIO uid do array `curtidas`
+        // (mesma lógica já usada nos posts) — editar o texto do comentário
+        // ou mexer na curtida de outra pessoa continua proibido.
+        allow update: if isSignedIn() && apenasProprioCurtiuMudou();
+        allow delete: if isSignedIn() && (resource.data.autorId == request.auth.uid || isAdmin());
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // ORAÇÃO
+    // ------------------------------------------------------------------------
+    match /prayers/{prayerId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && !usuarioTravado() && request.resource.data.autorId == request.auth.uid;
+      allow update: if isSignedIn() && (
+        (resource.data.autorId == request.auth.uid && apenasEstesCamposMudaram(['status'])) ||
+        (apenasEstesCamposMudaram(['totalOracoes']) && !usuarioTravado()) ||
+        (resource.data.autorId == request.auth.uid && !usuarioTravado() && (
+          // Botão "Ocultar"/"Reexibir" — sempre permitido pro dono, sem
+          // limite de 24h, e só mexe nesses 3 campos (mesmo padrão do post).
+          apenasEstesCamposMudaram(['oculto', 'ocultoPor', 'ocultoEm']) ||
+          // Botão "Editar" — só dentro da janela de 24h.
+          (podeEditarConteudoDoPrayer() && apenasEstesCamposMudaram(['descricao', 'prazo', 'editadoEm']))
+        )) ||
+        isAdmin()
+      );
+      allow delete: if isSignedIn() && (resource.data.autorId == request.auth.uid || isAdmin());
+
+      // Um registro por pessoa por dia (o ID do documento é "{uid}_{data}"),
+      // o que a regra abaixo confirma — impedindo orar 2x no mesmo pedido
+      // no mesmo dia mesmo que alguém tente burlar a tela.
+      match /interacoes/{interacaoId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && !usuarioTravado() &&
+          request.resource.data.uid == request.auth.uid &&
+          interacaoId == request.auth.uid + '_' + request.resource.data.data;
+        // DESCLIQUE — a própria pessoa pode apagar o registro de hoje (é o
+        // que desfaz a oração ao clicar de novo em "Orou hoje", ver
+        // desfazerOracao em lib/firestore-helpers.js). Só o próprio dono,
+        // nunca de outra pessoa.
+        allow delete: if isSignedIn() && resource.data.uid == request.auth.uid && !usuarioTravado();
+        allow update: if false;
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // MISSÕES (catálogo) — o Admin cria/edita/apaga pelo painel. Leitura
+    // liberada pra qualquer pessoa logada, porque a tela de Missões dos
+    // usuários precisa ler daqui pra montar a lista.
+    // ------------------------------------------------------------------------
+    match /missoes/{missaoId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // CONQUISTAS (catálogo) — mesmo padrão de "missoes": o Admin cria/edita/
+    // apaga pelo painel (app/(app)/admin/_components/AbaConquistas.js).
+    // Leitura liberada pra qualquer pessoa logada, porque a aba de
+    // conquistas do perfil precisa ler o catálogo inteiro pra montar a lista
+    // (bloqueadas + desbloqueadas).
+    // ------------------------------------------------------------------------
+    match /conquistas/{conquistaId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // FUNÇÕES (papéis da comunidade, ex.: "Líder de Célula") — mesmo padrão
+    // de "conquistas"/"categoriasAcao": o Admin cria/edita/reordena/apaga
+    // pelo painel (aba Funções, lib/funcoesRepo.js). Leitura liberada pra
+    // qualquer pessoa logada, porque o seletor de função no Editar Perfil
+    // precisa ler as funções ativas.
+    // ------------------------------------------------------------------------
+    match /funcoes/{funcaoId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // FASE 2 — CATEGORIAS DE AÇÃO (catálogo) — mesmo padrão de "conquistas":
+    // o Admin cria/edita/apaga pelo painel (aba Categorias). Leitura
+    // liberada pra qualquer pessoa logada, porque o seletor de categoria ao
+    // postar no Feed precisa ler o catálogo inteiro.
+    // ------------------------------------------------------------------------
+    match /categoriasAcao/{categoriaId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // FASE 2 — LOG CENTRAL DE AÇÕES — histórico auditável de cada ação
+    // registrada por uma categoria configurável (ver lib/acoesLog.js). Nunca
+    // editável depois de criado. Mesma limitação conhecida e aceita já
+    // assumida para `pointsLog`/`dracmaLog` (ver comentários abaixo): o
+    // create permite que o próprio usuário insira uma entrada em seu nome,
+    // mas isso não altera pontos/Dracma de verdade (que só mudam via
+    // runTransaction/creditarDracma) — só poderia poluir esse histórico.
+    // ------------------------------------------------------------------------
+    match /acoesLog/{logId} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || isAdmin());
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // MISSÕES — o ID do documento já é "{uid}_{missaoId}_{periodo}", o que
+    // torna duplicidade fisicamente impossível (não dá pra criar 2x o
+    // mesmo documento). A regra abaixo reforça isso e garante que uma
+    // pessoa só grava submissão em nome dela mesma.
+    // ------------------------------------------------------------------------
+    match /missionSubmissions/{submissionId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && !usuarioTravado() &&
+        request.resource.data.uid == request.auth.uid &&
+        submissionId.matches(request.auth.uid + '_.*');
+      // CORREÇÃO DE BUG: o app grava o `postId` do post automático de volta
+      // nesta submissão logo depois de criá-lo (ver submeterMissao em
+      // lib/points.js), pra permitir "encaminhar" da submissão pro post
+      // gerado. A regra antiga bloqueava QUALQUER update, então essa escrita
+      // sempre falhava com permissão negada (os pontos já tinham sido
+      // creditados antes, então o erro só quebrava esse último passo). Só o
+      // dono da submissão pode alterar, e só o campo `postId`.
+      allow update: if isSignedIn() && resource.data.uid == request.auth.uid &&
+        apenasEstesCamposMudaram(['postId']);
+      // CORREÇÃO DE BUG: apagar o post automático de uma missão (ver
+      // removerPontosMissaoDoPostApagado em lib/points.js) tenta apagar
+      // este documento pra liberar a missão de novo, mas a regra recusava
+      // TODA exclusão — o app engolia o erro (try/catch), então pontos e
+      // Dracma voltavam certinho mas a missão nunca reabria. Só o dono da
+      // submissão (ou o Admin, que pode apagar post de qualquer pessoa)
+      // pode apagar; a decisão de SE ela pode ser apagada (só quando ainda
+      // é do ciclo/período atual) já é feita no app antes de chamar isto.
+      allow delete: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    // Histórico auditável de cada ponto ganho — nunca editável depois de criado.
+    //
+    // LIMITAÇÃO CONHECIDA E ACEITA: o create abaixo permite que o próprio
+    // usuário insira uma entrada de log em seu nome. Isso NÃO altera o saldo
+    // real de pontos (que só muda via runTransaction em users/{uid}) — só
+    // poderia poluir o histórico auditável com uma entrada fabricada. Mesmo
+    // risco aceito pra comunidade pequena de confiança já assumido pra
+    // `pontos` (ver comentário no topo do arquivo).
+    match /pointsLog/{logId} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && (request.resource.data.uid == request.auth.uid || isAdmin());
+      // DESCLIQUE DE ORAÇÃO — a própria pessoa pode apagar uma entrada dela
+      // mesma (usado por desfazerPontosOracao em lib/points.js, pra
+      // reverter exatamente os pontos ganhos ao "desorar" — sem isso, o
+      // histórico ficava com uma entrada fantasma que continuava contando
+      // pra conquistas do tipo 'oracao' mesmo depois do desclique). Mesmo
+      // risco já aceito de sempre pra esta coleção (comunidade pequena e de
+      // confiança).
+      allow delete: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow update: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // PACOTE 2 — Histórico auditável de cada transação de Dracma (ganho por
+    // missão/ação, ajuste manual do admin — e, a partir do PACOTE 3,
+    // transferências). Nunca editável depois de criado. Mesma limitação
+    // conhecida e aceita já assumida para `pointsLog` acima.
+    // ------------------------------------------------------------------------
+    // PACOTE 3: uma entrada de transferência não tem campo `uid` — tem
+    // `origem` (quem mandou) e `destino` (quem recebeu). Os `.get(campo,
+    // null)` abaixo leem esses campos com segurança mesmo quando não
+    // existem no documento (leitura direta, sem `.get()`, de um campo
+    // ausente lança erro na regra — mesmo motivo já documentado em
+    // apenasProprioCurtiuMudou() lá em cima).
+    match /dracmaLog/{logId} {
+      allow read: if isSignedIn() && (
+        resource.data.get('uid', null) == request.auth.uid ||
+        resource.data.get('origem', null) == request.auth.uid ||
+        resource.data.get('destino', null) == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isSignedIn() && (
+        request.resource.data.get('uid', null) == request.auth.uid ||
+        request.resource.data.get('origem', null) == request.auth.uid ||
+        isAdmin()
+      );
+      allow update, delete: if false;
+    }
+
+    // Conquistas desbloqueadas — mesma lógica de ID determinístico.
+    //
+    // LIMITAÇÃO CONHECIDA E ACEITA: o create abaixo garante que o documento
+    // é do próprio uid e que o ID é determinístico, mas NÃO valida se a
+    // conquista foi realmente cumprida — um usuário tecnicamente habilidoso
+    // poderia se autoconceder uma conquista via ferramentas de desenvolvedor
+    // do navegador. Mesmo risco aceito pra comunidade pequena de confiança
+    // já assumido pra `pontos` (ver comentário no topo do arquivo).
+    match /achievementsUnlocked/{docId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid &&
+        docId == request.auth.uid + '_' + request.resource.data.achievementId;
+      // Só permite marcar a própria conquista como "vista" (usado depois da
+      // animação do cadeado abrindo na aba de conquistas do perfil) — nenhum
+      // outro campo pode mudar por essa via.
+      allow update: if isSignedIn() &&
+        resource.data.uid == request.auth.uid &&
+        apenasEstesCamposMudaram(['visto']) &&
+        request.resource.data.visto == true;
+      allow delete: if false;
+    }
+
+    // (regra da coleção "challenges" removida — aba Desafios descontinuada)
+
+    // ------------------------------------------------------------------------
+    // CORREIO — admin envia mensagens (tipo 'mensagem'); qualquer pessoa
+    // pode gerar uma notificação automática de curtida/comentário PARA
+    // OUTRA pessoa (nunca para si mesma). Só remetente e destinatário leem.
+    // ------------------------------------------------------------------------
+    match /mailbox/{messageId} {
+      // Item 14º do Bloco 7 — admin pode ler qualquer mensagem (histórico
+      // geral/por pessoa), além das próprias regras que já existiam.
+      allow read: if isSignedIn() &&
+        (resource.data.destinatarioId == request.auth.uid || resource.data.remetenteId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && request.resource.data.remetenteId == request.auth.uid && (
+        // 'mensagem' cobre tanto o texto livre do Admin quanto (item novo)
+        // uma mensagem com pontos/dracma anexados — o valor em si não é
+        // validado aqui, mas só o Admin pode criar esse tipo, então é o
+        // mesmo nível de confiança que já existe pra qualquer outro campo
+        // de uma mensagem do Admin (ex.: fixada, fotoURL).
+        // missao_nova/missao_especial/pontos_admin/dracma_admin (itens
+        // novos) são avisos automáticos que só o Admin dispara.
+        (isAdmin() &&
+          request.resource.data.tipo in
+            ['mensagem', 'missao_nova', 'missao_especial', 'pontos_admin', 'dracma_admin']) ||
+        (!usuarioTravado() &&
+          request.resource.data.tipo in ['curtida', 'comentario', 'curtida_comentario', 'mencao'] &&
+          request.resource.data.destinatarioId != request.auth.uid) ||
+        // Item novo — notificação de conquista desbloqueada: a pessoa avisa
+        // a si mesma (remetenteId == destinatarioId == quem desbloqueou),
+        // diferente das notificações sociais acima que são sempre sobre
+        // outra pessoa.
+        (!usuarioTravado() &&
+          request.resource.data.tipo == 'conquista' &&
+          request.resource.data.destinatarioId == request.auth.uid)
+      );
+      allow update: if isSignedIn() && (
+        (resource.data.destinatarioId == request.auth.uid && apenasEstesCamposMudaram(['lida'])) ||
+        (isAdmin() && apenasEstesCamposMudaram(['fixada'])) ||
+        // Item novo — resgatar pontos/dracma anexados no Correio: só quem
+        // recebeu, só nesses dois campos, e só no sentido "ainda não
+        // resgatado" → "resgatado" (nunca o contrário, nunca resgatar de
+        // novo). Ver resgatarRecompensaCorreio em lib/notificacoes.js.
+        (resource.data.destinatarioId == request.auth.uid &&
+          apenasEstesCamposMudaram(['resgatado', 'resgatadoEm']) &&
+          resource.data.get('resgatado', false) == false &&
+          request.resource.data.resgatado == true)
+      );
+      // Item 14º — admin pode apagar qualquer mensagem do histórico.
+      // Item 15º — quem recebeu pode fechar (apagar) suas próprias
+      // mensagens/notificações não fixadas (fixada nunca pode ser fechada).
+      // CORREÇÃO: notificações automáticas (curtida/comentário/menção) nunca
+      // gravam o campo `fixada` — só as mensagens do Admin gravam. Acessar
+      // um campo que não existe no documento (resource.data.fixada) faz a
+      // regra inteira dar erro e negar a exclusão. Troca por .get(..., false)
+      // com valor padrão, que nunca falha mesmo quando o campo não existe.
+      allow delete: if isAdmin() || (isSignedIn() &&
+        resource.data.destinatarioId == request.auth.uid && resource.data.get('fixada', false) != true);
+    }
+
+    // ------------------------------------------------------------------------
+    // VERSÍCULO DO DIA (cache) — leitura/escrita liberada pra qualquer
+    // pessoa logada, já que não é dado sensível (é só o texto do dia).
+    // ------------------------------------------------------------------------
+    match /dailyVerseCache/{date} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ------------------------------------------------------------------------
+    // CONFIGURAÇÕES (pontos das missões) — só admin altera.
+    // ------------------------------------------------------------------------
+    match /config/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // LOG DE AÇÕES DO ADMIN (item 4 do Bloco A) — histórico auditável de
+    // alterações feitas pelo painel administrativo. Só admin grava e lê;
+    // nunca editável/apagável depois de criado.
+    // ------------------------------------------------------------------------
+    match /adminActionsLog/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin() && request.resource.data.adminId == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ------------------------------------------------------------------------
+    // TOKENS DE PUSH (Bloco 10) — lib/push.js grava/apaga o token do próprio
+    // aparelho. Sem regra nenhuma aqui, salvar/remover o token dá erro de
+    // permissão e o push nunca chega a funcionar. Ninguém precisa ler essa
+    // coleção pelo cliente (as Cloud Functions leem via Admin SDK, que já
+    // ignora essas regras) — só criar/atualizar/apagar o próprio token.
+    // ------------------------------------------------------------------------
+    match /pushTokens/{tokenId} {
+      allow read: if false;
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.uid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // ------------------------------------------------------------------------
+    // DENÚNCIAS (item 17) — qualquer pessoa logada pode denunciar (em nome
+    // dela mesma); só o Admin lê a fila e só pode alterar o campo `status`
+    // (marcar como resolvida/reabrir). Nada é editável ou apagável além disso.
+    // ------------------------------------------------------------------------
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && request.resource.data.reportadoPorId == request.auth.uid;
+      allow update: if isAdmin() && apenasEstesCamposMudaram(['status']);
+      allow delete: if false;
+    }
+  }
+}
