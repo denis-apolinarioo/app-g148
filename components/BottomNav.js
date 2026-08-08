@@ -3,13 +3,11 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Trophy, User } from 'lucide-react';
-import NavBowArrowIcon from '@/components/icons/NavBowArrowIcon';
-import NavPrayingHandsIcon from '@/components/icons/NavPrayingHandsIcon';
 import { ABAS_PRINCIPAIS } from '@/lib/constants';
 
 // Ícones do lucide-react pra Feed/Ranking/Perfil (mantidos como já estavam,
 // só maiores) — envolvidos numa função pra terem a mesma interface
-// {size, ativo} dos ícones sólidos abaixo.
+// {size, ativo} dos ícones em imagem abaixo.
 function iconeLucide(Cmp) {
   return function IconeLucideWrap({ size, ativo }) {
     return (
@@ -22,23 +20,32 @@ function iconeLucide(Cmp) {
   };
 }
 
-// CORREÇÃO MODO ESCURO — Missões e Oração usavam PNGs recortados da imagem
-// de referência (public/icons/custom/), com a cor "gravada" no arquivo.
-// Diferente dos ícones acima (que herdam cor via className e por isso já
-// invertiam certinho no escuro, ver html.dark .text-coffee-700/300 em
-// app/globals.css), o PNG fica sempre com a MESMA cor não importa o tema —
-// no escuro isso deixava esses dois ícones escuros (ilegíveis) enquanto os
-// outros três ficavam claros. Troca pros equivalentes em SVG
-// (components/icons/NavBowArrowIcon.js e NavPrayingHandsIcon.js, que já
-// existiam prontos no projeto mas não tinham sido ligados aqui) — mesmo
-// desenho, só que com fill="currentColor", herdando cor da mesma forma que
-// os ícones do lucide acima.
+// Missões e Oração usam os PNGs recortados da imagem de referência que o
+// usuário mandou (public/icons/custom/) — arco-e-flecha e mãos orando —
+// em vez de ícone de fonte/lib, por isso trocam de arquivo (ativo/inativo)
+// em vez de mudar de cor via CSS.
 function IconeArcoFlecha({ size, ativo }) {
-  return <NavBowArrowIcon size={size} className={ativo ? 'text-coffee-700' : 'text-coffee-300'} />;
+  return (
+    <img
+      src={ativo ? '/icons/custom/bow-active.png' : '/icons/custom/bow-inactive.png'}
+      width={size}
+      height={size}
+      alt=""
+      className="object-contain"
+    />
+  );
 }
 
 function IconeMaosOrando({ size, ativo }) {
-  return <NavPrayingHandsIcon size={size} className={ativo ? 'text-coffee-700' : 'text-coffee-300'} />;
+  return (
+    <img
+      src={ativo ? '/icons/custom/hands-active-nav.png' : '/icons/custom/hands-inactive.png'}
+      width={size}
+      height={size}
+      alt=""
+      className="object-contain"
+    />
+  );
 }
 
 // Mapeia o nome de ícone (string, em lib/constants.js) pro componente de
