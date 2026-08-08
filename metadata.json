@@ -1,8 +1,0 @@
-{
-  "name": "G148 - Geração 148",
-  "description": "Aplicativo de comunidade e crescimento espiritual Geração 148",
-  "requestFramePermissions": [],
-  "majorCapabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}
