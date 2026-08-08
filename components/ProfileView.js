@@ -12,9 +12,6 @@ import EmptyState from '@/components/EmptyState';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import ConquistaDetalheModal from '@/components/ConquistaDetalheModal';
 import CrossIcon from '@/components/icons/CrossIcon';
-import NavPostIcon from '@/components/icons/NavPostIcon';
-import NavMedalIcon from '@/components/icons/NavMedalIcon';
-import PrayingHandsIcon from '@/components/PrayingHandsIcon';
 import {
   subscribeToUserPosts,
   subscribeToUserPrayers,
@@ -26,34 +23,45 @@ import { useAppConfig } from '@/lib/useAppConfig';
 import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
 import { todayBrasilia } from '@/lib/dateUtils';
 
-// CORREÇÃO MODO ESCURO — Ícones das abas do Perfil (Posts/Orações/
-// Conquistas) usavam PNGs recortados da imagem de referência
-// (public/icons/custom/), com a cor "gravada" no arquivo — por isso não
-// invertiam junto com o tema (ver html.dark .text-coffee-700/300 em
-// app/globals.css) e ficavam escuros/ilegíveis no modo escuro, diferente
-// dos ícones que já herdavam cor via className. Troca pelos equivalentes em
-// SVG que já existiam prontos no projeto (components/icons/NavPostIcon.js,
-// components/icons/NavMedalIcon.js e components/PrayingHandsIcon.js) mas
-// não tinham sido ligados aqui — mesmo desenho, com stroke/fill
-// "currentColor", herdando cor do mesmo jeito que o resto do app.
-function IconePosts({ size, strokeWidth, ativo }) {
+// Ícones das abas do Perfil (Posts/Orações/Conquistas) — PNGs recortados
+// da imagem de referência que o usuário mandou (public/icons/custom/), no
+// lugar dos ícones de lib. Como a cor vem "gravada" na imagem (não são
+// SVG com currentColor), cada um troca de arquivo pelo prop `ativo` em
+// vez de herdar cor via CSS.
+function IconePosts({ size, ativo }) {
   return (
-    <NavPostIcon size={size} strokeWidth={strokeWidth} className={ativo ? 'text-coffee-700' : 'text-coffee-300'} />
+    <img
+      src={ativo ? '/icons/custom/post-active.png' : '/icons/custom/post-inactive.png'}
+      width={size}
+      height={size}
+      alt=""
+      className="object-contain"
+    />
   );
 }
 
-function IconeOracoesPerfil({ size, strokeWidth, ativo }) {
+function IconeOracoesPerfil({ size, ativo }) {
   return (
-    <PrayingHandsIcon
-      size={size}
-      strokeWidth={strokeWidth}
-      className={ativo ? 'text-coffee-700' : 'text-coffee-300'}
+    <img
+      src={ativo ? '/icons/custom/hands-active-perfil.png' : '/icons/custom/hands-inactive.png'}
+      width={size}
+      height={size}
+      alt=""
+      className="object-contain"
     />
   );
 }
 
 function IconeConquistas({ size, ativo }) {
-  return <NavMedalIcon size={size} className={ativo ? 'text-coffee-700' : 'text-coffee-300'} />;
+  return (
+    <img
+      src={ativo ? '/icons/custom/medal-active.png' : '/icons/custom/medal-inactive.png'}
+      width={size}
+      height={size}
+      alt=""
+      className="object-contain"
+    />
+  );
 }
 
 const POSTS_POR_PAGINA = 8;
