@@ -334,10 +334,7 @@ exports.excluirConta = functions
         solicitanteSnap = await db.collection('users').doc(solicitanteUid).get();
       } catch (err) {
         console.error(`[excluirConta] Falhou ao checar se quem chamou é admin (uid=${solicitanteUid}):`, err);
-        throw new functions.https.HttpsError(
-          'internal',
-          `Falha ao checar permissão de Admin: ${(err && err.message) || err}`
-        );
+        throw new Error(`Falha ao checar permissão de Admin: ${(err && err.message) || err}`);
       }
       if (!solicitanteSnap.exists || !solicitanteSnap.data().isAdmin) {
         throw new functions.https.HttpsError(
@@ -353,10 +350,7 @@ exports.excluirConta = functions
       alvoSnap = await alvoRef.get();
     } catch (err) {
       console.error(`[excluirConta] Falhou ao buscar a conta alvo (uid=${alvoUid}):`, err);
-      throw new functions.https.HttpsError(
-        'internal',
-        `Falha ao buscar a conta a excluir: ${(err && err.message) || err}`
-      );
+      throw new Error(`Falha ao buscar a conta a excluir: ${(err && err.message) || err}`);
     }
     if (!alvoSnap.exists) {
       // Idempotente: se já não existe mais (ex.: 2ª tentativa depois de uma
@@ -368,17 +362,17 @@ exports.excluirConta = functions
     // DIAGNÓSTICO: cada etapa é isolada com seu próprio try/catch e log —
     // se uma etapa específica falhar (ex.: falta de permissão do IAM numa
     // API, índice do Firestore ainda propagando), o erro aparece nos
-    // Registros do Cloud Functions com o nome exato da etapa, em vez de um
-    // "INTERNAL" genérico e sem pista nenhuma de onde quebrou.
+    // Registros do Cloud Functions com o nome exato da etapa. A mensagem
+    // detalhada some no cliente se a gente jogar isso como HttpsError code
+    // 'internal' (ver comentário grande lá embaixo, no catch geral) — por
+    // isso aqui usamos um Error comum, não HttpsError, e deixamos o catch
+    // geral no final decidir como devolver isso pro app.
     async function etapa(nome, fn) {
       try {
         await fn();
       } catch (err) {
         console.error(`[excluirConta] Falhou na etapa "${nome}" (uid=${alvoUid}):`, err);
-        throw new functions.https.HttpsError(
-          'internal',
-          `Falha ao excluir conta na etapa "${nome}": ${err.message || err}`
-        );
+        throw new Error(`Falha ao excluir conta na etapa "${nome}": ${(err && err.message) || err}`);
       }
     }
 
@@ -454,11 +448,22 @@ exports.excluirConta = functions
 
     return { ok: true, jaEstavaExcluido: false };
   } catch (err) {
-    // Rede de segurança final: se por algum motivo um erro escapou de todas
-    // as proteções acima (não deveria, mas garante que nunca mais volta
-    // pro app como INTERNAL genérico sem mensagem).
+    // ATENÇÃO — pegadinha real do Firebase: um HttpsError com código
+    // 'internal' (ou 'unknown') tem a MENSAGEM apagada pelo próprio SDK
+    // antes de chegar no navegador, por segurança — o cliente sempre vê só
+    // o texto genérico "INTERNAL", não importa o que a gente escreva aqui.
+    // É a causa raiz de por que nenhuma mensagem detalhada nunca apareceu,
+    // mesmo com a etapa() e o try/catch geral certos. Erros "esperados"
+    // (não logado, sem permissão) continuam sendo HttpsError normal — esses
+    // códigos ('unauthenticated', 'permission-denied' etc.) NÃO são
+    // filtrados e chegam com a mensagem certinha. Só as falhas internas
+    // inesperadas (Error comum, lançado pela etapa() e pelos try/catch
+    // acima) é que precisam sair por um caminho diferente: devolver um
+    // resultado normal (200, sem lançar erro nenhum) com `ok:false` e o
+    // texto do erro dentro. O client (lib/excluirContaRepo.js) já sabe ler
+    // esse formato e transformar em erro de novo, com a mensagem intacta.
     if (err instanceof functions.https.HttpsError) throw err;
-    console.error(`[excluirConta] Erro não previsto:`, err);
-    throw new functions.https.HttpsError('internal', `Erro inesperado ao excluir conta: ${(err && err.message) || err}`);
+    console.error(`[excluirConta] Erro inesperado:`, err);
+    return { ok: false, erro: (err && err.message) || String(err) };
   }
   });
