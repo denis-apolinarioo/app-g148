@@ -185,10 +185,7 @@ export default function AbaAcoes() {
       <div>
         <h3 className="mb-1 font-destaque text-sm font-semibold text-coffee-700">Ações básicas</h3>
         <p className="mb-2 text-[11px] text-coffee-300">
-          Os pontos de cada missão se editam direto na aba{' '}
-          <span className="font-semibold text-coffee-600">Missões</span> (junto com o resto da
-          missão). Aqui fica só o que é fixo do app — não muda com o tempo e não tem limite de uso,
-          diferente das categorias abaixo.
+          Pontos de missão se editam na aba Missões. Aqui é só o que é fixo do app.
         </p>
         <div className="space-y-2">
           {ACOES_BASICAS.map((m) => (
@@ -216,12 +213,8 @@ export default function AbaAcoes() {
           </button>
         </div>
         <p className="mb-3 text-[11px] text-coffee-300">
-          Categorias configuráveis, usadas como categoria de post no Feed (a pessoa escolhe ao
-          publicar). Diferente das missões, uma categoria não tem fim — dá pra usar quantas vezes
-          quiser, por isso cada categoria pode limitar separadamente quantas vezes ela dá PONTOS e
-          quantas vezes ela dá DRACMA. Toda ação registrada aqui entra num log central — permite
-          contar qualquer categoria automaticamente, inclusive pra criar conquistas na aba
-          Conquistas.
+          Categorias usadas ao publicar no Feed. Sem data de fim, com limite configurável de
+          quantas vezes pontuam ou dão Dracma.
         </p>
 
         <div className="relative mb-2.5">
@@ -672,9 +665,8 @@ function CategoriaFormModal({ categoriaInicial, onFechar, onSalvo }) {
           )}
           {((pontua && pontosTemLimite) || (daDracma && dracmaTemLimite)) && (
             <p className="text-[11px] text-coffee-400">
-              Depois do limite, a pessoa ainda consegue postar nessa categoria normalmente — só
-              deixa de pontuar ou de dar Dracma (o que tiver batido o limite) até o próximo
-              período. Os dois limites são totalmente independentes um do outro.
+              Depois do limite, continua postando normalmente — só para de pontuar/dar Dracma até
+              o próximo período.
             </p>
           )}
 
@@ -708,10 +700,7 @@ function CategoriaFormModal({ categoriaInicial, onFechar, onSalvo }) {
                 Áudio obrigatório
               </label>
             </div>
-            <p className="mt-2 text-[11px] text-coffee-400">
-              Nada marcado = sem exigência (publica só com texto, só com foto ou só com áudio,
-              como já era).
-            </p>
+            <p className="mt-2 text-[11px] text-coffee-400">Nada marcado = sem exigência.</p>
           </div>
 
           <div className="rounded-xl border border-coffee-100 bg-cream-card p-3">
@@ -724,9 +713,7 @@ function CategoriaFormModal({ categoriaInicial, onFechar, onSalvo }) {
               <Clock size={13} />
               Só ficar visível num horário específico
             </label>
-            <p className="mt-1 text-[11px] text-coffee-300">
-              Sem marcar, a categoria fica disponível no seletor o dia inteiro (como já era).
-            </p>
+            <p className="mt-1 text-[11px] text-coffee-300">Sem marcar, fica visível o dia todo.</p>
             {horarioAtivo && (
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <Campo label="Das">

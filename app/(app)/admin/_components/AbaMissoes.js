@@ -610,8 +610,7 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
             </label>
             {!repeteAutomaticamente && (
               <p className="mt-1 text-[11px] text-coffee-300">
-                Sem repetição: a missão fica disponível só nesse período e some sozinha da lista
-                de quem usa o app quando ele terminar.
+                Sem repetição: fica disponível só nesse período e some sozinha depois.
               </p>
             )}
 
@@ -625,10 +624,7 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
                   className="w-full rounded-lg border border-coffee-100 bg-cream px-3 py-2.5 text-sm text-coffee-800"
                 />
               </Campo>
-              <p className="mt-1 text-[11px] text-coffee-300">
-                Mínimo 1. Ex.: missão diária com 3 aqui permite responder até 3x no mesmo dia
-                antes de travar até o próximo ciclo.
-              </p>
+              <p className="mt-1 text-[11px] text-coffee-300">Mínimo 1.</p>
             </div>
           </div>
 
@@ -642,9 +638,7 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
               <Clock size={13} />
               Só ficar visível num horário específico
             </label>
-            <p className="mt-1 text-[11px] text-coffee-300">
-              Sem marcar, a missão fica visível o dia inteiro (como já era).
-            </p>
+            <p className="mt-1 text-[11px] text-coffee-300">Sem marcar, fica visível o dia todo.</p>
             {horarioAtivo && (
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <Campo label="Das">

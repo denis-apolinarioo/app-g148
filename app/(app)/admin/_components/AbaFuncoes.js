@@ -74,10 +74,8 @@ export default function AbaFuncoes() {
           </button>
         </div>
         <p className="mb-2 text-[11px] text-coffee-300">
-          Toda pessoa é obrigada a ter uma função (nunca fica sem essa opção) — ela escolhe entre
-          as ATIVAS ao editar o próprio perfil, e você também pode trocar a de qualquer pessoa
-          pela aba Usuários. Uma função inativa some da lista de escolha, mas quem já estava com
-          ela continua normalmente até trocar.
+          Toda pessoa tem uma função, escolhida entre as ATIVAS. Inativas somem da lista, mas
+          quem já tinha continua com ela.
         </p>
 
         {funcoes.length === 0 && (
