@@ -309,6 +309,17 @@ async function commitEmLotes(refs, transformar) {
 exports.excluirConta = functions
   .region('southamerica-east1')
   .https.onCall(async (data, context) => {
+  // BLINDAGEM: tudo dentro de 1 try/catch geral, cobrindo também a parte de
+  // cima (checagem de admin, busca do alvo) que antes ficava FORA das
+  // proteções de etapa() lá embaixo. Motivo: o Firebase troca qualquer erro
+  // que não seja um HttpsError por um "INTERNAL" genérico e SEM mensagem
+  // nenhuma pro navegador (só loga o real nos Registros do Cloud Functions)
+  // — então um erro nessa parte de cima (ex.: falha ao consultar o Firestore
+  // pra checar se quem chamou é admin) sempre aparecia como o texto
+  // genérico no app, não importa quantos detalhes a gente adicionasse lá
+  // embaixo. Esse try/catch garante que TODO erro daqui pra baixo vira um
+  // HttpsError com mensagem de verdade antes de sair da function.
+  try {
     if (!context.auth) {
       throw new functions.https.HttpsError('unauthenticated', 'Você precisa estar logado.');
     }
@@ -318,7 +329,16 @@ exports.excluirConta = functions
     // Só a própria pessoa (excluindo a própria conta) ou um Admin (excluindo
     // qualquer conta) podem chamar isto.
     if (alvoUid !== solicitanteUid) {
-      const solicitanteSnap = await db.collection('users').doc(solicitanteUid).get();
+      let solicitanteSnap;
+      try {
+        solicitanteSnap = await db.collection('users').doc(solicitanteUid).get();
+      } catch (err) {
+        console.error(`[excluirConta] Falhou ao checar se quem chamou é admin (uid=${solicitanteUid}):`, err);
+        throw new functions.https.HttpsError(
+          'internal',
+          `Falha ao checar permissão de Admin: ${(err && err.message) || err}`
+        );
+      }
       if (!solicitanteSnap.exists || !solicitanteSnap.data().isAdmin) {
         throw new functions.https.HttpsError(
           'permission-denied',
@@ -328,7 +348,16 @@ exports.excluirConta = functions
     }
 
     const alvoRef = db.collection('users').doc(alvoUid);
-    const alvoSnap = await alvoRef.get();
+    let alvoSnap;
+    try {
+      alvoSnap = await alvoRef.get();
+    } catch (err) {
+      console.error(`[excluirConta] Falhou ao buscar a conta alvo (uid=${alvoUid}):`, err);
+      throw new functions.https.HttpsError(
+        'internal',
+        `Falha ao buscar a conta a excluir: ${(err && err.message) || err}`
+      );
+    }
     if (!alvoSnap.exists) {
       // Idempotente: se já não existe mais (ex.: 2ª tentativa depois de uma
       // falha no meio), não é erro — só confirma que já está feito.
@@ -424,4 +453,12 @@ exports.excluirConta = functions
     });
 
     return { ok: true, jaEstavaExcluido: false };
+  } catch (err) {
+    // Rede de segurança final: se por algum motivo um erro escapou de todas
+    // as proteções acima (não deveria, mas garante que nunca mais volta
+    // pro app como INTERNAL genérico sem mensagem).
+    if (err instanceof functions.https.HttpsError) throw err;
+    console.error(`[excluirConta] Erro não previsto:`, err);
+    throw new functions.https.HttpsError('internal', `Erro inesperado ao excluir conta: ${(err && err.message) || err}`);
+  }
   });
