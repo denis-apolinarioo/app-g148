@@ -102,7 +102,7 @@ export default function StreakFogueira({ dias = 0, aceso = false }) {
   function handleClick() {
     if (!aceso) return;
     vibrarToqueLeve();
-    emitirFaisca();
+    for (let i = 0; i < 5; i += 1) emitirFaisca();
   }
 
   return (
@@ -120,7 +120,7 @@ export default function StreakFogueira({ dias = 0, aceso = false }) {
           : `Streak de ${dias} ${dias === 1 ? 'dia' : 'dias'} — ainda sem missão concluída hoje`
       }
     >
-      <div className="relative flex h-14 w-14 items-end justify-center">
+      <div className="relative flex h-[66px] w-[66px] translate-y-[5px] items-end justify-center">
         {aceso && (
           <Lottie
             lottieRef={lottieRef}
@@ -128,7 +128,7 @@ export default function StreakFogueira({ dias = 0, aceso = false }) {
             loop
             autoplay
             onDOMLoaded={() => lottieRef.current?.setSpeed(VELOCIDADE_CHAMA)}
-            className="h-14 w-14"
+            className="h-[66px] w-[66px]"
           />
         )}
 
