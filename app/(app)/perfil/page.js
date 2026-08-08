@@ -75,6 +75,10 @@ function MeuPerfilConteudo() {
           <Link href="/carteira" className="text-coffee-500" aria-label="Carteira">
             <Wallet size={21} />
           </Link>
+          {/* Linha fininha separando os ícones gerais (tema/correio/carteira)
+              dos botões que são do próprio perfil (editar/sair) — pedido do
+              usuário. */}
+          <span className="h-5 w-px bg-coffee-200" aria-hidden="true" />
           <Link href="/perfil/editar" className="text-coffee-500">
             <Settings size={21} />
           </Link>

@@ -205,7 +205,7 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
           {/* pr-1.5: reduzido pra empurrar a vitrine mais pra direita (pedido
               do usuário) — ainda sobra uma margem mínima pra moldura
               dourada da última medalha não cortar na borda da tela. */}
-          <div className="-mt-3 ml-auto flex flex-shrink-0 flex-col items-end pr-1.5">
+          <div className="-mt-[19px] ml-auto flex flex-shrink-0 flex-col items-end pr-1.5">
             <div className="flex items-end gap-2">
               <div className="rounded-xl2 border border-coffee-200 bg-coffee-100 px-4 py-2.5 text-center shadow-card">
                 <p className="font-destaque text-lg font-bold text-coffee-800">{usuario.pontos || 0}</p>
