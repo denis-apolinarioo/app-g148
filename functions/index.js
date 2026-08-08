@@ -22,7 +22,14 @@
 //   acima da função, mais abaixo neste arquivo.
 // ============================================================================
 
-const functions = require('firebase-functions');
+// CORREÇÃO DE DEPLOY: firebase-functions 6.x moveu a API v1 (a sintaxe
+// usada neste arquivo — functions.region(...).https.onCall(...),
+// functions.pubsub.schedule(...) etc.) pra dentro do namespace
+// 'firebase-functions/v1'. Sem isso, o deploy falha com "functions.region
+// is not a function" — a raiz real de um erro anterior de timeout
+// ("Cannot determine backend specification"), que só aparecia por causa da
+// versão desatualizada do pacote no package.json (corrigido junto com isto).
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 admin.initializeApp();
