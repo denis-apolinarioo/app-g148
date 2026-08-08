@@ -27,40 +27,37 @@ import { todayBrasilia } from '@/lib/dateUtils';
 // da imagem de referência que o usuário mandou (public/icons/custom/), no
 // lugar dos ícones de lib. Como a cor vem "gravada" na imagem (não são
 // SVG com currentColor), cada um troca de arquivo pelo prop `ativo` em
-// vez de herdar cor via CSS.
+// vez de herdar cor via CSS. Pra clarear no modo escuro, os dois PNGs
+// (claro e a variante "-dark") ficam sempre os dois no DOM, e o CSS puro
+// do Tailwind (dark:) decide qual mostrar — mesmo mecanismo dos ícones do
+// nav (ver BottomNav.js) e dos ícones oficiais, sem JS/hook envolvido.
 function IconePosts({ size, ativo }) {
+  const base = ativo ? 'post-active' : 'post-inactive';
   return (
-    <img
-      src={ativo ? '/icons/custom/post-active.png' : '/icons/custom/post-inactive.png'}
-      width={size}
-      height={size}
-      alt=""
-      className="object-contain"
-    />
+    <>
+      <img src={`/icons/custom/${base}.png`} width={size} height={size} alt="" className="object-contain dark:hidden" />
+      <img src={`/icons/custom/${base}-dark.png`} width={size} height={size} alt="" className="hidden object-contain dark:block" />
+    </>
   );
 }
 
 function IconeOracoesPerfil({ size, ativo }) {
+  const base = ativo ? 'hands-active-perfil' : 'hands-inactive';
   return (
-    <img
-      src={ativo ? '/icons/custom/hands-active-perfil.png' : '/icons/custom/hands-inactive.png'}
-      width={size}
-      height={size}
-      alt=""
-      className="object-contain"
-    />
+    <>
+      <img src={`/icons/custom/${base}.png`} width={size} height={size} alt="" className="object-contain dark:hidden" />
+      <img src={`/icons/custom/${base}-dark.png`} width={size} height={size} alt="" className="hidden object-contain dark:block" />
+    </>
   );
 }
 
 function IconeConquistas({ size, ativo }) {
+  const base = ativo ? 'medal-active' : 'medal-inactive';
   return (
-    <img
-      src={ativo ? '/icons/custom/medal-active.png' : '/icons/custom/medal-inactive.png'}
-      width={size}
-      height={size}
-      alt=""
-      className="object-contain"
-    />
+    <>
+      <img src={`/icons/custom/${base}.png`} width={size} height={size} alt="" className="object-contain dark:hidden" />
+      <img src={`/icons/custom/${base}-dark.png`} width={size} height={size} alt="" className="hidden object-contain dark:block" />
+    </>
   );
 }
 

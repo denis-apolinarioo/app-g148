@@ -23,28 +23,54 @@ function iconeLucide(Cmp) {
 // Missões e Oração usam os PNGs recortados da imagem de referência que o
 // usuário mandou (public/icons/custom/) — arco-e-flecha e mãos orando —
 // em vez de ícone de fonte/lib, por isso trocam de arquivo (ativo/inativo)
-// em vez de mudar de cor via CSS.
+// em vez de mudar de cor via CSS. Pra clarear no modo escuro (mesmo
+// desenho, só a variante "-dark" com a cor trocada) SEM depender de nenhum
+// JS: os dois PNGs (claro e escuro) ficam sempre os dois no DOM, e o CSS
+// puro do Tailwind (dark:) decide qual mostrar — exatamente o mesmo
+// mecanismo que já recolore os ícones oficiais, só que aqui trocando a
+// imagem inteira em vez da cor do texto. Sem hook, sem re-render, sem
+// atraso: muda junto com a classe `dark` do <html>, na mesma hora.
 function IconeArcoFlecha({ size, ativo }) {
+  const base = ativo ? 'bow-active' : 'bow-inactive';
   return (
-    <img
-      src={ativo ? '/icons/custom/bow-active.png' : '/icons/custom/bow-inactive.png'}
-      width={size}
-      height={size}
-      alt=""
-      className="object-contain"
-    />
+    <>
+      <img
+        src={`/icons/custom/${base}.png`}
+        width={size}
+        height={size}
+        alt=""
+        className="object-contain dark:hidden"
+      />
+      <img
+        src={`/icons/custom/${base}-dark.png`}
+        width={size}
+        height={size}
+        alt=""
+        className="hidden object-contain dark:block"
+      />
+    </>
   );
 }
 
 function IconeMaosOrando({ size, ativo }) {
+  const base = ativo ? 'hands-active-nav' : 'hands-inactive';
   return (
-    <img
-      src={ativo ? '/icons/custom/hands-active-nav.png' : '/icons/custom/hands-inactive.png'}
-      width={size}
-      height={size}
-      alt=""
-      className="object-contain"
-    />
+    <>
+      <img
+        src={`/icons/custom/${base}.png`}
+        width={size}
+        height={size}
+        alt=""
+        className="object-contain dark:hidden"
+      />
+      <img
+        src={`/icons/custom/${base}-dark.png`}
+        width={size}
+        height={size}
+        alt=""
+        className="hidden object-contain dark:block"
+      />
+    </>
   );
 }
 
