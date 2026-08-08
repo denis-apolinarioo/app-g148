@@ -90,6 +90,55 @@ const TIPOS_CONTADOR = [
   { valor: 'manual', label: 'Manual — sem contador automático, eu concedo à mão' },
 ];
 
+// Lista pedida por Denis: só estes contadores aparecem na hora de CRIAR uma
+// conquista nova (ou editar o tipo de uma já existente que já use um destes).
+// TIPOS_CONTADOR acima continua completo de propósito — é usado por
+// descreverContador() pra mostrar o nome certo de conquistas antigas que já
+// usam um tipo fora dessa lista (ex.: "Tá On" usa 'cadastro', "Publicano"
+// usa 'dracma_saldo'), e por opcoesContador() logo abaixo, que reinclui o
+// tipo atual automaticamente ao editar uma conquista assim — pra nunca trocar
+// o contador dela só por abrir o formulário sem mexer nesse campo.
+const VALORES_CONTADOR_PERMITIDOS_NA_CRIACAO = new Set([
+  'conta_idade_dias',
+  'streak',
+  'top1_dias_seguidos',
+  'top3_dias_seguidos',
+  'top10_dias_seguidos',
+  'conquistas_desbloqueadas',
+  'pontos_total',
+  'missoes_concluidas_total',
+  'missao',
+  'post',
+  'categoria',
+  'curtidas_recebidas_total',
+  'curtidas_dadas',
+  'comentarios',
+  'comentarios_recebidos_total',
+  'mencoes_feitas_total',
+  'mencoes_recebidas_total',
+  'pedido_oracao_criado_total',
+  'oracao',
+  'pessoas_diferentes_orou_total',
+  'dracma_recebido_total',
+  'dracma_enviado_total',
+  'manual',
+]);
+const TIPOS_CONTADOR_CRIACAO = TIPOS_CONTADOR.filter((t) =>
+  VALORES_CONTADOR_PERMITIDOS_NA_CRIACAO.has(t.valor)
+);
+
+// Opções pra um <select> de contador: a lista restrita acima, mas reincluindo
+// o valor atual (com o label certo, vindo da lista completa) se ele não
+// estiver nela — só acontece ao editar uma conquista antiga com um tipo que
+// saiu da lista de criação.
+function opcoesContador(valorAtual) {
+  if (!valorAtual || VALORES_CONTADOR_PERMITIDOS_NA_CRIACAO.has(valorAtual)) {
+    return TIPOS_CONTADOR_CRIACAO;
+  }
+  const atual = TIPOS_CONTADOR.find((t) => t.valor === valorAtual);
+  return atual ? [atual, ...TIPOS_CONTADOR_CRIACAO] : TIPOS_CONTADOR_CRIACAO;
+}
+
 function montarContadorTipo(tipoBase, missaoId, categoriaId) {
   if (tipoBase === 'missao') return `missao:${missaoId || ''}`;
   if (tipoBase === 'categoria') return `categoria:${categoriaId || ''}`;
@@ -508,7 +557,7 @@ const MODOS_CONTADOR = [
 // tipoBase/missaoId/categoriaId do formulário clássico acima, só que
 // repetida por linha (cada contador do combo pode ser um tipo diferente).
 function LinhaContadorMultiplo({ linha, onMudar, onRemover, missoes, categoriasAcao }) {
-  const tiposSemManual = TIPOS_CONTADOR.filter((t) => t.valor !== 'manual');
+  const tiposSemManual = opcoesContador(linha.tipoBase).filter((t) => t.valor !== 'manual');
   return (
     <div className="space-y-2 rounded-lg border border-coffee-100 bg-cream p-3">
       <div className="flex items-center gap-2">
@@ -861,7 +910,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
                 onChange={(e) => setTipoBase(e.target.value)}
                 className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
               >
-                {TIPOS_CONTADOR.map((t) => (
+                {opcoesContador(tipoBase).map((t) => (
                   <option key={t.valor} value={t.valor}>
                     {t.label}
                   </option>
