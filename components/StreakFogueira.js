@@ -120,7 +120,14 @@ export default function StreakFogueira({ dias = 0, aceso = false }) {
           : `Streak de ${dias} ${dias === 1 ? 'dia' : 'dias'} — ainda sem missão concluída hoje`
       }
     >
-      <div className="relative flex h-[66px] w-[66px] translate-y-[5px] items-end justify-center">
+      {/* Caixa com o TAMANHO ORIGINAL fixo (56x56) — é isso que entra na
+          conta do layout flex (items-end na linha com o balão de Pontos de
+          Comunhão, em ProfileView.js). A chama em si é maior (66px) e mais
+          baixa, mas fica com position:absolute por dentro, então o
+          "footprint" que o layout enxerga nunca muda — aumentar/diminuir a
+          chama não empurra mais o balão de Pontos nem a Vitrine de
+          Conquistas embaixo. */}
+      <div className="relative h-14 w-14">
         {aceso && (
           <Lottie
             lottieRef={lottieRef}
@@ -128,14 +135,14 @@ export default function StreakFogueira({ dias = 0, aceso = false }) {
             loop
             autoplay
             onDOMLoaded={() => lottieRef.current?.setSpeed(VELOCIDADE_CHAMA)}
-            className="h-[66px] w-[66px]"
+            className="absolute bottom-[-5px] left-1/2 h-[66px] w-[66px] -translate-x-1/2"
           />
         )}
 
         {faiscas.map((f) => (
           <div
             key={f.id}
-            className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 animate-faiscaVoa"
+            className="pointer-events-none absolute bottom-[19px] left-1/2 -translate-x-1/2 animate-faiscaVoa"
             style={{
               '--faisca-tx1': `${f.tx1}px`,
               '--faisca-ty1': `${f.ty1}px`,
