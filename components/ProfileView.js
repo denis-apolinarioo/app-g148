@@ -364,7 +364,18 @@ function AbaBtn({ ativo, onClick, icone: Icone, label }) {
       aria-label={label}
       title={label}
       className={`flex flex-1 items-center justify-center border-b-2 pb-2.5 pt-2 transition-colors ${
-        ativo ? 'border-coffee-700 text-coffee-800' : 'border-transparent text-coffee-300'
+        // CORREÇÃO DE BUG (barrinha da aba com cor diferente do ícone no
+        // modo escuro): border-coffee-700 remapeia pra #8A6644 no escuro
+        // (marrom médio, é o remapeamento padrão de BORDA/divisor — fica só
+        // "um pouco mais claro"), enquanto os ícones ativos usam #E8DCC8
+        // (o remapeamento de TEXTO, bem mais claro — conferido direto nos
+        // PNGs "-active-dark"). No claro os dois vêm do mesmo marrom, por
+        // isso combinava; no escuro cada um pega um remapeamento diferente
+        // e desencontra. dark:border-[#E8DCC8] força a barrinha a usar
+        // exatamente a mesma cor do ícone no escuro, sem mexer no
+        // remapeamento padrão de border-coffee-700 (usado em outros
+        // lugares como divisor de verdade).
+        ativo ? 'border-coffee-700 text-coffee-800 dark:border-[#E8DCC8]' : 'border-transparent text-coffee-300'
       }`}
     >
       <Icone size={30} strokeWidth={ativo ? 2.1 : 1.7} ativo={ativo} />
