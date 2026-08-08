@@ -334,57 +334,93 @@ exports.excluirConta = functions
       // falha no meio), não é erro — só confirma que já está feito.
       return { ok: true, jaEstavaExcluido: true };
     }
+    const usernameAlvo = alvoSnap.data() ? alvoSnap.data().username : null;
+
+    // DIAGNÓSTICO: cada etapa é isolada com seu próprio try/catch e log —
+    // se uma etapa específica falhar (ex.: falta de permissão do IAM numa
+    // API, índice do Firestore ainda propagando), o erro aparece nos
+    // Registros do Cloud Functions com o nome exato da etapa, em vez de um
+    // "INTERNAL" genérico e sem pista nenhuma de onde quebrou.
+    async function etapa(nome, fn) {
+      try {
+        await fn();
+      } catch (err) {
+        console.error(`[excluirConta] Falhou na etapa "${nome}" (uid=${alvoUid}):`, err);
+        throw new functions.https.HttpsError(
+          'internal',
+          `Falha ao excluir conta na etapa "${nome}": ${err.message || err}`
+        );
+      }
+    }
 
     // --- 1) Anonimiza os campos "congelados" de nome/foto/username -------
     // Posts e comentários (subcoleção de cada post) criados pela pessoa.
-    const postsSnap = await db.collection('posts').where('autorId', '==', alvoUid).get();
-    await commitEmLotes(postsSnap.docs.map((d) => d.ref), (batch, ref) =>
-      batch.update(ref, { autorNome: 'Usuário removido', autorFoto: '', autorUsername: '' })
-    );
+    await etapa('anonimizar posts', async () => {
+      const postsSnap = await db.collection('posts').where('autorId', '==', alvoUid).get();
+      await commitEmLotes(postsSnap.docs.map((d) => d.ref), (batch, ref) =>
+        batch.update(ref, { autorNome: 'Usuário removido', autorFoto: '', autorUsername: '' })
+      );
+    });
     // Comentários da pessoa em posts de QUALQUER autor — precisa varrer a
     // subcoleção de cada post (Firestore não tem "collection group" nativo
     // sem index dedicado; usamos collectionGroup, que já cobre isso sem
     // precisar listar post por post).
-    const comentariosSnap = await db
-      .collectionGroup('comentarios')
-      .where('autorId', '==', alvoUid)
-      .get();
-    await commitEmLotes(comentariosSnap.docs.map((d) => d.ref), (batch, ref) =>
-      batch.update(ref, { autorNome: 'Usuário removido', autorFoto: '' })
-    );
+    await etapa('anonimizar comentários', async () => {
+      const comentariosSnap = await db
+        .collectionGroup('comentarios')
+        .where('autorId', '==', alvoUid)
+        .get();
+      await commitEmLotes(comentariosSnap.docs.map((d) => d.ref), (batch, ref) =>
+        batch.update(ref, { autorNome: 'Usuário removido', autorFoto: '' })
+      );
+    });
     // Pedidos de oração da pessoa.
-    const prayersSnap = await db.collection('prayers').where('autorId', '==', alvoUid).get();
-    await commitEmLotes(prayersSnap.docs.map((d) => d.ref), (batch, ref) =>
-      batch.update(ref, { autorNome: 'Usuário removido', autorFoto: '', autorUsername: '' })
-    );
+    await etapa('anonimizar pedidos de oração', async () => {
+      const prayersSnap = await db.collection('prayers').where('autorId', '==', alvoUid).get();
+      await commitEmLotes(prayersSnap.docs.map((d) => d.ref), (batch, ref) =>
+        batch.update(ref, { autorNome: 'Usuário removido', autorFoto: '', autorUsername: '' })
+      );
+    });
 
     // --- 2) Apaga de vez o que só faz sentido existir com a conta ativa ---
-    const submissoesSnap = await db.collection('missionSubmissions').where('uid', '==', alvoUid).get();
-    await commitEmLotes(submissoesSnap.docs.map((d) => d.ref), (batch, ref) => batch.delete(ref));
+    await etapa('apagar submissões de missão', async () => {
+      const submissoesSnap = await db.collection('missionSubmissions').where('uid', '==', alvoUid).get();
+      await commitEmLotes(submissoesSnap.docs.map((d) => d.ref), (batch, ref) => batch.delete(ref));
+    });
 
-    const pushTokensSnap = await db.collection('pushTokens').where('uid', '==', alvoUid).get();
-    await commitEmLotes(pushTokensSnap.docs.map((d) => d.ref), (batch, ref) => batch.delete(ref));
+    await etapa('apagar tokens de push', async () => {
+      const pushTokensSnap = await db.collection('pushTokens').where('uid', '==', alvoUid).get();
+      await commitEmLotes(pushTokensSnap.docs.map((d) => d.ref), (batch, ref) => batch.delete(ref));
+    });
 
-    await db.collection('walletSecrets').doc(alvoUid).delete();
-    await db.collection('achievementsUnlocked').doc(alvoUid).delete();
+    await etapa('apagar segredo da carteira e conquistas', async () => {
+      await db.collection('walletSecrets').doc(alvoUid).delete();
+      await db.collection('achievementsUnlocked').doc(alvoUid).delete();
+    });
 
     // --- 3) Apaga o perfil em si -------------------------------------------
-    await alvoRef.delete();
-    // O username reservado (coleção `usernames`, ver lib/firestore-helpers.js
-    // -> getUserByUsername) também precisa sumir, senão ninguém mais
-    // consegue registrar esse @ de novo.
-    if (alvoSnap.data().username) {
-      await db.collection('usernames').doc(String(alvoSnap.data().username).toLowerCase()).delete().catch(() => {});
-    }
+    await etapa('apagar perfil', async () => {
+      await alvoRef.delete();
+      // O username reservado (coleção `usernames`, ver lib/firestore-helpers.js
+      // -> getUserByUsername) também precisa sumir, senão ninguém mais
+      // consegue registrar esse @ de novo.
+      if (usernameAlvo) {
+        await db.collection('usernames').doc(String(usernameAlvo).toLowerCase()).delete().catch((err) => {
+          console.error(`[excluirConta] Não foi possível apagar username reservado (uid=${alvoUid}):`, err);
+        });
+      }
+    });
 
     // --- 4) Apaga o login (Firebase Auth) ----------------------------------
     // Sem isso, a pessoa continuaria conseguindo entrar (o app trataria
     // como "perfil sumiu", mas o login em si continuaria válido).
-    await auth.deleteUser(alvoUid).catch((err) => {
-      // 'auth/user-not-found' é ok (idempotente); qualquer outro erro aqui
-      // sobe pro chamador, porque significa que a conta de login ainda
-      // existe e a pessoa ainda consegue entrar.
-      if (err.code !== 'auth/user-not-found') throw err;
+    await etapa('apagar login (Firebase Auth)', async () => {
+      await auth.deleteUser(alvoUid).catch((err) => {
+        // 'auth/user-not-found' é ok (idempotente); qualquer outro erro aqui
+        // sobe pro chamador, porque significa que a conta de login ainda
+        // existe e a pessoa ainda consegue entrar.
+        if (err.code !== 'auth/user-not-found') throw err;
+      });
     });
 
     return { ok: true, jaEstavaExcluido: false };
