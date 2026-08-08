@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Lottie from 'lottie-react';
 import { Flame } from 'lucide-react';
 import { vibrarToqueLeve } from '@/lib/haptics';
@@ -13,6 +13,27 @@ let proximoIdFaisca = 0;
 // rápido"). Setado via lottieRef.setSpeed porque a versão do lottie-react
 // usada aqui não tem prop `speed` direta.
 const VELOCIDADE_CHAMA = 2.0;
+
+// Cada faísca "estoura" da chama numa direção totalmente aleatória (pode
+// sair de lado ou até meio pra baixo, como uma fagulha de verdade), mas a
+// partir do 2º trecho a trajetória sempre curva pra cima — o puxão vertical
+// domina o resto do caminho, não importa de que lado ela saiu. É uma curva
+// em 3 trechos (estouro → sobe → some), não uma linha reta.
+function gerarTrajetoriaFaisca() {
+  const anguloEstouro = Math.random() * 360;
+  const distEstouro = 5 + Math.random() * 9;
+  const tx1 = Math.cos((anguloEstouro * Math.PI) / 180) * distEstouro;
+  const ty1 = Math.sin((anguloEstouro * Math.PI) / 180) * distEstouro;
+
+  const derivaLateral = (Math.random() - 0.5) * 14; // ventinho lateral extra, aleatório
+  const tx2 = tx1 * 1.3 + derivaLateral;
+  const ty2 = -(16 + Math.random() * 12); // a partir daqui só sobe
+
+  const tx3 = tx2 * 0.75; // desacelera de lado (resistência do ar)
+  const ty3 = -(42 + Math.random() * 22); // continua subindo até sumir
+
+  return { tx1, ty1, tx2, ty2, tx3, ty3 };
+}
 
 /**
  * Fogueira do streak de constância — usa a animação Lottie fire.json (fogo
@@ -27,9 +48,12 @@ const VELOCIDADE_CHAMA = 2.0;
  * já que o streak só reseta de fato na próxima ação fora da sequência (ver
  * atualizarStreak em lib/points.js).
  *
- * Interação: cada clique solta 1 faísca avulsa, com direção e distância
- * aleatórias — só efeito visual, não mexe em nada no Firestore. Só reage a
- * clique quando está acesa (sem fogo, não tem o que faiscar).
+ * Faíscas: saem sozinhas o tempo todo enquanto está acesa, num intervalo
+ * sempre aleatório girando em torno de meio segundo (não é um metrônomo
+ * fixo de 500ms — cada uma espera um tempinho diferente). Um toque na
+ * fogueira solta mais uma faísca na hora, além dessas automáticas. Só
+ * efeito visual, não mexe em nada no Firestore. Sem fogo, não tem o que
+ * faiscar (nem automático nem por toque).
  */
 export default function StreakFogueira({ dias = 0, aceso = false }) {
   const [faiscas, setFaiscas] = useState([]);
@@ -43,23 +67,42 @@ export default function StreakFogueira({ dias = 0, aceso = false }) {
     lottieRef.current?.setSpeed(VELOCIDADE_CHAMA);
   }, [aceso]);
 
+  const emitirFaisca = useCallback(() => {
+    const id = proximoIdFaisca++;
+    setFaiscas((atual) => [...atual, { id, ...gerarTrajetoriaFaisca() }]);
+    setTimeout(() => {
+      setFaiscas((atual) => atual.filter((f) => f.id !== id));
+    }, 900);
+  }, []);
+
+  // Loop de faíscas automáticas: reagenda a si mesmo com um atraso aleatório
+  // a cada rodada, então nunca cai num ritmo mecânico. Só roda enquanto a
+  // fogueira está acesa; para e limpa o timer se apagar ou desmontar.
+  useEffect(() => {
+    if (!aceso) return undefined;
+    let ativo = true;
+    let timeoutId;
+
+    function agendarProxima() {
+      const atraso = 300 + Math.random() * 400; // gira em torno de 0,5s, sempre aleatório
+      timeoutId = setTimeout(() => {
+        if (!ativo) return;
+        emitirFaisca();
+        agendarProxima();
+      }, atraso);
+    }
+
+    agendarProxima();
+    return () => {
+      ativo = false;
+      clearTimeout(timeoutId);
+    };
+  }, [aceso, emitirFaisca]);
+
   function handleClick() {
     if (!aceso) return;
     vibrarToqueLeve();
-
-    const id = proximoIdFaisca++;
-    // Ângulo e distância aleatórios pra cada faísca sair "pra qualquer lado",
-    // com viés leve pra cima (ty sempre negativo) pra parecer faísca subindo,
-    // não caindo.
-    const anguloGraus = 200 + Math.random() * 140; // ~200°–340°: leque voltado pra cima
-    const distancia = 22 + Math.random() * 20;
-    const tx = Math.cos((anguloGraus * Math.PI) / 180) * distancia;
-    const ty = Math.sin((anguloGraus * Math.PI) / 180) * distancia;
-
-    setFaiscas((atual) => [...atual, { id, tx, ty }]);
-    setTimeout(() => {
-      setFaiscas((atual) => atual.filter((f) => f.id !== id));
-    }, 650);
+    emitirFaisca();
   }
 
   return (
@@ -93,7 +136,14 @@ export default function StreakFogueira({ dias = 0, aceso = false }) {
           <div
             key={f.id}
             className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 animate-faiscaVoa"
-            style={{ '--faisca-tx': `${f.tx}px`, '--faisca-ty': `${f.ty}px` }}
+            style={{
+              '--faisca-tx1': `${f.tx1}px`,
+              '--faisca-ty1': `${f.ty1}px`,
+              '--faisca-tx2': `${f.tx2}px`,
+              '--faisca-ty2': `${f.ty2}px`,
+              '--faisca-tx3': `${f.tx3}px`,
+              '--faisca-ty3': `${f.ty3}px`,
+            }}
           >
             <Flame size={11} fill="currentColor" className="text-orange-400" />
           </div>
