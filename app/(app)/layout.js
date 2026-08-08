@@ -12,12 +12,14 @@ import { processarFilaOffline } from '@/lib/offlineQueue';
 import { useSwipeNavigation } from '@/lib/useSwipeNavigation';
 import { ABAS_PRINCIPAIS } from '@/lib/constants';
 import { Lock } from 'lucide-react';
+import { useSincronizarBarrinha } from '@/lib/theme';
 
 export default function AppLayout({ children }) {
   const { usuarioAuth, perfil, carregando } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const swipeHandlers = useSwipeNavigation();
+  useSincronizarBarrinha();
 
   // Compara o pathname anterior com o atual DURANTE a renderização (padrão
   // recomendado pelo React pra "ajustar estado quando uma prop muda", em vez
