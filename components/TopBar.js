@@ -13,7 +13,7 @@ export default function TopBar({ titulo, voltarPara, voltarPorHistorico, acao })
   const router = useRouter();
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-2 border-b border-coffee-100 bg-cream/95 px-4 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)]">
+    <header className="sticky top-0 z-30 flex items-center gap-2 bg-cream/95 px-4 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)]">
       {voltarPorHistorico ? (
         <button
           type="button"
