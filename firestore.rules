@@ -382,9 +382,14 @@ service cloud.firestore {
     // já assumido pra `pontos` (ver comentário no topo do arquivo).
     match /achievementsUnlocked/{docId} {
       allow read: if isSignedIn();
+      // ATUALIZAÇÃO CONQUISTAS — "|| isAdmin()" permite conceder conquista
+      // manualmente pra OUTRA pessoa (painel Conquistas → Aprovar
+      // Manualmente, ver concederConquistaManualmente em
+      // lib/achievements.js). Antes, só a própria pessoa conseguia
+      // desbloquear a própria conquista.
       allow create: if isSignedIn() &&
-        request.resource.data.uid == request.auth.uid &&
-        docId == request.auth.uid + '_' + request.resource.data.achievementId;
+        docId == request.resource.data.uid + '_' + request.resource.data.achievementId &&
+        (request.resource.data.uid == request.auth.uid || isAdmin());
       // Só permite marcar a própria conquista como "vista" (usado depois da
       // animação do cadeado abrindo na aba de conquistas do perfil) — nenhum
       // outro campo pode mudar por essa via.
@@ -392,6 +397,38 @@ service cloud.firestore {
         resource.data.uid == request.auth.uid &&
         apenasEstesCamposMudaram(['visto']) &&
         request.resource.data.visto == true;
+      allow delete: if false;
+    }
+
+    // ATUALIZAÇÃO CONQUISTAS — progresso de uma conquista com múltiplos
+    // contadores + período de validação (ver avaliarConquistaMultiContador
+    // em lib/achievements.js). Só a própria pessoa lê/escreve o próprio
+    // progresso; concessão manual pelo Admin nunca passa por aqui (ela
+    // desbloqueia direto, sem contador nem período).
+    match /conquistaProgresso/{docId} {
+      allow read: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid &&
+        docId == request.auth.uid + '_' + request.resource.data.conquistaId;
+      allow update: if isSignedIn() && resource.data.uid == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // ATUALIZAÇÃO CONQUISTAS — 1 registro por @menção válida feita num
+    // comentário (ver addComment em lib/firestore-helpers.js), usado pelos
+    // contadores 'mencoes_feitas_total'/'mencoes_recebidas_total'. Quem
+    // grava é sempre quem MENCIONOU (remetenteId == auth.uid) — é assim
+    // que dá pra creditar "menções recebidas" na conta de outra pessoa sem
+    // ela precisar estar logada no momento (mesma ideia de dracmaLog
+    // aceitar `origem` numa transferência). Ninguém edita ou apaga
+    // (histórico permanente, igual pointsLog/dracmaLog).
+    match /mencoesLog/{logId} {
+      allow read: if isSignedIn() &&
+        (resource.data.remetenteId == request.auth.uid ||
+         resource.data.mencionadoId == request.auth.uid ||
+         isAdmin());
+      allow create: if isSignedIn() && request.resource.data.remetenteId == request.auth.uid;
+      allow update: if false;
       allow delete: if false;
     }
 

@@ -10,6 +10,7 @@ import {
   ChevronDown,
   GripVertical,
   Users,
+  UserCheck,
   UploadCloud,
   X,
 } from 'lucide-react';
@@ -24,7 +25,7 @@ import {
 } from '@/lib/conquistasRepo';
 import { getTodasAsMissoes } from '@/lib/missionsRepo';
 import { getTodasAsCategoriasAcao } from '@/lib/categoriasAcaoRepo';
-import { getConquistasDoUsuario } from '@/lib/achievements';
+import { getConquistasDoUsuario, concederConquistaManualmente } from '@/lib/achievements';
 import { getAllUsers } from '@/lib/firestore-helpers';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { uploadImagemConquista } from '@/lib/storage';
@@ -73,6 +74,19 @@ const TIPOS_CONTADOR = [
   { valor: 'conta_idade_dias', label: 'Dias desde a criação da conta' },
   { valor: 'pedido_e_oracoes:10', label: 'Fez pedido próprio de oração + orou por 10 pessoas' },
   { valor: 'top1_dias_seguidos', label: 'Dias seguidos em 1º no ranking' },
+  // ---- adicionados na Atualização de Conquistas (múltiplos contadores) ----
+  { valor: 'top3_dias_seguidos', label: 'Dias seguidos no Top 3 do ranking' },
+  { valor: 'top10_dias_seguidos', label: 'Dias seguidos no Top 10 do ranking' },
+  { valor: 'pontos_total', label: 'Pontos de Comunhão total (histórico, não zera na temporada)' },
+  { valor: 'missoes_concluidas_total', label: 'Missões concluídas (qualquer uma)' },
+  { valor: 'curtidas_recebidas_total', label: 'Curtidas recebidas (soma de todos os posts)' },
+  { valor: 'comentarios_recebidos_total', label: 'Comentários recebidos (soma de todos os posts)' },
+  { valor: 'mencoes_feitas_total', label: 'Menções feitas (@alguém em um comentário)' },
+  { valor: 'mencoes_recebidas_total', label: 'Menções recebidas (@você em um comentário)' },
+  { valor: 'pedido_oracao_criado_total', label: 'Pedidos/Agradecimentos de oração criados' },
+  { valor: 'pessoas_diferentes_orou_total', label: 'Pessoas diferentes por quem já orou' },
+  { valor: 'dracma_enviado_total', label: 'Dracma enviada (valor total, não quantidade)' },
+  { valor: 'dracma_recebido_total', label: 'Dracma recebida (valor total, não quantidade)' },
   { valor: 'manual', label: 'Manual — sem contador automático, eu concedo à mão' },
 ];
 
@@ -93,6 +107,15 @@ function desmontarContadorTipo(contadorTipo) {
 }
 
 function descreverContador(conquista, missoesPorId, categoriasPorId) {
+  // ATUALIZAÇÃO CONQUISTAS — precisa vir ANTES do desmontarContadorTipo:
+  // conquista com `contadores` não necessariamente tem contadorTipo
+  // preenchido, e sem esse desvio caía no fallback 'streak' (errado/
+  // enganoso).
+  if (Array.isArray(conquista.contadores) && conquista.contadores.length > 0) {
+    const prazo = conquista.periodoValidacaoDias > 0 ? `prazo ${conquista.periodoValidacaoDias}d` : 'sem prazo';
+    const vezes = conquista.meta > 1 ? ` · repete ${conquista.meta}x` : '';
+    return `combo de ${conquista.contadores.length} contadores · ${prazo}${vezes}`;
+  }
   const { tipoBase, missaoId, categoriaId } = desmontarContadorTipo(conquista.contadorTipo);
   if (tipoBase === 'manual') return 'concedida manualmente';
   if (tipoBase === 'missao') {
@@ -116,6 +139,7 @@ export default function AbaConquistas() {
   const [conquistaEditando, setConquistaEditando] = useState(null); // objeto = editar, 'nova' = criar
   const [apagando, setApagando] = useState(null);
   const [mostrarBuscaPessoa, setMostrarBuscaPessoa] = useState(false);
+  const [mostrarAprovarManual, setMostrarAprovarManual] = useState(false);
   const [migrandoNovas, setMigrandoNovas] = useState(false);
   const [resultadoMigracaoNovas, setResultadoMigracaoNovas] = useState(null);
 
@@ -307,6 +331,15 @@ export default function AbaConquistas() {
           {mostrarBuscaPessoa ? 'Esconder busca por pessoa' : 'Buscar quem já conquistou o quê'}
         </button>
         {mostrarBuscaPessoa && <BuscaConquistasPorPessoa />}
+
+        <button
+          onClick={() => setMostrarAprovarManual((v) => !v)}
+          className="mt-2.5 flex items-center gap-1.5 text-xs font-semibold text-coffee-600"
+        >
+          <UserCheck size={13} />
+          {mostrarAprovarManual ? 'Esconder aprovar manualmente' : 'Aprovar conquista manualmente'}
+        </button>
+        {mostrarAprovarManual && <AprovarConquistaManual conquistas={conquistas} />}
       </div>
 
       {conquistaEditando && (
@@ -385,6 +418,171 @@ function BuscaConquistasPorPessoa() {
   );
 }
 
+// ----------------------------------------------------------------------------
+// ATUALIZAÇÃO CONQUISTAS — Conquistas → Aprovar Manualmente. Só lista
+// conquistas configuradas como manuais (contadorTipo === 'manual', ativas);
+// escolhe a pessoa (mesmo BuscaUsuario de sempre) e concede com 1 toque.
+// Passa pelo MESMO desbloquear() de uma conquista automática — recompensa
+// de Pontos/Dracma, notificação, histórico e contagem pro ranking ficam
+// idênticos (ver concederConquistaManualmente em lib/achievements.js).
+// ----------------------------------------------------------------------------
+function AprovarConquistaManual({ conquistas }) {
+  const { perfil } = useAuth();
+  const [usuarios, setUsuarios] = useState(null);
+  const [selecionado, setSelecionado] = useState(null);
+  const [concedendo, setConcedendo] = useState(null);
+  const [resultado, setResultado] = useState({});
+
+  const conquistasManuais = conquistas.filter((c) => c.contadorTipo === 'manual' && c.ativa !== false);
+
+  useEffect(() => {
+    getAllUsers()
+      .then(setUsuarios)
+      .catch((err) => {
+        console.error('[AprovarConquistaManual] Erro ao carregar usuários:', err);
+        setUsuarios([]);
+      });
+  }, []);
+
+  async function handleConceder(conquista) {
+    if (!selecionado || concedendo) return;
+    setConcedendo(conquista.id);
+    setResultado((r) => ({ ...r, [conquista.id]: null }));
+    try {
+      const concedida = await concederConquistaManualmente(selecionado.id, conquista.id, perfil);
+      setResultado((r) => ({
+        ...r,
+        [conquista.id]: concedida ? 'Concedida!' : `${selecionado.nome} já tinha essa conquista.`,
+      }));
+    } catch (err) {
+      console.error('Erro ao conceder conquista manual:', err);
+      setResultado((r) => ({ ...r, [conquista.id]: 'Não foi possível conceder agora.' }));
+    } finally {
+      setConcedendo(null);
+    }
+  }
+
+  return (
+    <div className="mt-2.5 space-y-2.5 rounded-xl2 border border-coffee-100 bg-cream-card p-3.5">
+      <BuscaUsuario usuarios={usuarios} selecionado={selecionado} onSelecionar={setSelecionado} />
+
+      {conquistasManuais.length === 0 && (
+        <p className="text-xs text-coffee-300">
+          Nenhuma conquista manual ativa ainda — crie uma escolhendo &quot;Manual&quot; em
+          &quot;O que conta pra essa conquista&quot;.
+        </p>
+      )}
+
+      {selecionado &&
+        conquistasManuais.map((c) => (
+          <div key={c.id} className="flex items-center gap-2.5 rounded-lg bg-cream px-3 py-2">
+            <EmblemaConquista conquista={c} size={32} bloqueada={false} mostrarCadeado={false} className="flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-coffee-700">{c.nome}</p>
+              {resultado[c.id] && <p className="text-[11px] text-coffee-400">{resultado[c.id]}</p>}
+            </div>
+            <button
+              onClick={() => handleConceder(c)}
+              disabled={concedendo === c.id}
+              className="flex-shrink-0 rounded-lg bg-coffee-700 px-3 py-1.5 text-xs font-semibold text-cream disabled:opacity-40"
+            >
+              {concedendo === c.id ? <Loader2 size={13} className="animate-spin" /> : 'Conceder'}
+            </button>
+          </div>
+        ))}
+    </div>
+  );
+}
+
+// ATUALIZAÇÃO CONQUISTAS — os 3 modos de cada contador dentro de um combo de
+// múltiplos contadores (ver comentário grande em avaliarConquistaMultiContador,
+// lib/achievements.js, sobre o que cada um significa e a limitação de
+// alguns contadores não terem histórico pra respeitar o modo escolhido).
+const MODOS_CONTADOR = [
+  { valor: 'estado_atual', label: 'Estado Atual (histórico todo, mesmo de antes da conquista)' },
+  { valor: 'obtido_periodo', label: 'Obtido Durante o Período (só o progresso feito dentro do prazo)' },
+  { valor: 'lancamento', label: 'A Partir do Lançamento (só desde que a conquista foi criada)' },
+];
+
+// Uma linha do editor de "múltiplos contadores" — mesma ideia de
+// tipoBase/missaoId/categoriaId do formulário clássico acima, só que
+// repetida por linha (cada contador do combo pode ser um tipo diferente).
+function LinhaContadorMultiplo({ linha, onMudar, onRemover, missoes, categoriasAcao }) {
+  const tiposSemManual = TIPOS_CONTADOR.filter((t) => t.valor !== 'manual');
+  return (
+    <div className="space-y-2 rounded-lg border border-coffee-100 bg-cream p-3">
+      <div className="flex items-center gap-2">
+        <select
+          value={linha.tipoBase}
+          onChange={(e) => onMudar({ ...linha, tipoBase: e.target.value })}
+          className="w-full rounded-lg border border-coffee-100 bg-cream-card px-2.5 py-2 text-xs text-coffee-800"
+        >
+          {tiposSemManual.map((t) => (
+            <option key={t.valor} value={t.valor}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+        <button type="button" onClick={onRemover} className="flex-shrink-0 text-coffee-400">
+          <X size={16} />
+        </button>
+      </div>
+
+      {linha.tipoBase === 'missao' && (
+        <select
+          value={linha.missaoId}
+          onChange={(e) => onMudar({ ...linha, missaoId: e.target.value })}
+          className="w-full rounded-lg border border-coffee-100 bg-cream-card px-2.5 py-2 text-xs text-coffee-800"
+        >
+          <option value="">Qual missão…</option>
+          {missoes.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.titulo}
+            </option>
+          ))}
+        </select>
+      )}
+
+      {linha.tipoBase === 'categoria' && (
+        <select
+          value={linha.categoriaId}
+          onChange={(e) => onMudar({ ...linha, categoriaId: e.target.value })}
+          className="w-full rounded-lg border border-coffee-100 bg-cream-card px-2.5 py-2 text-xs text-coffee-800"
+        >
+          <option value="">Qual categoria…</option>
+          {categoriasAcao.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nome}
+            </option>
+          ))}
+        </select>
+      )}
+
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min="1"
+          value={linha.meta}
+          onChange={(e) => onMudar({ ...linha, meta: e.target.value })}
+          placeholder="Meta"
+          className="w-20 flex-shrink-0 rounded-lg border border-coffee-100 bg-cream-card px-2.5 py-2 text-xs text-coffee-800"
+        />
+        <select
+          value={linha.modo}
+          onChange={(e) => onMudar({ ...linha, modo: e.target.value })}
+          className="w-full rounded-lg border border-coffee-100 bg-cream-card px-2.5 py-2 text-xs text-coffee-800"
+        >
+          {MODOS_CONTADOR.map((m) => (
+            <option key={m.valor} value={m.valor}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
 function Campo({ label, children }) {
   return (
     <div>
@@ -408,6 +606,40 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
   const [categoriaId, setCategoriaId] = useState(iniciais.categoriaId);
   const [meta, setMeta] = useState(conquistaInicial?.meta ?? 10);
   const [ativa, setAtiva] = useState(conquistaInicial?.ativa ?? true);
+
+  // ATUALIZAÇÃO CONQUISTAS — múltiplos contadores + período de validação.
+  // `usarMultiplo` liga/desliga o modo avançado; desligado, o formulário se
+  // comporta 100% como antes (1 contadorTipo + meta). `contadoresLinhas`
+  // espelha tipoBase/missaoId/categoriaId do formulário clássico, só que
+  // uma vez por linha — convertido pra { tipo, meta, modo } só na hora de
+  // salvar (ver montarContadorTipo/handleSalvar).
+  const usarMultiploInicial = Array.isArray(conquistaInicial?.contadores) && conquistaInicial.contadores.length > 0;
+  const [usarMultiplo, setUsarMultiplo] = useState(usarMultiploInicial);
+  const [contadoresLinhas, setContadoresLinhas] = useState(() => {
+    if (!usarMultiploInicial) {
+      return [{ tipoBase: 'streak', missaoId: '', categoriaId: '', meta: 1, modo: 'estado_atual' }];
+    }
+    return conquistaInicial.contadores.map((c) => {
+      const d = desmontarContadorTipo(c.tipo);
+      return { tipoBase: d.tipoBase, missaoId: d.missaoId, categoriaId: d.categoriaId, meta: c.meta ?? 1, modo: c.modo || 'estado_atual' };
+    });
+  });
+  const [periodoValidacaoDias, setPeriodoValidacaoDias] = useState(conquistaInicial?.periodoValidacaoDias || '');
+  const [pontosRecompensa, setPontosRecompensa] = useState(conquistaInicial?.pontosRecompensa || '');
+  const [dracmaRecompensa, setDracmaRecompensa] = useState(conquistaInicial?.dracmaRecompensa || '');
+
+  function adicionarLinhaContador() {
+    setContadoresLinhas((linhas) => [
+      ...linhas,
+      { tipoBase: 'streak', missaoId: '', categoriaId: '', meta: 1, modo: 'estado_atual' },
+    ]);
+  }
+  function mudarLinhaContador(index, novaLinha) {
+    setContadoresLinhas((linhas) => linhas.map((l, i) => (i === index ? novaLinha : l)));
+  }
+  function removerLinhaContador(index) {
+    setContadoresLinhas((linhas) => linhas.filter((_, i) => i !== index));
+  }
 
   const [previewImagem, setPreviewImagem] = useState(conquistaInicial?.imagemURL || '');
   const [arquivoImagem, setArquivoImagem] = useState(null);
@@ -443,6 +675,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
 
   async function handleSalvar() {
     if (!nome.trim() || salvando) return;
+    if (usarMultiplo && contadoresLinhas.length === 0) return;
     setSalvando(true);
     setErro('');
     try {
@@ -451,10 +684,28 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
         descricao: descricao.trim(),
         icone,
         emblema,
-        contadorTipo: montarContadorTipo(tipoBase, missaoId, categoriaId),
-        meta: tipoBase === 'manual' ? null : Number(meta) || 0,
         ativa,
+        // ATUALIZAÇÃO CONQUISTAS — recompensa opcional, vale pra clássica,
+        // múltipla E manual (todas passam pelo mesmo desbloquear()).
+        pontosRecompensa: Number(pontosRecompensa) || 0,
+        dracmaRecompensa: Number(dracmaRecompensa) || 0,
       };
+
+      if (usarMultiplo) {
+        dados.contadores = contadoresLinhas.map((l) => ({
+          tipo: montarContadorTipo(l.tipoBase, l.missaoId, l.categoriaId),
+          meta: Number(l.meta) || 1,
+          modo: l.modo,
+        }));
+        dados.periodoValidacaoDias = Number(periodoValidacaoDias) || 0;
+        dados.meta = Number(meta) || 1; // aqui vira "quantas vezes repetir o combo"
+        dados.contadorTipo = null; // combo múltiplo não usa o contadorTipo clássico
+      } else {
+        dados.contadores = []; // permite "desligar" o modo múltiplo numa edição
+        dados.periodoValidacaoDias = 0;
+        dados.contadorTipo = montarContadorTipo(tipoBase, missaoId, categoriaId);
+        dados.meta = tipoBase === 'manual' ? null : Number(meta) || 0;
+      }
 
       let idFinal;
       if (editando) {
@@ -588,21 +839,38 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
             />
           </Campo>
 
-          <Campo label="O que conta pra essa conquista">
-            <select
-              value={tipoBase}
-              onChange={(e) => setTipoBase(e.target.value)}
-              className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
-            >
-              {TIPOS_CONTADOR.map((t) => (
-                <option key={t.valor} value={t.valor}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+          <Campo label="Múltiplos contadores + período de validação (opcional)">
+            <label className="flex items-center justify-between gap-2 rounded-lg border border-coffee-100 bg-cream px-3 py-2.5">
+              <span className="text-[11px] text-coffee-500">
+                Combine várias condições (ex.: 3 missões diferentes) com um prazo em dias pra
+                cumprir todas juntas, em vez de um contador só.
+              </span>
+              <input
+                type="checkbox"
+                checked={usarMultiplo}
+                onChange={(e) => setUsarMultiplo(e.target.checked)}
+                className="flex-shrink-0"
+              />
+            </label>
           </Campo>
 
-          {tipoBase === 'missao' && (
+          {!usarMultiplo && (
+            <Campo label="O que conta pra essa conquista">
+              <select
+                value={tipoBase}
+                onChange={(e) => setTipoBase(e.target.value)}
+                className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+              >
+                {TIPOS_CONTADOR.map((t) => (
+                  <option key={t.valor} value={t.valor}>
+                    {t.label}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+          )}
+
+          {!usarMultiplo && tipoBase === 'missao' && (
             <Campo label="Qual missão">
               <select
                 value={missaoId}
@@ -619,7 +887,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
             </Campo>
           )}
 
-          {tipoBase === 'categoria' && (
+          {!usarMultiplo && tipoBase === 'categoria' && (
             <Campo label="Qual categoria de ação">
               <select
                 value={categoriaId}
@@ -641,7 +909,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
             </Campo>
           )}
 
-          {tipoBase !== 'manual' && (
+          {!usarMultiplo && tipoBase !== 'manual' && (
             <Campo label="Quantas vezes é preciso fazer (meta)">
               <input
                 type="number"
@@ -653,12 +921,82 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
             </Campo>
           )}
 
-          {tipoBase === 'manual' && (
+          {!usarMultiplo && tipoBase === 'manual' && (
             <p className="text-xs text-coffee-400">
-              Conquista manual não é desbloqueada sozinha — precisa ser concedida à mão (recurso
-              ainda não tem uma tela própria; por enquanto é feito direto no Firestore).
+              Conquista manual não é desbloqueada sozinha — precisa ser concedida à mão em
+              Conquistas &gt; Aprovar Manualmente (fora deste formulário).
             </p>
           )}
+
+          {usarMultiplo && (
+            <>
+              <Campo label="Contadores do combo (todos precisam ser cumpridos)">
+                <div className="space-y-2">
+                  {contadoresLinhas.map((linha, index) => (
+                    <LinhaContadorMultiplo
+                      key={index}
+                      linha={linha}
+                      onMudar={(nova) => mudarLinhaContador(index, nova)}
+                      onRemover={() => removerLinhaContador(index)}
+                      missoes={missoes}
+                      categoriasAcao={categoriasAcao}
+                    />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={adicionarLinhaContador}
+                  className="mt-2 flex items-center gap-1 text-xs font-semibold text-coffee-600"
+                >
+                  <Plus size={13} /> Adicionar contador
+                </button>
+              </Campo>
+
+              <Campo label="Período de validação em dias (prazo pessoal pra cumprir todos — vazio = sem prazo)">
+                <input
+                  type="number"
+                  min="1"
+                  value={periodoValidacaoDias}
+                  onChange={(e) => setPeriodoValidacaoDias(e.target.value)}
+                  placeholder="Ex: 1, 7, 30…"
+                  className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+                />
+              </Campo>
+
+              <Campo label="Quantas vezes repetir o combo (deixe 1 pra valer só uma vez)">
+                <input
+                  type="number"
+                  min="1"
+                  value={meta}
+                  onChange={(e) => setMeta(e.target.value)}
+                  className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+                />
+              </Campo>
+            </>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <Campo label="Recompensa em Pontos (opcional)">
+              <input
+                type="number"
+                min="0"
+                value={pontosRecompensa}
+                onChange={(e) => setPontosRecompensa(e.target.value)}
+                placeholder="0"
+                className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+              />
+            </Campo>
+            <Campo label="Recompensa em Dracma (opcional)">
+              <input
+                type="number"
+                min="0"
+                value={dracmaRecompensa}
+                onChange={(e) => setDracmaRecompensa(e.target.value)}
+                placeholder="0"
+                className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+              />
+            </Campo>
+          </div>
 
           <label className="flex items-center gap-2 text-xs text-coffee-500">
             <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} />

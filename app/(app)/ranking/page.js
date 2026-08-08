@@ -9,7 +9,7 @@ import RankingRow from '@/components/RankingRow';
 import EmptyState from '@/components/EmptyState';
 import { Trophy } from 'lucide-react';
 import { reportarConexaoOk, reportarErroConexao } from '@/lib/connectivity';
-import { atualizarStreakTop1 } from '@/lib/rankingStreak';
+import { atualizarStreaksRanking } from '@/lib/rankingStreak';
 
 export default function RankingPage() {
   const { perfil } = useAuth();
@@ -41,18 +41,21 @@ export default function RankingPage() {
   }, []);
 
   const minhaPosicao = usuarios?.findIndex((u) => u.id === perfil?.uid);
-  const estouEm1Lugar = minhaPosicao === 0;
+  // ATUALIZAÇÃO CONQUISTAS — 1-indexada (1 = primeiro lugar), pra
+  // atualizarStreaksRanking cuidar das 3 faixas (1º, Top 3, Top 10) de uma
+  // vez. Antes era um booleano só de "está em 1º".
+  const minhaPosicao1Indexada = minhaPosicao >= 0 ? minhaPosicao + 1 : null;
 
-  // CONQUISTA "Planando como Águia" — checagem por dia, não em tempo real
-  // (ver comentário de limitação em lib/rankingStreak.js). Só dispara
-  // quando o status de "estar em 1º" muda de fato (não a cada tick do
-  // ranking em tempo real).
+  // CONQUISTA "Planando como Águia" (e as novas de Top 3/Top 10) — checagem
+  // por dia, não em tempo real (ver comentário de limitação em
+  // lib/rankingStreak.js). Só dispara quando a posição muda de fato (não a
+  // cada tick do ranking em tempo real).
   useEffect(() => {
-    if (!perfil?.uid || minhaPosicao === undefined || minhaPosicao === -1) return;
-    atualizarStreakTop1(perfil.uid, estouEm1Lugar).catch((err) => {
-      console.error('Erro ao atualizar streak de 1º lugar:', err);
+    if (!perfil?.uid || !minhaPosicao1Indexada) return;
+    atualizarStreaksRanking(perfil.uid, minhaPosicao1Indexada).catch((err) => {
+      console.error('Erro ao atualizar streak de ranking:', err);
     });
-  }, [perfil?.uid, estouEm1Lugar]);
+  }, [perfil?.uid, minhaPosicao1Indexada]);
 
   return (
     <div className="mx-auto max-w-2xl">
