@@ -32,15 +32,6 @@ body {
   color: #3f2c1c;
   font-family: var(--font-body);
   overscroll-behavior-y: none;
-  /* CORREÇÃO DE BUG (linha fina embaixo da barra de notificação ao trocar
-     de tema, só no Android/PWA instalado): o Android anima nativamente a
-     cor da barra de status quando ela muda (é o próprio sistema fazendo
-     isso, não dá pra desligar) — mas o fundo da página, sem isso aqui,
-     trocava de cor instantaneamente. Um lado animado e o outro instantâneo
-     é o que sobrava como linha por uma fração de segundo. Com os dois no
-     mesmo ritmo (~300ms), a transição fica sincronizada em vez de um
-     "pulando" na frente do outro. */
-  transition: background-color 300ms ease-out;
 }
 
 html.dark,
@@ -48,6 +39,30 @@ html.dark body {
   color-scheme: dark;
   background-color: #0d0906;
   color: #f3ece0;
+}
+
+/* Transição suave ao trocar tema (claro/escuro). Antes, só o fundo do
+   html/body tinha uma transição de 300ms — todo o resto (cards, bordas,
+   textos, ícones) trocava de cor na hora, criando um descompasso visível
+   (o fundo "atrasado" em relação ao resto, que já tinha mudado). A classe
+   abaixo é ligada só durante a troca (ver alternar() em lib/theme.js) e
+   força TODOS os elementos a trocarem de cor juntos, no mesmo ritmo —
+   inclusive corrigindo, de quebra, a linha fina que aparecia embaixo da
+   barra de notificação no Android (o sistema anima a cor da barra de
+   status sozinho; antes só o fundo da página acompanhava esse ritmo, o
+   resto da tela não). O !important garante que nenhum componente com sua
+   própria transição (ex.: toggle switches) fique fora de sincronia durante
+   a troca de tema. */
+html.tema-transicionando,
+html.tema-transicionando *,
+html.tema-transicionando *::before,
+html.tema-transicionando *::after {
+  transition:
+    background-color 300ms ease-out,
+    border-color 300ms ease-out,
+    color 300ms ease-out,
+    fill 300ms ease-out,
+    stroke 300ms ease-out !important;
 }
 
 /* Foco visível pra navegação por teclado — acessibilidade básica */
