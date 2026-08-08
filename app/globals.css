@@ -53,16 +53,17 @@ html.dark body {
    resto da tela não). O !important garante que nenhum componente com sua
    própria transição (ex.: toggle switches) fique fora de sincronia durante
    a troca de tema. */
-html.tema-transicionando,
-html.tema-transicionando *,
-html.tema-transicionando *::before,
-html.tema-transicionando *::after {
-  transition:
-    background-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 150ms cubic-bezier(0.4, 0, 0.2, 1),
-    color 150ms cubic-bezier(0.4, 0, 0.2, 1),
-    fill 150ms cubic-bezier(0.4, 0, 0.2, 1),
-    stroke 150ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+/* Transição suave ao trocar tema (claro/escuro), via View Transitions API
+   (ver alternar() em lib/theme.js). O navegador tira um "print" da tela
+   antes e depois da troca e cross-fadeia (opacidade) entre as 2 imagens —
+   sozinho, sem precisar animar a cor de cada elemento um por um (método
+   antigo, que travava no Android por recalcular estilo de centenas de nós
+   a cada frame). Aqui só ajustamos a duração/curva do cross-fade padrão do
+   navegador (que sem isso costuma ser meio lento, ~300ms linear). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Foco visível pra navegação por teclado — acessibilidade básica */
@@ -86,6 +87,12 @@ html.dark textarea:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
   }
 }
 
