@@ -9,6 +9,7 @@ import { createPost } from '@/lib/firestore-helpers';
 import { pontuarPostFeed } from '@/lib/points';
 import { registrarAcaoCategoria } from '@/lib/acoesLog';
 import { getTodasAsCategoriasAcao } from '@/lib/categoriasAcaoRepo';
+import { dentroDaJanelaHorario } from '@/lib/dateUtils';
 import { verificarConquistas } from '@/lib/achievements';
 import { uploadFotoComThumb, uploadAudio } from '@/lib/storage';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
@@ -84,7 +85,11 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
   // mostra só "Nenhuma" — mesmo visual de antes da Fase 3.
   useEffect(() => {
     getTodasAsCategoriasAcao().then((todas) => {
-      setCategoriasDisponiveis(todas.filter((c) => c.ativa !== false));
+      setCategoriasDisponiveis(
+        todas.filter(
+          (c) => c.ativa !== false && (!c.horarioAtivo || dentroDaJanelaHorario(c.horarioInicio, c.horarioFim))
+        )
+      );
     });
   }, []);
 

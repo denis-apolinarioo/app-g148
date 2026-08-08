@@ -12,6 +12,7 @@ import StreakBadge from '@/components/StreakBadge';
 import EmptyState from '@/components/EmptyState';
 import { getMissoesPorCategoria } from '@/lib/missionsRepo';
 import { calcularCicloAtual, getStatusMissoesNoCiclo, getSubmissoesDoCicloComPost } from '@/lib/missionCycles';
+import { dentroDaJanelaHorario } from '@/lib/dateUtils';
 
 export default function MissoesPage() {
   const { perfil } = useAuth();
@@ -41,7 +42,8 @@ export default function MissoesPage() {
         calcularCicloAtual(missao) !== null &&
         (!Array.isArray(missao.destinatarios) ||
           missao.destinatarios.length === 0 ||
-          missao.destinatarios.includes(perfil.uid));
+          missao.destinatarios.includes(perfil.uid)) &&
+        (!missao.horarioAtivo || dentroDaJanelaHorario(missao.horarioInicio, missao.horarioFim));
 
       setMissoesExclusivas(exclusivas.filter(visivelPara));
       setMissoesGerais(gerais.filter(visivelPara));

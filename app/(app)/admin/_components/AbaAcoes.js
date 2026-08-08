@@ -14,6 +14,7 @@ import {
   X,
   Search,
   Users,
+  Clock,
 } from 'lucide-react';
 import { getPontosEfetivos, salvarPontosDaMissao } from '@/lib/missionOverrides';
 import {
@@ -69,6 +70,9 @@ function descreverCategoria(categoria) {
   if (categoria.exigeTexto) obrigatorios.push('texto');
   if (categoria.exigeAudio) obrigatorios.push('áudio');
   if (obrigatorios.length > 0) partes.push(`exige ${obrigatorios.join(' + ')}`);
+  if (categoria.horarioAtivo && categoria.horarioInicio && categoria.horarioFim) {
+    partes.push(`visível ${categoria.horarioInicio}–${categoria.horarioFim}`);
+  }
 
   return partes.join(' · ');
 }
@@ -469,6 +473,13 @@ function CategoriaFormModal({ categoriaInicial, onFechar, onSalvo }) {
   const [exigeTexto, setExigeTexto] = useState(categoriaInicial?.exigeTexto ?? false);
   const [exigeAudio, setExigeAudio] = useState(categoriaInicial?.exigeAudio ?? false);
 
+  // Horário de visibilidade: sem marcar, a categoria fica disponível o dia
+  // inteiro no seletor de categoria (comportamento de sempre). Marcando, só
+  // aparece pro usuário entre horarioInicio e horarioFim.
+  const [horarioAtivo, setHorarioAtivo] = useState(categoriaInicial?.horarioAtivo ?? false);
+  const [horarioInicio, setHorarioInicio] = useState(categoriaInicial?.horarioInicio || '08:00');
+  const [horarioFim, setHorarioFim] = useState(categoriaInicial?.horarioFim || '18:00');
+
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -493,6 +504,9 @@ function CategoriaFormModal({ categoriaInicial, onFechar, onSalvo }) {
         exigeImagem,
         exigeTexto,
         exigeAudio,
+        horarioAtivo,
+        horarioInicio: horarioAtivo ? horarioInicio : null,
+        horarioFim: horarioAtivo ? horarioFim : null,
       };
 
       if (editando) {
@@ -698,6 +712,41 @@ function CategoriaFormModal({ categoriaInicial, onFechar, onSalvo }) {
               Nada marcado = sem exigência (publica só com texto, só com foto ou só com áudio,
               como já era).
             </p>
+          </div>
+
+          <div className="rounded-xl border border-coffee-100 bg-cream-card p-3">
+            <label className="flex items-center gap-2 text-xs font-semibold text-coffee-600">
+              <input
+                type="checkbox"
+                checked={horarioAtivo}
+                onChange={(e) => setHorarioAtivo(e.target.checked)}
+              />
+              <Clock size={13} />
+              Só ficar visível num horário específico
+            </label>
+            <p className="mt-1 text-[11px] text-coffee-300">
+              Sem marcar, a categoria fica disponível no seletor o dia inteiro (como já era).
+            </p>
+            {horarioAtivo && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <Campo label="Das">
+                  <input
+                    type="time"
+                    value={horarioInicio}
+                    onChange={(e) => setHorarioInicio(e.target.value)}
+                    className="w-full rounded-lg border border-coffee-100 bg-cream px-3 py-2 text-sm text-coffee-800"
+                  />
+                </Campo>
+                <Campo label="Até">
+                  <input
+                    type="time"
+                    value={horarioFim}
+                    onChange={(e) => setHorarioFim(e.target.value)}
+                    className="w-full rounded-lg border border-coffee-100 bg-cream px-3 py-2 text-sm text-coffee-800"
+                  />
+                </Campo>
+              </div>
+            )}
           </div>
 
           <label className="flex items-center gap-2 text-xs text-coffee-500">

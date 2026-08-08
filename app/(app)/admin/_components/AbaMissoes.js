@@ -12,6 +12,7 @@ import {
   GripVertical,
   Users,
   X,
+  Clock,
 } from 'lucide-react';
 import {
   getTodasAsMissoes,
@@ -76,8 +77,12 @@ function descreverMissao(missao) {
     periodo = missao.repeteAutomaticamente ? dias : `${dias} (não repete)`;
   }
   const vezes = missao.vezesPorPeriodo > 1 ? ` · ${missao.vezesPorPeriodo}x por período` : '';
+  const horario =
+    missao.horarioAtivo && missao.horarioInicio && missao.horarioFim
+      ? ` · visível ${missao.horarioInicio}–${missao.horarioFim}`
+      : '';
 
-  return `${resposta} · ${periodo}${vezes}`;
+  return `${resposta} · ${periodo}${vezes}${horario}`;
 }
 
 export default function AbaMissoes() {
@@ -370,6 +375,13 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
   );
   const [vezesPorPeriodo, setVezesPorPeriodo] = useState(missaoInicial?.vezesPorPeriodo ?? 1);
 
+  // Horário de visibilidade: sem marcar, a missão fica visível o dia
+  // inteiro (comportamento de sempre). Marcando, só aparece pro usuário
+  // entre horarioInicio e horarioFim (ver lib/dateUtils.js).
+  const [horarioAtivo, setHorarioAtivo] = useState(missaoInicial?.horarioAtivo ?? false);
+  const [horarioInicio, setHorarioInicio] = useState(missaoInicial?.horarioInicio || '08:00');
+  const [horarioFim, setHorarioFim] = useState(missaoInicial?.horarioFim || '18:00');
+
   const [destinatarios, setDestinatarios] = useState(missaoInicial?.destinatarios || null);
   const [usuarios, setUsuarios] = useState([]);
   const [salvando, setSalvando] = useState(false);
@@ -475,6 +487,9 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
       // Sempre tem limite — mínimo 1, nunca "ilimitado" (decisão combinada:
       // toda missão precisa de um teto de quantas vezes cabe no período).
       vezesPorPeriodo: Math.max(1, Number(vezesPorPeriodo) || 1),
+      horarioAtivo,
+      horarioInicio: horarioAtivo ? horarioInicio : null,
+      horarioFim: horarioAtivo ? horarioFim : null,
     };
 
     dados.destinatarios = destinatarios && destinatarios.length > 0 ? destinatarios : null;
@@ -615,6 +630,41 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
                 antes de travar até o próximo ciclo.
               </p>
             </div>
+          </div>
+
+          <div className="rounded-xl border border-coffee-100 bg-cream-card p-3.5">
+            <label className="flex items-center gap-2 text-xs font-semibold text-coffee-600">
+              <input
+                type="checkbox"
+                checked={horarioAtivo}
+                onChange={(e) => setHorarioAtivo(e.target.checked)}
+              />
+              <Clock size={13} />
+              Só ficar visível num horário específico
+            </label>
+            <p className="mt-1 text-[11px] text-coffee-300">
+              Sem marcar, a missão fica visível o dia inteiro (como já era).
+            </p>
+            {horarioAtivo && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <Campo label="Das">
+                  <input
+                    type="time"
+                    value={horarioInicio}
+                    onChange={(e) => setHorarioInicio(e.target.value)}
+                    className="w-full rounded-lg border border-coffee-100 bg-cream px-3 py-2.5 text-sm text-coffee-800"
+                  />
+                </Campo>
+                <Campo label="Até">
+                  <input
+                    type="time"
+                    value={horarioFim}
+                    onChange={(e) => setHorarioFim(e.target.value)}
+                    className="w-full rounded-lg border border-coffee-100 bg-cream px-3 py-2.5 text-sm text-coffee-800"
+                  />
+                </Campo>
+              </div>
+            )}
           </div>
 
           <Campo label="Instruções (opcional)">
