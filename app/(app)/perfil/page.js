@@ -49,8 +49,14 @@ function MeuPerfilConteudo() {
   return (
     <div className="mx-auto max-w-2xl">
       {/* transition-colors: ver comentário em app/globals.css sobre a
-          linha fina embaixo da barra de notificação ao trocar de tema. */}
-      <header className="sticky top-0 z-30 flex items-center justify-between bg-cream/95 px-5 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)] transition-colors duration-300">
+          linha fina embaixo da barra de notificação ao trocar de tema. A
+          border-b abaixo reaproveita esse MESMO transition-colors que a
+          barra já tinha — border-color entra na conta dele — pra separar a
+          barra de botões do conteúdo do perfil embaixo sem gerar o mesmo
+          tipo de descompasso/flash ao trocar de tema (senão a linha muda de
+          cor na hora enquanto o resto da barra ainda tá no meio da
+          transição de 300ms). */}
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-coffee-200 bg-cream/95 px-5 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)] transition-colors duration-300">
         <div>
           {/* Item novo (Bloco A) — acesso ao Admin movido pra ponta esquerda
               do cabeçalho, com o ícone de coroa no lugar do escudo. */}
@@ -75,10 +81,6 @@ function MeuPerfilConteudo() {
           <Link href="/carteira" className="text-coffee-500" aria-label="Carteira">
             <Wallet size={21} />
           </Link>
-          {/* Linha fininha separando os ícones gerais (tema/correio/carteira)
-              dos botões que são do próprio perfil (editar/sair) — pedido do
-              usuário. */}
-          <span className="h-5 w-px bg-coffee-200" aria-hidden="true" />
           <Link href="/perfil/editar" className="text-coffee-500">
             <Settings size={21} />
           </Link>
