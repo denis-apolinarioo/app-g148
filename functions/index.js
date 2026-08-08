@@ -18,6 +18,8 @@
 // - limparTokensAntigos: apaga, uma vez por semana, tokens que não são
 //   renovados há muito tempo (aparelho desinstalou o app, trocou de
 //   celular etc.) — reforço do item 25 além da limpeza reativa.
+// - excluirConta: exclusão de conta (LGPD). Ver comentário detalhado logo
+//   acima da função, mais abaixo neste arquivo.
 // ============================================================================
 
 const functions = require('firebase-functions');
@@ -26,6 +28,7 @@ const admin = require('firebase-admin');
 admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();
+const auth = admin.auth();
 
 const FUSO = 'America/Sao_Paulo';
 
@@ -236,4 +239,146 @@ exports.limparTokensAntigos = functions
     snap.docs.forEach((doc) => batch.delete(doc.ref));
     await batch.commit();
     return null;
+  });
+
+// ============================================================================
+// EXCLUSÃO DE CONTA (LGPD)
+// ----------------------------------------------------------------------------
+// Callable — chamada pelo app via httpsCallable('excluirConta'), tanto pela
+// própria pessoa (área Perfil → "Excluir minha conta") quanto pelo Admin
+// (aba Usuários → "Excluir conta"). Precisa ser uma Function (não dá pra
+// fazer isso só no navegador da pessoa) por três motivos:
+//   1) Apagar posts/comentários/orações DE OUTRAS PESSOAS que a pessoa
+//      curtiu ou comentou — isso o navegador dela não tem (e não deveria
+//      ter) permissão de fazer.
+//   2) Apagar o login da pessoa no Firebase Auth — senão ela continua
+//      conseguindo entrar depois de "excluída".
+//   3) Ficar imune a queda de conexão no meio do processo — se cair, dá pra
+//      rodar de novo (todos os passos abaixo são idempotentes: apagar algo
+//      que já não existe mais não dá erro).
+//
+// DECISÃO DE PRODUTO (conversada com o usuário): posts, comentários (tanto
+// os que a pessoa criou quanto os dela em posts de outras pessoas) e
+// pedidos de oração NÃO são apagados — ficam, só o autor vira anônimo
+// (functions abaixo apagam users/{uid}, e o app já resolve nome/foto/
+// username em tempo real via lib/usersCache.js, que já tinha o fallback
+// "Usuário removido" pronto pra quando o doc do usuário não existe mais —
+// nada precisa mudar nas telas). Curtidas idem: o uid continua no array
+// `curtidas` do post/comentário (mantendo a contagem certa), só some da
+// lista de "quem curtiu" (LikesListModal.js já filtra usuário sem perfil).
+//
+// O que É apagado de vez: o perfil, o PIN da carteira, os tokens de push,
+// as submissões de missão e as conquistas desbloqueadas — nada disso faz
+// sentido manter associado a uma conta que não existe mais.
+//
+// O que fica mas anonimizado (sem apagar o documento): pointsLog, dracmaLog,
+// acoesLog, mailbox, prayers/interacoes — são histórico/auditoria e, no caso
+// do dracmaLog, também o extrato de QUEM RECEBEU uma transferência dela;
+// apagar quebraria o saldo/extrato de outras pessoas. Trocamos só o que
+// identifica a pessoa (nome/foto, quando o documento guarda isso) — o uid
+// em si fica (não tem como restaurar o extrato de quem recebeu sem ele), e
+// como o perfil já não existe mais, esse uid não abre pra lugar nenhum.
+//
+// Campos "congelados" de nome/foto/username em posts/comentários/prayers
+// (autorNome/autorFoto/autorUsername, gravados na hora da criação como
+// fallback de exibição — ver lib/firestore-helpers.js) são limpos também,
+// por completude: mesmo não aparecendo na tela (o app sempre busca o nome
+// ATUAL via useUsuarioAtual/getUsuarioCache, nunca lê esses campos direto),
+// o dado real não deveria continuar gravado ali depois que a pessoa pediu
+// pra sumir.
+// ============================================================================
+
+const LIMITE_BATCH = 400; // folga sobre o teto de 500 do Firestore
+
+async function commitEmLotes(refs, transformar) {
+  for (let i = 0; i < refs.length; i += LIMITE_BATCH) {
+    const fatia = refs.slice(i, i + LIMITE_BATCH);
+    const batch = db.batch();
+    fatia.forEach((ref) => transformar(batch, ref));
+    await batch.commit();
+  }
+}
+
+exports.excluirConta = functions
+  .region('southamerica-east1')
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'Você precisa estar logado.');
+    }
+    const solicitanteUid = context.auth.uid;
+    const alvoUid = data && data.uid ? String(data.uid) : solicitanteUid;
+
+    // Só a própria pessoa (excluindo a própria conta) ou um Admin (excluindo
+    // qualquer conta) podem chamar isto.
+    if (alvoUid !== solicitanteUid) {
+      const solicitanteSnap = await db.collection('users').doc(solicitanteUid).get();
+      if (!solicitanteSnap.exists || !solicitanteSnap.data().isAdmin) {
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'Só é possível excluir a própria conta, ou ser Admin pra excluir a de outra pessoa.'
+        );
+      }
+    }
+
+    const alvoRef = db.collection('users').doc(alvoUid);
+    const alvoSnap = await alvoRef.get();
+    if (!alvoSnap.exists) {
+      // Idempotente: se já não existe mais (ex.: 2ª tentativa depois de uma
+      // falha no meio), não é erro — só confirma que já está feito.
+      return { ok: true, jaEstavaExcluido: true };
+    }
+
+    // --- 1) Anonimiza os campos "congelados" de nome/foto/username -------
+    // Posts e comentários (subcoleção de cada post) criados pela pessoa.
+    const postsSnap = await db.collection('posts').where('autorId', '==', alvoUid).get();
+    await commitEmLotes(postsSnap.docs.map((d) => d.ref), (batch, ref) =>
+      batch.update(ref, { autorNome: 'Usuário removido', autorFoto: '', autorUsername: '' })
+    );
+    // Comentários da pessoa em posts de QUALQUER autor — precisa varrer a
+    // subcoleção de cada post (Firestore não tem "collection group" nativo
+    // sem index dedicado; usamos collectionGroup, que já cobre isso sem
+    // precisar listar post por post).
+    const comentariosSnap = await db
+      .collectionGroup('comentarios')
+      .where('autorId', '==', alvoUid)
+      .get();
+    await commitEmLotes(comentariosSnap.docs.map((d) => d.ref), (batch, ref) =>
+      batch.update(ref, { autorNome: 'Usuário removido', autorFoto: '' })
+    );
+    // Pedidos de oração da pessoa.
+    const prayersSnap = await db.collection('prayers').where('autorId', '==', alvoUid).get();
+    await commitEmLotes(prayersSnap.docs.map((d) => d.ref), (batch, ref) =>
+      batch.update(ref, { autorNome: 'Usuário removido', autorFoto: '', autorUsername: '' })
+    );
+
+    // --- 2) Apaga de vez o que só faz sentido existir com a conta ativa ---
+    const submissoesSnap = await db.collection('missionSubmissions').where('uid', '==', alvoUid).get();
+    await commitEmLotes(submissoesSnap.docs.map((d) => d.ref), (batch, ref) => batch.delete(ref));
+
+    const pushTokensSnap = await db.collection('pushTokens').where('uid', '==', alvoUid).get();
+    await commitEmLotes(pushTokensSnap.docs.map((d) => d.ref), (batch, ref) => batch.delete(ref));
+
+    await db.collection('walletSecrets').doc(alvoUid).delete();
+    await db.collection('achievementsUnlocked').doc(alvoUid).delete();
+
+    // --- 3) Apaga o perfil em si -------------------------------------------
+    await alvoRef.delete();
+    // O username reservado (coleção `usernames`, ver lib/firestore-helpers.js
+    // -> getUserByUsername) também precisa sumir, senão ninguém mais
+    // consegue registrar esse @ de novo.
+    if (alvoSnap.data().username) {
+      await db.collection('usernames').doc(String(alvoSnap.data().username).toLowerCase()).delete().catch(() => {});
+    }
+
+    // --- 4) Apaga o login (Firebase Auth) ----------------------------------
+    // Sem isso, a pessoa continuaria conseguindo entrar (o app trataria
+    // como "perfil sumiu", mas o login em si continuaria válido).
+    await auth.deleteUser(alvoUid).catch((err) => {
+      // 'auth/user-not-found' é ok (idempotente); qualquer outro erro aqui
+      // sobe pro chamador, porque significa que a conta de login ainda
+      // existe e a pessoa ainda consegue entrar.
+      if (err.code !== 'auth/user-not-found') throw err;
+    });
+
+    return { ok: true, jaEstavaExcluido: false };
   });

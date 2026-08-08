@@ -1,4 +1,10 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "comentarios",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [{ "fieldPath": "autorId", "order": "ASCENDING" }]
+    }
+  ],
   "fieldOverrides": []
 }

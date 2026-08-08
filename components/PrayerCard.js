@@ -177,11 +177,11 @@ export default function PrayerCard({ pedido }) {
     <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-4 shadow-card">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-start gap-3">
-          <Link href={`/u/${autor.username}`}>
+          <Link href={`/u/${autor.username || pedido.autorId}`}>
             <Avatar src={autor.fotoURL} nome={autor.nome} tamanho="sm" />
           </Link>
           <div className="min-w-0 flex-1">
-            <Link href={`/u/${autor.username}`} className="text-sm font-semibold text-coffee-800">
+            <Link href={`/u/${autor.username || pedido.autorId}`} className="text-sm font-semibold text-coffee-800">
               {autor.nome}
             </Link>
             <p className="mt-0.5 whitespace-pre-wrap text-sm leading-relaxed text-coffee-600">

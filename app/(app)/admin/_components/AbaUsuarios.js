@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Lock, Unlock, Loader2, SlidersHorizontal, Search, X, UserCog } from 'lucide-react';
+import { Lock, Unlock, Loader2, SlidersHorizontal, Search, X, UserCog, UserX } from 'lucide-react';
 import DracmaIcon from '@/components/DracmaIcon';
 import Avatar from '@/components/Avatar';
+import ConfirmarAcaoModal from '@/components/ConfirmarAcaoModal';
 import { useAuth } from '@/components/AuthProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { getAllUsers, toggleTravarUsuario, updateUserProfile } from '@/lib/firestore-helpers';
@@ -12,6 +13,7 @@ import { ajustarDracmaManualmente, formatarDracma } from '@/lib/dracma';
 import { combinaComBusca } from '@/lib/searchUtils';
 import { getTodasAsFuncoes } from '@/lib/funcoesRepo';
 import { notificarGanhoPontos, notificarGanhoDracma } from '@/lib/notificacoes';
+import { excluirConta } from '@/lib/excluirContaRepo';
 
 // A migração que ativava o campo `dracmas` pra quem já estava cadastrado
 // antes da 2ª moeda existir já rodou e não é mais necessária — o botão
@@ -23,6 +25,13 @@ export default function AbaUsuarios() {
   const [busca, setBusca] = useState('');
   const [travandoId, setTravandoId] = useState(null);
   const [ajuste, setAjuste] = useState(null); // { usuario, tipo: 'pontos' | 'dracma' }
+
+  // Excluir conta (LGPD) — mesma function do botão em Perfil → Editar,
+  // agora pro Admin poder acionar em nome de qualquer pessoa (ver
+  // excluirConta em functions/index.js pro que exatamente acontece).
+  const [excluindo, setExcluindo] = useState(null); // usuário sendo confirmado/excluído
+  const [processandoExclusao, setProcessandoExclusao] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState('');
 
   // Troca de função (aba Funções) — o Admin pode mudar a de qualquer
   // pessoa daqui, além da própria pessoa poder trocar a sua quando quiser
@@ -81,6 +90,26 @@ export default function AbaUsuarios() {
 
   function aplicarNoUsuario(uid, patch) {
     setUsuarios((lista) => lista.map((u) => (u.id === uid ? { ...u, ...patch } : u)));
+  }
+
+  // Excluir conta (LGPD) — o Admin não pode excluir a PRÓPRIA conta por
+  // aqui (evita acidente; se ele mesmo quiser sair do app de vez, usa o
+  // botão em Perfil → Editar, que passa por outra confirmação, específica
+  // dele). Ver excluirConta em lib/excluirContaRepo.js / functions/index.js.
+  async function handleExcluirUsuario() {
+    if (!excluindo || processandoExclusao) return;
+    setProcessandoExclusao(true);
+    setErroExclusao('');
+    try {
+      await excluirConta(excluindo.id);
+      setUsuarios((lista) => lista.filter((u) => u.id !== excluindo.id));
+      setExcluindo(null);
+    } catch (err) {
+      console.error('Erro ao excluir conta:', err);
+      setErroExclusao('Não foi possível excluir agora. Verifique sua internet e tente de novo.');
+    } finally {
+      setProcessandoExclusao(false);
+    }
   }
 
   if (!usuarios) return <div className="h-40 animate-pulse rounded-xl2 bg-coffee-100/60" />;
@@ -184,6 +213,18 @@ export default function AbaUsuarios() {
                 <Lock size={14} />
               )}
             </button>
+            {/* Excluir conta (LGPD) — não aparece pra própria conta do Admin
+                logado (mesma trava do botão de travar acima; excluir a
+                própria conta é só pelo botão em Perfil → Editar). */}
+            {u.id !== perfil?.uid && (
+              <button
+                onClick={() => setExcluindo(u)}
+                title="Excluir conta"
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-coffee-100 text-coffee-400 hover:border-red-200 hover:text-red-600"
+              >
+                <UserX size={14} />
+              </button>
+            )}
           </div>
 
           {/* Seletor de função — abre embaixo da linha, entre TODAS as
@@ -225,6 +266,32 @@ export default function AbaUsuarios() {
           onFechar={() => setAjuste(null)}
           onAplicado={(patch) => aplicarNoUsuario(ajuste.usuario.id, patch)}
         />
+      )}
+
+      {excluindo && (
+        <div>
+          <ConfirmarAcaoModal
+            titulo={`Excluir a conta de ${excluindo.nome}?`}
+            mensagem={`O perfil, a carteira e as conquistas de ${excluindo.nome} somem de vez, e ela é desconectada do app na hora. Os posts, comentários e pedidos de oração que ela já fez continuam no app, mas aparecem como "Usuário removido". Essa ação não pode ser desfeita.`}
+            textoConfirmar="Excluir conta"
+            confirmando={processandoExclusao}
+            onFechar={() => {
+              if (!processandoExclusao) {
+                setExcluindo(null);
+                setErroExclusao('');
+              }
+            }}
+            onConfirmar={handleExcluirUsuario}
+          />
+          {/* Erro (se houver) fica por cima do modal — ConfirmarAcaoModal
+              não tem slot próprio pra isso, então mostramos como um toast
+              simples ancorado embaixo, sem fechar o popup de confirmação. */}
+          {erroExclusao && (
+            <div className="fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-xs rounded-xl bg-red-700 px-4 py-2.5 text-center text-xs font-medium text-cream shadow-lg">
+              {erroExclusao}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

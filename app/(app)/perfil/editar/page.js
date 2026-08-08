@@ -3,16 +3,20 @@
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'firebase/auth';
 import { useAuth } from '@/components/AuthProvider';
 import TopBar from '@/components/TopBar';
 import Avatar from '@/components/Avatar';
 import LoadingScreen from '@/components/LoadingScreen';
 import ImageCropper from '@/components/ImageCropper';
+import ConfirmarAcaoModal from '@/components/ConfirmarAcaoModal';
+import { auth } from '@/lib/firebase';
 import { updateUserProfile } from '@/lib/firestore-helpers';
 import { atualizarUsuarioCache } from '@/lib/usersCache';
 import { uploadFotoPerfil } from '@/lib/storage';
 import { getFuncoesAtivas } from '@/lib/funcoesRepo';
-import { Camera, KeyRound, Loader2 } from 'lucide-react';
+import { excluirConta } from '@/lib/excluirContaRepo';
+import { Camera, KeyRound, Loader2, UserX } from 'lucide-react';
 
 export default function EditarPerfilPage() {
   const router = useRouter();
@@ -27,6 +31,14 @@ export default function EditarPerfilPage() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const inputFotoRef = useRef(null);
+
+  // Exclusão de conta (LGPD) — ver comentário grande na Cloud Function
+  // excluirConta (functions/index.js) pro que exatamente é apagado/
+  // anonimizado. Dois passos: o botão abre a confirmação; só ao confirmar
+  // de fato é que chama a function.
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [excluindoConta, setExcluindoConta] = useState(false);
+  const [erroExclusao, setErroExclusao] = useState('');
 
   // CORREÇÃO DE VAZAMENTO: tanto srcCorte (URL bruta pra tela de corte)
   // quanto previewFoto (prévia depois de cortar) são blob: locais que
@@ -95,6 +107,26 @@ export default function EditarPerfilPage() {
       setErro('Não foi possível salvar. Verifique sua internet e tente de novo.');
     } finally {
       setSalvando(false);
+    }
+  }
+
+  // Exclusão de conta (LGPD). A Cloud Function faz tudo do lado do
+  // servidor (ver excluirConta em functions/index.js); aqui só chamamos e,
+  // se der certo, deslogamos — a sessão local já não vale mais nada depois
+  // que a conta some do Firebase Auth, então signOut é só pra limpar o
+  // estado do app e mandar pra tela de login.
+  async function handleExcluirConta() {
+    if (excluindoConta) return;
+    setExcluindoConta(true);
+    setErroExclusao('');
+    try {
+      await excluirConta();
+      await signOut(auth);
+      router.push('/login');
+    } catch (err) {
+      console.error('Erro ao excluir conta:', err);
+      setErroExclusao('Não foi possível excluir agora. Verifique sua internet e tente de novo.');
+      setExcluindoConta(false);
     }
   }
 
@@ -210,7 +242,32 @@ export default function EditarPerfilPage() {
         >
           Termos de Uso e Política de Privacidade
         </Link>
+
+        {/* Exclusão de conta (LGPD) — separado do resto por espaço e cor,
+            pra não ficar perto de ações do dia a dia por engano. */}
+        <button
+          type="button"
+          onClick={() => setConfirmandoExclusao(true)}
+          className="flex w-full items-center justify-center gap-2 pt-3 text-center text-xs font-medium text-red-700/80"
+        >
+          <UserX size={14} />
+          Excluir minha conta
+        </button>
+        {erroExclusao && (
+          <p className="text-center text-xs text-red-700">{erroExclusao}</p>
+        )}
       </div>
+
+      {confirmandoExclusao && (
+        <ConfirmarAcaoModal
+          titulo="Excluir sua conta?"
+          mensagem='Seu perfil, carteira e conquistas somem de vez. Seus posts, comentários e pedidos de oração continuam no app, mas aparecem como "Usuário removido". Essa ação não pode ser desfeita e você será desconectado(a) na hora.'
+          textoConfirmar="Excluir conta"
+          confirmando={excluindoConta}
+          onFechar={() => !excluindoConta && setConfirmandoExclusao(false)}
+          onConfirmar={handleExcluirConta}
+        />
+      )}
 
       <style jsx global>{`
         .input {
