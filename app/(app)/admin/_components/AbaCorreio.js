@@ -29,6 +29,7 @@ export default function AbaCorreio() {
   const [previewFoto, setPreviewFoto] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
+  const [erroEnvio, setErroEnvio] = useState('');
   const [anexarRecompensa, setAnexarRecompensa] = useState(false);
   const [pontosAnexados, setPontosAnexados] = useState('');
   const [dracmasAnexados, setDracmasAnexados] = useState('');
@@ -65,6 +66,7 @@ export default function AbaCorreio() {
     if (!arquivo) return;
     setArquivoFoto(arquivo);
     setPreviewFoto(URL.createObjectURL(arquivo));
+    setErroEnvio('');
   }
 
   // CORREÇÃO DE VAZAMENTO: previewFoto (blob: local) nunca era revogada —
@@ -79,6 +81,7 @@ export default function AbaCorreio() {
   async function handleEnviar() {
     if (selecionados.length === 0 || !texto.trim() || enviando) return;
     setEnviando(true);
+    setErroEnvio('');
     try {
       let fotoURL = '';
       let fotoThumbURL = '';
@@ -111,6 +114,16 @@ export default function AbaCorreio() {
       setTimeout(() => setEnviado(false), 2000);
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
+      // CORREÇÃO DE BUG (envio "não vai" com foto grande): antes esse catch
+      // só logava no console — o admin via o carregando parar e nada mais,
+      // sem nenhuma pista do que aconteceu. Agora mostra uma mensagem na
+      // tela; quando a causa for a foto (ver comprimirImagem em
+      // lib/imageCompress.js), a mensagem específica aparece aqui.
+      setErroEnvio(
+        err.message?.includes('comprimir')
+          ? err.message
+          : 'Não foi possível enviar. Verifique sua internet e tente de novo.'
+      );
     } finally {
       setEnviando(false);
     }
@@ -286,6 +299,7 @@ export default function AbaCorreio() {
           ? 'Enviado!'
           : `Enviar mensagem${selecionados.length > 1 ? ` (${selecionados.length} pessoas)` : ''}`}
       </button>
+      {erroEnvio && <p className="text-center text-xs font-medium text-red-600">{erroEnvio}</p>}
 
       <HistoricoMensagens usuarios={usuarios} />
     </div>
