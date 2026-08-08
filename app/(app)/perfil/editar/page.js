@@ -125,7 +125,15 @@ export default function EditarPerfilPage() {
       router.push('/login');
     } catch (err) {
       console.error('Erro ao excluir conta:', err);
-      setErroExclusao('Não foi possível excluir agora. Verifique sua internet e tente de novo.');
+      // Mesma correção do Admin: mostra a mensagem real da Cloud Function
+      // (etapa que falhou) em vez de sempre um texto genérico, que escondia
+      // qualquer detalhe útil sobre o que realmente deu errado.
+      const detalhe = err && typeof err.message === 'string' ? err.message.trim() : '';
+      setErroExclusao(
+        detalhe && detalhe.toLowerCase() !== 'internal'
+          ? detalhe
+          : 'Não foi possível excluir agora. Verifique sua internet e tente de novo.'
+      );
       setExcluindoConta(false);
     }
   }

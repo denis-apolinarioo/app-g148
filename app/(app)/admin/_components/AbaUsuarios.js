@@ -106,7 +106,17 @@ export default function AbaUsuarios() {
       setExcluindo(null);
     } catch (err) {
       console.error('Erro ao excluir conta:', err);
-      setErroExclusao('Não foi possível excluir agora. Verifique sua internet e tente de novo.');
+      // Mostra a mensagem real que a Cloud Function mandou (ex.: "Falha ao
+      // excluir conta na etapa X: ...") sempre que ela existir — antes esse
+      // detalhe era jogado fora e o texto genérico aparecia até quando o
+      // erro tinha uma causa clara. Só cai no texto genérico se realmente
+      // não veio nenhuma mensagem útil (ex.: sem internet de verdade).
+      const detalhe = err && typeof err.message === 'string' ? err.message.trim() : '';
+      setErroExclusao(
+        detalhe && detalhe.toLowerCase() !== 'internal'
+          ? detalhe
+          : 'Não foi possível excluir agora. Verifique sua internet e tente de novo.'
+      );
     } finally {
       setProcessandoExclusao(false);
     }
