@@ -808,7 +808,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
         </div>
 
         <div className="space-y-4 p-5">
-          <Campo label="Imagem circular (opcional — sem imagem, usa o ícone abaixo)">
+          <Campo label="Imagem circular (opcional)">
             <div className="flex items-center gap-3">
               <EmblemaConquista
                 conquista={{ imagemURL: previewImagem, icone, emblema }}
@@ -836,11 +836,11 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
             </div>
           </Campo>
 
-          <Campo label="Ícone de reserva (usado enquanto não há imagem)">
+          <Campo label="Ícone de reserva">
             <IconGalleryPicker value={icone} onChange={(valor) => setIcone(valor || 'award')} />
           </Campo>
 
-          <Campo label="Emblema (moldura do tier — opcional)">
+          <Campo label="Emblema (opcional)">
             <div className="flex flex-wrap items-center gap-2.5">
               <button
                 type="button"
@@ -878,7 +878,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
             />
           </Campo>
 
-          <Campo label="Texto (aparece quando a pessoa toca na conquista)">
+          <Campo label="Texto">
             <textarea
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
@@ -888,11 +888,10 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
             />
           </Campo>
 
-          <Campo label="Múltiplos contadores + período de validação (opcional)">
+          <Campo label="Múltiplos contadores (opcional)">
             <label className="flex items-center justify-between gap-2 rounded-lg border border-coffee-100 bg-cream px-3 py-2.5">
               <span className="text-[11px] text-coffee-500">
-                Combine várias condições (ex.: 3 missões diferentes) com um prazo em dias pra
-                cumprir todas juntas, em vez de um contador só.
+                Combinar várias condições com um prazo em dias
               </span>
               <input
                 type="checkbox"
@@ -1001,7 +1000,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
                 </button>
               </Campo>
 
-              <Campo label="Período de validação em dias (prazo pessoal pra cumprir todos — vazio = sem prazo)">
+              <Campo label="Prazo em dias (vazio = sem prazo)">
                 <input
                   type="number"
                   min="1"
@@ -1012,7 +1011,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
                 />
               </Campo>
 
-              <Campo label="Quantas vezes repetir o combo (deixe 1 pra valer só uma vez)">
+              <Campo label="Quantas vezes repetir (1 = uma vez)">
                 <input
                   type="number"
                   min="1"
@@ -1049,7 +1048,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
 
           <label className="flex items-center gap-2 text-xs text-coffee-500">
             <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} />
-            Ativa (entra no catálogo e passa a valer pra quem usa o app)
+            Ativa (visível no app)
           </label>
 
           {erro && <p className="text-center text-sm text-red-700">{erro}</p>}

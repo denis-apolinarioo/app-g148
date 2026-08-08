@@ -804,7 +804,7 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
 
           <label className="flex items-center gap-2 text-xs text-coffee-500">
             <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} />
-            Ativa (aparece pra quem usa o app)
+            Ativa (visível no app)
           </label>
 
           {/* Item novo — dispara notificação no Correio + push (categoria

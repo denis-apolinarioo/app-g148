@@ -543,7 +543,7 @@ function CategoriaFormModal({ categoriaInicial, onFechar, onSalvo }) {
         </div>
 
         <div className="space-y-4 p-5">
-          <Campo label="Nome (aparece no seletor de categoria ao postar)">
+          <Campo label="Nome">
             <input
               value={nome}
               onChange={(e) => setNome(e.target.value)}
@@ -751,7 +751,7 @@ function CategoriaFormModal({ categoriaInicial, onFechar, onSalvo }) {
 
           <label className="flex items-center gap-2 text-xs text-coffee-500">
             <input type="checkbox" checked={ativa} onChange={(e) => setAtiva(e.target.checked)} />
-            Ativa (aparece no seletor de categoria pra quem usa o app)
+            Ativa (visível no app)
           </label>
 
           {erro && <p className="text-center text-sm text-red-700">{erro}</p>}

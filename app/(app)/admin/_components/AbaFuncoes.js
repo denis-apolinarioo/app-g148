@@ -205,7 +205,7 @@ function FuncaoFormModal({ funcaoInicial, onFechar, onSalvo }) {
         </div>
 
         <div className="space-y-4 p-5">
-          <Campo label="Nome (aparece no seletor de função do perfil)">
+          <Campo label="Nome">
             <input
               value={nome}
               onChange={(e) => setNome(e.target.value)}
