@@ -16,7 +16,7 @@ import {
   Users,
   Clock,
 } from 'lucide-react';
-import { getPontosEfetivos, salvarPontosDaMissao } from '@/lib/missionOverrides';
+import { getConfigsAcoesBasicas, salvarConfigAcaoBasica } from '@/lib/missionOverrides';
 import {
   getTodasAsCategoriasAcao,
   criarCategoriaAcao,
@@ -37,6 +37,7 @@ import { useArrastarReordenar } from './useArrastarReordenar';
 const ACOES_BASICAS = [
   { id: 'postarNoFeed', titulo: 'Post no Feed' },
   { id: 'orarPorAlguem', titulo: 'Orar por alguém' },
+  { id: 'abrirVersiculo', titulo: 'Abrir o Verso do Dia' },
 ];
 
 const OPCOES_PERIODO = [
@@ -82,7 +83,7 @@ export default function AbaAcoes() {
   const confirmar = useConfirm();
 
   // --- Ações básicas -----------------------------------------------------
-  const [mapaPontos, setMapaPontos] = useState(null);
+  const [configsBasicas, setConfigsBasicas] = useState(null);
   const [salvandoId, setSalvandoId] = useState(null);
   const [salvoId, setSalvoId] = useState(null);
 
@@ -93,8 +94,8 @@ export default function AbaAcoes() {
   const [buscaCategoria, setBuscaCategoria] = useState('');
   const [mostrarBuscaPessoa, setMostrarBuscaPessoa] = useState(false);
 
-  const carregarPontos = useCallback(() => {
-    getPontosEfetivos().then(setMapaPontos);
+  const carregarConfigsBasicas = useCallback(() => {
+    getConfigsAcoesBasicas().then(setConfigsBasicas);
   }, []);
 
   const carregarCategorias = useCallback(() => {
@@ -102,21 +103,19 @@ export default function AbaAcoes() {
   }, []);
 
   useEffect(() => {
-    carregarPontos();
+    carregarConfigsBasicas();
     carregarCategorias();
-  }, [carregarPontos, carregarCategorias]);
+  }, [carregarConfigsBasicas, carregarCategorias]);
 
-  async function handleSalvarPontoBasico(missaoId, valor) {
-    const numero = Number(valor);
-    if (Number.isNaN(numero) || numero < 0) return;
-    setSalvandoId(missaoId);
+  async function handleSalvarAcaoBasica(id, novaConfig) {
+    setSalvandoId(id);
     try {
-      await salvarPontosDaMissao(missaoId, numero, perfil);
-      setMapaPontos((m) => ({ ...m, [missaoId]: numero }));
-      setSalvoId(missaoId);
+      const salvo = await salvarConfigAcaoBasica(id, novaConfig, perfil);
+      setConfigsBasicas((atual) => ({ ...atual, [id]: salvo }));
+      setSalvoId(id);
       setTimeout(() => setSalvoId(null), 1500);
     } catch (err) {
-      console.error('Erro ao salvar pontos:', err);
+      console.error('Erro ao salvar ação básica:', err);
     } finally {
       setSalvandoId(null);
     }
@@ -175,7 +174,7 @@ export default function AbaAcoes() {
     reordenarCategoriasAcao(novaOrdem).then(carregarCategorias)
   );
 
-  if (!mapaPontos || !categorias) {
+  if (!configsBasicas || !categorias) {
     return <div className="h-40 animate-pulse rounded-xl2 bg-coffee-100/60" />;
   }
 
@@ -185,15 +184,16 @@ export default function AbaAcoes() {
       <div>
         <h3 className="mb-1 font-destaque text-sm font-semibold text-coffee-700">Ações básicas</h3>
         <p className="mb-2 text-[11px] text-coffee-300">
-          Pontos de missão se editam na aba Missões. Aqui é só o que é fixo do app.
+          Pontos de missão se editam na aba Missões. Aqui é só o que é fixo do app — cada ação
+          pode dar Pontos de Comunhão, Dracma, os dois, ou nenhum dos dois.
         </p>
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {ACOES_BASICAS.map((m) => (
-            <LinhaPontoBasico
+            <LinhaAcaoBasica
               key={m.id}
-              missao={m}
-              valorAtual={mapaPontos[m.id]}
-              onSalvar={handleSalvarPontoBasico}
+              acao={m}
+              configAtual={configsBasicas[m.id]}
+              onSalvar={handleSalvarAcaoBasica}
               salvando={salvandoId === m.id}
               salvo={salvoId === m.id}
             />
@@ -327,32 +327,61 @@ export default function AbaAcoes() {
   );
 }
 
-function LinhaPontoBasico({ missao, valorAtual, onSalvar, salvando, salvo }) {
-  const [valor, setValor] = useState('');
+function LinhaAcaoBasica({ acao, configAtual, onSalvar, salvando, salvo }) {
+  const [pontua, setPontua] = useState(configAtual?.pontua ?? true);
+  const [pontos, setPontos] = useState(configAtual?.pontos ?? 0);
+  const [daDracma, setDaDracma] = useState(configAtual?.daDracma ?? false);
+  const [dracma, setDracma] = useState(configAtual?.dracma ?? 0);
 
   return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-coffee-100 bg-cream-card px-3.5 py-2.5">
-      <span className="flex-1 truncate text-sm text-coffee-700">{missao.titulo}</span>
-      <input
-        type="number"
-        min={0}
-        defaultValue={valorAtual}
-        onChange={(e) => setValor(e.target.value)}
-        className="w-16 rounded-lg border border-coffee-100 bg-cream px-2 py-1.5 text-center text-sm text-coffee-800"
-      />
-      <button
-        onClick={() => onSalvar(missao.id, valor === '' ? valorAtual : valor)}
-        disabled={salvando}
-        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-coffee-700 text-cream disabled:opacity-40"
-      >
-        {salvando ? (
-          <Loader2 size={14} className="animate-spin" />
-        ) : salvo ? (
-          <Check size={14} />
-        ) : (
-          <Save size={14} />
+    <div className="rounded-xl border border-coffee-100 bg-cream-card px-3.5 py-3">
+      <div className="mb-2.5 flex items-center justify-between">
+        <span className="text-sm font-medium text-coffee-700">{acao.titulo}</span>
+        <button
+          onClick={() => onSalvar(acao.id, { pontua, pontos, daDracma, dracma })}
+          disabled={salvando}
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-coffee-700 text-cream disabled:opacity-40"
+        >
+          {salvando ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : salvo ? (
+            <Check size={14} />
+          ) : (
+            <Save size={14} />
+          )}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <label className="flex items-center gap-1.5 text-xs text-coffee-500">
+          <input type="checkbox" checked={pontua} onChange={(e) => setPontua(e.target.checked)} />
+          Pontua
+        </label>
+        {pontua && (
+          <input
+            type="number"
+            min={0}
+            value={pontos}
+            onChange={(e) => setPontos(e.target.value)}
+            className="w-16 rounded-lg border border-coffee-100 bg-cream px-2 py-1.5 text-center text-sm text-coffee-800"
+          />
         )}
-      </button>
+
+        <label className="flex items-center gap-1.5 text-xs text-coffee-500">
+          <input type="checkbox" checked={daDracma} onChange={(e) => setDaDracma(e.target.checked)} />
+          Dá Dracma
+        </label>
+        {daDracma && (
+          <input
+            type="number"
+            min={0}
+            step="0.01"
+            value={dracma}
+            onChange={(e) => setDracma(e.target.value)}
+            className="w-16 rounded-lg border border-coffee-100 bg-cream px-2 py-1.5 text-center text-sm text-coffee-800"
+          />
+        )}
+      </div>
     </div>
   );
 }

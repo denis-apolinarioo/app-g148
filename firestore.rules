@@ -369,7 +369,14 @@ service cloud.firestore {
         request.resource.data.get('origem', null) == request.auth.uid ||
         isAdmin()
       );
-      allow update, delete: if false;
+      // DESCLIQUE DE ORAÇÃO — quando "Orar por alguém" também dá Dracma
+      // (configurável em Admin > Ações), a própria pessoa pode apagar a
+      // entrada de Dracma dela mesma ao desclicar "Orei por isso" (mesmo
+      // padrão já existente pra pointsLog logo acima, mesmo motivo: sem
+      // isso, a entrada fantasma continuaria contando pras conquistas de
+      // Dracma mesmo depois do desclique).
+      allow delete: if isSignedIn() && (resource.data.get('uid', null) == request.auth.uid || isAdmin());
+      allow update: if false;
     }
 
     // Conquistas desbloqueadas — mesma lógica de ID determinístico.
