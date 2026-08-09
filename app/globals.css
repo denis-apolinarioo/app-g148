@@ -6,6 +6,13 @@
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-destaque: 'Poppins', system-ui, -apple-system, sans-serif;
+  /* Duração/curva do fade ao trocar tema — usada tanto pela View Transition
+     (cross-fade da tela) quanto pela classe .barra-fade-tema abaixo (barras
+     sticky com backdrop-blur, que a View Transition não cobre sozinha).
+     Fica só aqui, numa variável, pra nunca mais os dois lados saírem de
+     sincronia como já aconteceu (uma trocava em 300ms, a outra em 180ms). */
+  --tema-fade-duracao: 180ms;
+  --tema-fade-curva: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -62,8 +69,22 @@ html.dark body {
    navegador (que sem isso costuma ser meio lento, ~300ms linear). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 180ms;
-  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-duration: var(--tema-fade-duracao);
+  animation-timing-function: var(--tema-fade-curva);
+}
+
+/* Barras sticky com backdrop-blur (TopBar, cabeçalho do Perfil) ficam de
+   fora do "print" que a View Transition tira da tela — o backdrop-blur
+   exige que o navegador mantenha elas "vivas"/recompostas ao vivo em vez
+   de assar num retrato plano junto com o resto, então sem isso elas trocam
+   de cor na hora, sem fade, enquanto a tela ao redor cross-fadeia. Dando
+   uma transition-colors própria pra elas (usando a MESMA variável de
+   duração/curva do cross-fade acima, não um valor solto) elas passam a
+   acompanhar o resto da tela, sem descompasso. */
+.barra-fade-tema {
+  transition:
+    background-color var(--tema-fade-duracao) var(--tema-fade-curva),
+    border-color var(--tema-fade-duracao) var(--tema-fade-curva);
 }
 
 /* Foco visível pra navegação por teclado — acessibilidade básica */

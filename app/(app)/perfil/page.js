@@ -48,14 +48,12 @@ function MeuPerfilConteudo() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      {/* Sem transition-colors própria aqui: a troca de cor ao alternar
-          tema agora é coberta pelo cross-fade da View Transition (ver
-          lib/theme.js e app/globals.css), junto com o resto da tela. Ter
-          uma transição separada nessa barra (como tinha antes, pro fade
-          antigo) fazia ela ficar dessincronizada do resto — mudando de cor
-          num ritmo diferente, com delay perceptível — inclusive nos ícones
-          (coroa do Admin, sol/lua de trocar tema). */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-coffee-200 bg-cream/95 px-5 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)]">
+      {/* .barra-fade-tema: dá um fade próprio pra essa barra ao trocar
+          tema (backdrop-blur não entra no cross-fade automático da View
+          Transition — ver comentário da classe em globals.css),
+          sincronizado com o resto da tela pela mesma variável de
+          duração/curva — inclusive os ícones (coroa do Admin, sol/lua). */}
+      <header className="barra-fade-tema sticky top-0 z-30 flex items-center justify-between border-b border-coffee-200 bg-cream/95 px-5 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)]">
         <div>
           {/* Item novo (Bloco A) — acesso ao Admin movido pra ponta esquerda
               do cabeçalho, com o ícone de coroa no lugar do escudo. */}
