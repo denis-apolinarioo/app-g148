@@ -21,7 +21,7 @@ import {
 import { getConquistasDoUsuario, marcarConquistaVista, getVitrineConquistas } from '@/lib/achievements';
 import { useAppConfig } from '@/lib/useAppConfig';
 import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
-import { todayBrasilia } from '@/lib/dateUtils';
+import { todayBrasilia, yesterdayBrasilia } from '@/lib/dateUtils';
 
 // Ícones das abas do Perfil (Posts/Orações/Conquistas) — PNGs recortados
 // da imagem de referência que o usuário mandou (public/icons/custom/), no
@@ -213,7 +213,15 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
               </div>
               <StreakFogueira
                 dias={usuario.streakAtual || 0}
-                aceso={!!usuario.ultimoDiaAtivo && usuario.ultimoDiaAtivo === todayBrasilia()}
+                // Fica acesa se a última ação foi HOJE ou ONTEM — só apaga
+                // de fato depois que passa 00:00 do 2º dia sem nada (mesma
+                // regra que atualizarStreak usa pra decidir se o streak
+                // continua ou reinicia). Antes apagava assim que virava o
+                // dia mesmo sem ainda ter passado 24h sem ação nenhuma.
+                aceso={
+                  !!usuario.ultimoDiaAtivo &&
+                  (usuario.ultimoDiaAtivo === todayBrasilia() || usuario.ultimoDiaAtivo === yesterdayBrasilia())
+                }
               />
             </div>
 
