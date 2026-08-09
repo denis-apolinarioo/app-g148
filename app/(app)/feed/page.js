@@ -52,11 +52,18 @@ export default function FeedPage() {
   // Botão "Ocultar" (novo) — post oculto some do Feed de todo mundo, exceto
   // do próprio dono (que vê um placeholder, ver PostCard.js) e do Admin
   // (que sempre vê tudo, normalmente).
+  // CORREÇÃO DE BUG (botão "encaminhar" quebrado em missão sem feed) —
+  // post "de bastidor" (missaoSemFeed, ver lib/points.js) nunca aparece no
+  // Feed, nem pro próprio dono: ele não é um post de verdade, é só um
+  // registro pra dar pra "encaminhar"/excluir a missão (ver
+  // MissionCard.js e PostCard.js). Filtro no cliente, igual ao de `oculto`
+  // logo acima — pega tanto o pré-carregado (lib/preload.js) quanto o
+  // vindo da subscription (sem precisar de índice novo no Firestore).
   const postsVisiveis = (
     bloqueioAtivo && perfil?.bloqueados?.length
       ? posts?.filter((p) => !perfil.bloqueados.includes(p.autorId))
       : posts
-  )?.filter((p) => !p.oculto || p.autorId === perfil?.uid || perfil?.isAdmin);
+  )?.filter((p) => !p.missaoSemFeed && (!p.oculto || p.autorId === perfil?.uid || perfil?.isAdmin));
 
   return (
     <div className="mx-auto max-w-2xl">

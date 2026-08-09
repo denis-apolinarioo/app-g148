@@ -11,12 +11,15 @@ import { subscribeToPost } from '@/lib/firestore-helpers';
 
 // Tela de post individual — usada pelo botão "Ver post" da aba de Denúncias
 // do Admin (item 17), pra ir direto no post denunciado (inclusive quando a
-// denúncia é de um COMENTÁRIO, já que o comentário mora dentro do post), e
-// também pelo clique numa notificação de curtida/comentário no Correio
-// (item 15º do Bloco 7). Não existe em nenhum outro lugar do app: o Feed
-// continua sendo a lista normal, essa rota é só um "atalho" direto pra um
-// post pelo ID — por isso o botão de voltar usa o histórico do navegador em
-// vez de um destino fixo (as duas origens são diferentes).
+// denúncia é de um COMENTÁRIO, já que o comentário mora dentro do post),
+// pelo clique numa notificação de curtida/comentário no Correio (item 15º
+// do Bloco 7), e pelo botão "encaminhar" do MissionCard na tela de Missões
+// (CORREÇÃO DE BUG: leva ao post gerado pela missão, inclusive o "de
+// bastidor" — missaoSemFeed:true — das missões que não postam no Feed, ver
+// lib/points.js e PostCard.js). O Feed continua sendo a lista normal, essa
+// rota é só um "atalho" direto pra um post pelo ID — por isso o botão de
+// voltar usa o histórico do navegador em vez de um destino fixo (as
+// origens são diferentes entre si).
 export default function PostIndividualPage() {
   const { postId } = useParams();
   const { perfil } = useAuth();

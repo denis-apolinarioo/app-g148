@@ -47,9 +47,14 @@ export default function BuscarPage() {
     // Botão "Ocultar" (novo) — post oculto não aparece na busca de ninguém,
     // exceto do próprio dono (placeholder, ver PostCard.js) e do Admin
     // (sempre vê tudo).
+    // CORREÇÃO DE BUG (botão "encaminhar" quebrado em missão sem feed) —
+    // post "de bastidor" (missaoSemFeed, ver lib/points.js) nunca aparece
+    // na busca, nem pro próprio dono: existe só pra dar pra
+    // "encaminhar"/excluir a missão (ver MissionCard.js e PostCard.js).
     return posts.filter(
       (p) =>
         combinaComBusca(p.texto, termo) &&
+        !p.missaoSemFeed &&
         (!p.oculto || p.autorId === perfil?.uid || perfil?.isAdmin)
     );
   }, [posts, termo, perfil]);

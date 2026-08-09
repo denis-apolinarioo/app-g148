@@ -128,7 +128,11 @@ export default function PostCard({ post, usuarioAtual }) {
   }, []);
 
   async function handleLike() {
-    if (!usuarioAtual || curtindo || emDebounceCurtida()) return;
+    // CORREÇÃO DE BUG (post "de bastidor" de missão sem feed) — este tipo
+    // de post nunca tem curtida (ver missaoSemFeed, lib/points.js), então
+    // barra aqui pra cobrir também o duplo-toque nos itens (o botão de
+    // curtir em si já nem aparece, ver rodapé mais abaixo).
+    if (!usuarioAtual || curtindo || emDebounceCurtida() || post.missaoSemFeed) return;
     try {
       await dispararCurtida(!jaCurtiuExibido, async () => {
         if (estaOffline()) {
@@ -603,49 +607,57 @@ export default function PostCard({ post, usuarioAtual }) {
         </div>
       )}
 
-      {/* Rodapé */}
-      <div className="flex items-center gap-4 pt-1">
-        <button
-          onClick={handleClickCurtir}
-          onMouseDown={iniciarPressionar}
-          onMouseUp={cancelarPressionar}
-          onMouseLeave={cancelarPressionar}
-          onTouchStart={iniciarPressionar}
-          onTouchEnd={cancelarPressionar}
-          disabled={curtindo}
-          className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
-            jaCurtiuExibido ? 'text-red-500' : 'text-coffee-300 hover:text-red-400'
-          }`}
-        >
-          <Heart size={17} fill={jaCurtiuExibido ? 'currentColor' : 'none'} />
-          {contagemCurtidasExibida}
-        </button>
+      {/* Rodapé — post "de bastidor" de missão sem feed (missaoSemFeed,
+          ver lib/points.js) não tem curtida nem comentário: não é um post
+          de verdade pra interagir, existe só pra dar pra "encaminhar"
+          (MissionCard) e apagar (botão de excluir no cabeçalho, que
+          continua funcionando normal pro dono). */}
+      {!post.missaoSemFeed && (
+        <>
+          <div className="flex items-center gap-4 pt-1">
+            <button
+              onClick={handleClickCurtir}
+              onMouseDown={iniciarPressionar}
+              onMouseUp={cancelarPressionar}
+              onMouseLeave={cancelarPressionar}
+              onTouchStart={iniciarPressionar}
+              onTouchEnd={cancelarPressionar}
+              disabled={curtindo}
+              className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${
+                jaCurtiuExibido ? 'text-red-500' : 'text-coffee-300 hover:text-red-400'
+              }`}
+            >
+              <Heart size={17} fill={jaCurtiuExibido ? 'currentColor' : 'none'} />
+              {contagemCurtidasExibida}
+            </button>
 
-        <button
-          onClick={() => setMostrarComentarios((v) => !v)}
-          className="flex items-center gap-1.5 text-sm font-medium text-coffee-300 hover:text-coffee-600"
-        >
-          <MessageCircle size={17} />
-          {post.comentariosCount || 0}
-        </button>
+            <button
+              onClick={() => setMostrarComentarios((v) => !v)}
+              className="flex items-center gap-1.5 text-sm font-medium text-coffee-300 hover:text-coffee-600"
+            >
+              <MessageCircle size={17} />
+              {post.comentariosCount || 0}
+            </button>
 
-        {!ehDono && usuarioAtual && (
-          <button
-            onClick={handleReportar}
-            disabled={denunciando || denunciado}
-            aria-label="Denunciar post"
-            className={`ml-auto flex items-center gap-1 text-xs font-medium disabled:opacity-60 ${
-              denunciado ? 'text-coffee-400' : 'text-coffee-200 hover:text-red-500'
-            }`}
-          >
-            <Flag size={14} fill={denunciado ? 'currentColor' : 'none'} />
-            {denunciado ? 'Denunciado' : ''}
-          </button>
-        )}
-      </div>
+            {!ehDono && usuarioAtual && (
+              <button
+                onClick={handleReportar}
+                disabled={denunciando || denunciado}
+                aria-label="Denunciar post"
+                className={`ml-auto flex items-center gap-1 text-xs font-medium disabled:opacity-60 ${
+                  denunciado ? 'text-coffee-400' : 'text-coffee-200 hover:text-red-500'
+                }`}
+              >
+                <Flag size={14} fill={denunciado ? 'currentColor' : 'none'} />
+                {denunciado ? 'Denunciado' : ''}
+              </button>
+            )}
+          </div>
 
-      {mostrarComentarios && (
-        <CommentSection postId={post.id} postAutorId={post.autorId} usuarioAtual={usuarioAtual} />
+          {mostrarComentarios && (
+            <CommentSection postId={post.id} postAutorId={post.autorId} usuarioAtual={usuarioAtual} />
+          )}
+        </>
       )}
 
       {imagemAberta && (

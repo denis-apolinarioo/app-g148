@@ -163,6 +163,22 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
     await updateUserProfile(usuario.uid, { vitrineConquistas: novaSelecao });
   }
 
+  // CORREÇÃO DE BUG (botão "encaminhar" quebrado em missão sem feed) —
+  // post "de bastidor" (missaoSemFeed, ver lib/points.js) nunca aparece no
+  // grid do Perfil, nem pro próprio dono: mesmo padrão do filtro de
+  // `oculto` logo abaixo, só que sem exceção pra dono/Admin, porque esse
+  // tipo de post não é feito pra ser visto — só pra "encaminhar"/excluir a
+  // missão (ver MissionCard.js e PostCard.js). Centralizado aqui (em vez
+  // de repetir o filtro nos 3 lugares que usavam `posts` direto) também
+  // corrige de quebra um bug preexistente: como o `length === 0` do estado
+  // vazio olhava pro array cru, um perfil com só posts ocultos/de bastidor
+  // ficava com a aba "Posts" em branco, sem o aviso "Nenhum post ainda".
+  const postsVisiveis = posts?.filter(
+    (post) =>
+      !post.missaoSemFeed &&
+      (!post.oculto || usuario.uid === usuarioAtual?.uid || usuarioAtual?.isAdmin)
+  );
+
   return (
     <div className="px-4 pb-8 pt-3">
       <div className="flex flex-col items-center text-center">
@@ -293,22 +309,20 @@ export default function ProfileView({ usuario, usuarioAtual, abrirConquistaId })
         {aba === 'posts' && (
           <div className="space-y-4">
             {posts === null && <div className="h-24 animate-pulse rounded-xl2 bg-coffee-100/60" />}
-            {posts?.length === 0 && <EmptyState titulo="Nenhum post ainda" />}
+            {postsVisiveis?.length === 0 && <EmptyState titulo="Nenhum post ainda" />}
             {/* Botão "Ocultar" (novo) — post oculto some do perfil de todo
                 mundo, exceto do próprio dono (placeholder, ver PostCard.js)
-                e do Admin (sempre vê tudo). */}
+                e do Admin (sempre vê tudo). Filtro completo (oculto +
+                missaoSemFeed) calculado uma vez só em postsVisiveis, acima. */}
             {/* slice: mostra só os primeiros N posts pra não montar todos os
                 AudioPlayers de uma vez (causa crash em perfis com muitos
                 posts de áudio — ver bug fix em AudioPlayer.js). */}
-            {posts
-              ?.filter((post) => !post.oculto || usuario.uid === usuarioAtual?.uid || usuarioAtual?.isAdmin)
-              .slice(0, quantosPostsVisiveis)
+            {postsVisiveis
+              ?.slice(0, quantosPostsVisiveis)
               .map((post) => (
                 <PostCard key={post.id} post={post} usuarioAtual={usuarioAtual} />
               ))}
-            {posts &&
-              posts.filter((post) => !post.oculto || usuario.uid === usuarioAtual?.uid || usuarioAtual?.isAdmin)
-                .length > quantosPostsVisiveis && (
+            {postsVisiveis && postsVisiveis.length > quantosPostsVisiveis && (
               <button
                 onClick={() => setQuantosPostsVisiveis((n) => n + POSTS_POR_PAGINA)}
                 className="w-full rounded-xl2 border border-coffee-200 py-3 text-sm font-medium text-coffee-600 hover:bg-coffee-50"
