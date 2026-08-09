@@ -73,18 +73,24 @@ html.dark body {
   animation-timing-function: var(--tema-fade-curva);
 }
 
-/* Barras sticky com backdrop-blur (TopBar, cabeçalho do Perfil) ficam de
-   fora do "print" que a View Transition tira da tela — o backdrop-blur
-   exige que o navegador mantenha elas "vivas"/recompostas ao vivo em vez
-   de assar num retrato plano junto com o resto, então sem isso elas trocam
-   de cor na hora, sem fade, enquanto a tela ao redor cross-fadeia. Dando
-   uma transition-colors própria pra elas (usando a MESMA variável de
-   duração/curva do cross-fade acima, não um valor solto) elas passam a
-   acompanhar o resto da tela, sem descompasso. */
+/* Barras sticky com backdrop-blur (TopBar, cabeçalho do Perfil): a View
+   Transition, no modo padrão, tira 1 foto só da tela inteira ("root") e
+   troca a página real por essa foto durante o cross-fade — ou seja, o
+   elemento AO VIVO fica escondido enquanto a animação roda, então uma
+   transition-colors normal nele nunca chega a aparecer (não é sobre
+   duração/curva — o elemento que animaria nem está sendo desenhado nessa
+   janela). A solução é dar um "nome" próprio pra essa barra: aí o
+   navegador tira uma foto SEPARADA só dela (antes/depois) e cruza essas
+   duas fotos com a duração/curva daqui embaixo — backdrop-blur incluso,
+   porque é uma imagem, não o efeito ao vivo. */
 .barra-fade-tema {
-  transition:
-    background-color var(--tema-fade-duracao) var(--tema-fade-curva),
-    border-color var(--tema-fade-duracao) var(--tema-fade-curva);
+  view-transition-name: barra-fade-tema;
+}
+
+::view-transition-old(barra-fade-tema),
+::view-transition-new(barra-fade-tema) {
+  animation-duration: var(--tema-fade-duracao);
+  animation-timing-function: var(--tema-fade-curva);
 }
 
 /* Foco visível pra navegação por teclado — acessibilidade básica */
