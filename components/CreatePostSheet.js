@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { X, Image as ImageIcon, Mic as MicIcon, Type, Loader2, Camera } from 'lucide-react';
+import { X, Image as ImageIcon, Mic as MicIcon, Type, Camera } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { db } from '@/lib/firebase';
 import { createPost } from '@/lib/firestore-helpers';
@@ -23,30 +23,45 @@ const PROPORCOES = [
   { label: '3:4', w: 3, h: 4 },
 ];
 
-export default function CreatePostSheet({ onFechar, onPublicado }) {
+export default function CreatePostSheet({ onFechar, onPublicado, rascunhoInicial, onPublicarOtimista, onConfirmarPublicado, onErroPublicar }) {
   const { perfil } = useAuth();
   const mostrarToast = useToast();
-  const [aba, setAba] = useState('texto');
-  const [texto, setTexto] = useState('');
+  // PUBLICAÇÃO OTIMISTA — quando a tela reabre depois de um erro de envio
+  // (ver onErroPublicar), `rascunhoInicial` traz de volta exatamente o que
+  // a pessoa tinha digitado/escolhido, pra não perder nada.
+  const [aba, setAba] = useState(rascunhoInicial?.aba || 'texto');
+  const [texto, setTexto] = useState(rascunhoInicial?.texto || '');
   // FASE 3 — categoria escolhida entre as configuráveis pelo Admin (Admin >
   // Ações > Ações específicas). `null` = "Nenhuma", mesmo comportamento de
   // antes (pontua o valor padrão de post no Feed, editável em Admin > Ações
   // > Ações básicas).
   const [categoriasDisponiveis, setCategoriasDisponiveis] = useState([]);
-  const [categoria, setCategoria] = useState(null);
-  const [arquivoFoto, setArquivoFoto] = useState(null);
+  const [categoria, setCategoria] = useState(rascunhoInicial?.categoria || null);
+  const [arquivoFoto, setArquivoFoto] = useState(rascunhoInicial?.arquivoFoto || null);
   const [previewFoto, setPreviewFoto] = useState('');
   const [srcCorte, setSrcCorte] = useState(''); // URL da imagem bruta pra tela de corte
-  const [blobAudio, setBlobAudio] = useState(null);
+  const [blobAudio, setBlobAudio] = useState(rascunhoInicial?.blobAudio || null);
   // Duração aproximada (segundos) do áudio gravado — usada só pra
   // conquistas que exigem duração mínima (ex.: "Arautos da Shoppe").
-  const [duracaoAudio, setDuracaoAudio] = useState(0);
-  const [publicando, setPublicando] = useState(false);
-  const [erro, setErro] = useState('');
+  const [duracaoAudio, setDuracaoAudio] = useState(rascunhoInicial?.duracaoAudio || 0);
+  const [erro, setErro] = useState(rascunhoInicial ? 'Não foi possível publicar agora. Verifique sua internet e tente de novo.' : '');
   const inputFotoRef = useRef(null);
   const inputCameraRef = useRef(null);
   // Item 17 do Bloco 9 — debounce simples pra ignorar duplo toque rápido.
   const emDebouncePublicar = useProtecaoCliqueDuplo();
+
+  // Reconstrói a prévia da foto a partir do arquivo trazido pelo rascunho
+  // (o blob: URL antigo já foi revogado quando a tela fechou da vez
+  // passada — ver limpeza de previewFoto mais abaixo).
+  useEffect(() => {
+    if (rascunhoInicial?.arquivoFoto) {
+      setPreviewFoto(URL.createObjectURL(rascunhoInicial.arquivoFoto));
+    }
+    if (rascunhoInicial) {
+      mostrarToast('Não foi possível publicar. Tente novamente.');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // CORREÇÃO: o ImageCropper espera receber a prop "src" (uma URL), não o
   // arquivo bruto. Por isso a tela de corte fechava/travava ao tirar foto ou
@@ -110,10 +125,39 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
 
   const podePublicar = podePublicarConteudo && exigenciasPendentes.length === 0;
 
+  // PUBLICAÇÃO OTIMISTA — a tela fecha NA HORA, antes do post existir de
+  // verdade no Firestore. O que a pessoa via de esperar antes (upload da
+  // foto/áudio + gravação do post) agora acontece em segundo plano, com um
+  // card provisório aparecendo na hora no topo do Feed (ver
+  // PostCardOtimista.js e handlePublicarOtimista em FeedPage). Como esse
+  // upload/gravação praticamente nunca falha (a não ser sem internet), o
+  // ganho de velocidade percebida vale a troca — e no raro caso de erro, a
+  // pessoa volta pra esta mesma tela com tudo que tinha preenchido (ver
+  // onErroPublicar), sem precisar redigitar nada.
   async function handlePublicar() {
-    if (!podePublicar || publicando || emDebouncePublicar()) return;
-    setPublicando(true);
+    if (!podePublicar || emDebouncePublicar()) return;
     setErro('');
+
+    const tipoOtimista = aba === 'foto' && arquivoFoto ? 'foto' : aba === 'audio' && blobAudio ? 'audio' : 'texto';
+    // URL própria pro card otimista (independente da preview da tela, que
+    // é revogada quando a tela fecha) — quem cuida de revogar essa aqui é o
+    // FeedPage, quando o post otimista sai da lista (ver handleConfirmarPublicado/handleErroPublicar).
+    const midiaURLLocal = tipoOtimista === 'foto' && arquivoFoto ? URL.createObjectURL(arquivoFoto) : '';
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const rascunho = { aba, texto, categoria, arquivoFoto, blobAudio, duracaoAudio };
+
+    onPublicarOtimista?.({
+      id: tempId,
+      postIdReal: null,
+      tipo: tipoOtimista,
+      texto: texto.trim(),
+      midiaURLLocal,
+      categoria: categoria?.nome || null,
+      criadoEm: new Date(),
+    });
+    onFechar();
+
     try {
       let tipo = 'texto';
       let midiaURL = '';
@@ -140,27 +184,23 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
         audioDuracaoSegundos: tipo === 'audio' ? duracaoAudio : null,
       });
 
+      onConfirmarPublicado?.(tempId, postId, midiaURLLocal);
+
       // PERFORMANCE — a partir daqui o post já existe de verdade: já foi
       // salvo no Firestore e já apareceu no Feed de todo mundo (o listener
       // em tempo real do Feed pega o post assim que este createPost grava,
       // ver subscribeToFeed em lib/firestore-helpers.js). O que falta é só
       // a "burocracia" de pontos/Dracma/conquistas, que NUNCA deveria travar
       // a tela (ver o comentário no topo de lib/achievements.js) — então
-      // roda em segundo plano, sem a pessoa esperar: ela já vê a
-      // confirmação e volta pro Feed na hora.
+      // roda em segundo plano também, sem afetar o card já mostrado.
       finalizarPontuacaoDoPost(postId).catch((err) => {
         console.error('Erro ao pontuar/verificar conquistas do post:', err);
       });
 
-      mostrarToast('Publicado com sucesso!');
       onPublicado?.();
-      onFechar();
     } catch (err) {
       console.error('Erro ao publicar post:', err);
-      setErro(
-        'Não foi possível publicar agora. Verifique sua internet — se o problema for o Storage do Firebase (upload de mídia), confirme que o plano Blaze está ativo.'
-      );
-      setPublicando(false);
+      onErroPublicar?.(tempId, rascunho, midiaURLLocal);
     }
   }
 
@@ -340,10 +380,9 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
 
           <button
             onClick={handlePublicar}
-            disabled={!podePublicar || publicando}
+            disabled={!podePublicar}
             className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-3.5 text-sm font-semibold text-cream disabled:opacity-40"
           >
-            {publicando && <Loader2 size={16} className="animate-spin" />}
             Publicar
           </button>
         </div>

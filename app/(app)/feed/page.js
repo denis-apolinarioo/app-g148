@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Loader2 } from 'lucide-react';
 import MailboxLink from '@/components/MailboxLink';
 import Link from 'next/link';
@@ -9,6 +9,7 @@ import { subscribeToFeed } from '@/lib/firestore-helpers';
 import { getFeedPreCarregado } from '@/lib/preload';
 import VersiculoDiario from '@/components/VersiculoDiario';
 import PostCard from '@/components/PostCard';
+import PostCardOtimista from '@/components/PostCardOtimista';
 import CreatePostSheet from '@/components/CreatePostSheet';
 import EmptyState from '@/components/EmptyState';
 import StreakBadge from '@/components/StreakBadge';
@@ -30,6 +31,34 @@ export default function FeedPage() {
   const [limite, setLimite] = useState(QUANTIDADE_BASE);
   const [carregandoMais, setCarregandoMais] = useState(false);
 
+  // PUBLICAÇÃO OTIMISTA — ver comentário grande em handlePublicar de
+  // CreatePostSheet.js. `postsOtimistas` guarda os posts "em voo" (já
+  // aparecem no topo do Feed, mas ainda não existem de verdade no
+  // Firestore). `rascunhoPost` guarda o que a pessoa tinha preenchido, pra
+  // reabrir a tela de publicação com tudo de volta se o envio falhar.
+  const [postsOtimistas, setPostsOtimistas] = useState([]);
+  const [rascunhoPost, setRascunhoPost] = useState(null);
+
+  const handlePublicarOtimista = useCallback((postTemp) => {
+    setPostsOtimistas((lista) => [postTemp, ...lista]);
+  }, []);
+
+  const handleConfirmarPublicado = useCallback((tempId, postIdReal) => {
+    setPostsOtimistas((lista) =>
+      lista.map((p) => (p.id === tempId ? { ...p, postIdReal, id: postIdReal } : p))
+    );
+  }, []);
+
+  const handleErroPublicar = useCallback((tempId, rascunho) => {
+    setPostsOtimistas((lista) => {
+      const alvo = lista.find((p) => p.id === tempId);
+      if (alvo?.midiaURLLocal) URL.revokeObjectURL(alvo.midiaURLLocal);
+      return lista.filter((p) => p.id !== tempId);
+    });
+    setRascunhoPost(rascunho);
+    setCriando(true);
+  }, []);
+
   useEffect(() => {
     const unsub = subscribeToFeed((novosPosts) => {
       setPosts(novosPosts);
@@ -37,6 +66,22 @@ export default function FeedPage() {
     }, limite);
     return () => unsub();
   }, [limite]);
+
+  // PUBLICAÇÃO OTIMISTA — assim que o post real (mesmo id, já com
+  // postIdReal preenchido por handleConfirmarPublicado) aparece na lista
+  // vinda do Firestore, o card provisório não faz mais falta — a foto
+  // local (blob:) é revogada aqui pra não vazar memória.
+  useEffect(() => {
+    if (!posts) return;
+    setPostsOtimistas((lista) => {
+      const restantes = lista.filter((p) => !posts.some((real) => real.id === p.postIdReal));
+      const removidos = lista.filter((p) => posts.some((real) => real.id === p.postIdReal));
+      removidos.forEach((p) => {
+        if (p.midiaURLLocal) URL.revokeObjectURL(p.midiaURLLocal);
+      });
+      return removidos.length > 0 ? restantes : lista;
+    });
+  }, [posts]);
 
   // Se voltou menos posts do que o pedido, é porque já chegou no fim do
   // mural — não tem mais nada pra carregar.
@@ -86,7 +131,10 @@ export default function FeedPage() {
         <VersiculoDiario uid={perfil?.uid} perfil={perfil} />
 
         <button
-          onClick={() => setCriando(true)}
+          onClick={() => {
+            setRascunhoPost(null);
+            setCriando(true);
+          }}
           className="flex w-full items-center gap-3 rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-3.5 text-left shadow-card"
         >
           <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-coffee-100">
@@ -103,7 +151,7 @@ export default function FeedPage() {
           </div>
         )}
 
-        {posts?.length === 0 && (
+        {posts?.length === 0 && postsOtimistas.length === 0 && (
           <EmptyState
             icone={MessageSquare}
             titulo="Ainda não tem nada por aqui"
@@ -112,6 +160,12 @@ export default function FeedPage() {
         )}
 
         <div className="space-y-4 pb-6">
+          {/* PUBLICAÇÃO OTIMISTA — cards provisórios sempre no topo,
+              enquanto o post real ainda não chegou pelo listener. */}
+          {postsOtimistas.map((post) => (
+            <PostCardOtimista key={post.id} post={post} usuarioAtual={perfil} />
+          ))}
+
           {postsVisiveis?.map((post) => (
             <PostCard key={post.id} post={post} usuarioAtual={perfil} />
           ))}
@@ -129,7 +183,15 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {criando && <CreatePostSheet onFechar={() => setCriando(false)} />}
+      {criando && (
+        <CreatePostSheet
+          onFechar={() => setCriando(false)}
+          rascunhoInicial={rascunhoPost}
+          onPublicarOtimista={handlePublicarOtimista}
+          onConfirmarPublicado={handleConfirmarPublicado}
+          onErroPublicar={handleErroPublicar}
+        />
+      )}
     </div>
   );
 }

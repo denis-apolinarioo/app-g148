@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, Loader2, Image as ImageIcon } from 'lucide-react';
+import { X, Image as ImageIcon } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { submeterMissao } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
@@ -9,7 +9,6 @@ import { vibrarMissaoConcluida } from '@/lib/haptics';
 import { uploadFoto, uploadAudio } from '@/lib/storage';
 import ImageCropper from '@/components/ImageCropper';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
-import EmblemaConquista from '@/components/EmblemaConquista';
 import { useToast } from '@/components/ToastProvider';
 import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
 
@@ -19,24 +18,33 @@ const PROPORCOES = [
   { label: '3:4', w: 3, h: 4 },
 ];
 
-export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
+export default function MissionSubmitModal({ missao, onFechar, onConcluida, rascunhoInicial, onEnviarOtimista, onConfirmarEnviada, onErroEnviar }) {
   const { perfil } = useAuth();
   const mostrarToast = useToast();
   // Mesma proteção contra duplo toque rápido usada em curtir/comentar/postar
   // (ver lib/useProtecaoCliqueDuplo.js) — aqui pro botão "Enviar".
   const emDebounceEnviar = useProtecaoCliqueDuplo();
-  const [resposta, setResposta] = useState({});
-  const [arquivoFoto, setArquivoFoto] = useState(null);
+  // PUBLICAÇÃO OTIMISTA — quando a tela reabre depois de um erro de envio
+  // (ver onErroEnviar), `rascunhoInicial` traz de volta a resposta que a
+  // pessoa tinha preenchido, pra não perder nada.
+  const [resposta, setResposta] = useState(rascunhoInicial?.resposta || {});
+  const [arquivoFoto, setArquivoFoto] = useState(rascunhoInicial?.arquivoFoto || null);
   const [previewFoto, setPreviewFoto] = useState('');
   const [srcCorte, setSrcCorte] = useState(''); // URL da imagem bruta pra tela de corte
-  const [blobAudio, setBlobAudio] = useState(null);
+  const [blobAudio, setBlobAudio] = useState(rascunhoInicial?.blobAudio || null);
   // Duração aproximada (segundos) do áudio gravado — usada só pra
   // conquistas que exigem áudio (ex.: "Paulo no Whatsapp").
-  const [duracaoAudio, setDuracaoAudio] = useState(0);
-  const [enviando, setEnviando] = useState(false);
-  const [erro, setErro] = useState('');
-  const [conquistaNova, setConquistaNova] = useState(null);
+  const [duracaoAudio, setDuracaoAudio] = useState(rascunhoInicial?.duracaoAudio || 0);
+  const [erro, setErro] = useState(rascunhoInicial?.mensagemErro || '');
   const inputFotoRef = useRef(null);
+
+  // Reconstrói a prévia da foto a partir do arquivo trazido pelo rascunho.
+  useEffect(() => {
+    if (rascunhoInicial?.arquivoFoto) {
+      setPreviewFoto(URL.createObjectURL(rascunhoInicial.arquivoFoto));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function abrirCorte(arquivo) {
     setSrcCorte(URL.createObjectURL(arquivo));
@@ -92,10 +100,22 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
 
   const podeEnviar = camposObrigatoriosOk && fotoOk && audioOk && temAlgumConteudo;
 
+  // PUBLICAÇÃO OTIMISTA — mesma ideia de CreatePostSheet.js: a tela fecha
+  // NA HORA, o card da missão já vira "concluída" na tela de Missões (ver
+  // handleEnviarOtimista em app/(app)/missoes/page.js), e o upload +
+  // envio de verdade roda em segundo plano. Se destravar conquista nova, o
+  // pop-up aparece depois, por cima da tela de Missões (não dá mais pra
+  // mostrar aqui dentro, já que o modal já fechou) — ver
+  // handleConfirmarEnviada no pai. Em caso de erro, a missão volta a ficar
+  // disponível e este modal reabre com a resposta preenchida de novo.
   async function handleConfirmar() {
-    if (enviando || !podeEnviar || emDebounceEnviar()) return;
-    setEnviando(true);
+    if (!podeEnviar || emDebounceEnviar()) return;
     setErro('');
+
+    const rascunho = { resposta, arquivoFoto, blobAudio, duracaoAudio };
+
+    onEnviarOtimista?.(missao.id);
+    onFechar();
 
     try {
       let fotoURL = '';
@@ -116,78 +136,22 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
       // destravou alguma conquista nova. As checagens rodam todas em
       // paralelo (ver lib/achievements.js), então isso é rápido.
       const novas = await verificarConquistas(perfil.uid, (perfil.streakAtual || 0) + 1, 'missao_diaria');
-      if (novas.length > 0) {
-        setConquistaNova(novas[0]);
-        setEnviando(false);
-        return; // mostra a tela de conquista antes de fechar
-      }
 
       mostrarToast('Missão enviada com sucesso!');
       onConcluida?.();
-      onFechar();
+      onConfirmarEnviada?.(missao.id, novas[0] || null);
     } catch (err) {
+      let mensagem = 'Não foi possível enviar agora. Verifique sua internet e tente de novo.';
       if (err.message === 'MISSAO_LIMITE_ATINGIDO_NO_PERIODO') {
-        setErro('Você já atingiu o limite de vezes que pode cumprir essa missão neste período.');
-        setTimeout(() => {
-          onConcluida?.();
-          onFechar();
-        }, 1500);
+        mensagem = 'Você já atingiu o limite de vezes que pode cumprir essa missão neste período.';
       } else if (err.message === 'MISSAO_FORA_DO_PERIODO') {
-        setErro('Essa missão não está disponível agora.');
-        setTimeout(() => {
-          onConcluida?.();
-          onFechar();
-        }, 1500);
+        mensagem = 'Essa missão não está disponível agora.';
       } else {
         console.error('Erro ao enviar missão:', err);
-        setErro('Não foi possível enviar agora. Verifique sua internet e tente de novo.');
       }
-    } finally {
-      setEnviando(false);
+      onConcluida?.();
+      onErroEnviar?.(missao, rascunho, mensagem);
     }
-  }
-
-  if (conquistaNova) {
-    return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-coffee-900/50 px-6"
-        onClick={() => {
-          onConcluida?.();
-          onFechar();
-        }}
-      >
-        <div
-          className="w-full max-w-xs rounded-2xl bg-cream-card p-6 text-center shadow-soft"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* CORREÇÃO (cache de imagens) — antes usava <img src=...> direto
-              com conquistaNova.imagemURL, sem passar pelo cache persistente
-              em disco (a mesma imagem que já aparece no grid do perfil).
-              EmblemaConquista já resolve isso (e também mostra a moldura do
-              tier, se a conquista tiver uma configurada, e o ícone padrão
-              como fallback quando não há imagem). */}
-          <div className="mx-auto flex justify-center">
-            <EmblemaConquista conquista={conquistaNova} size={64} bloqueada={false} mostrarCadeado={false} />
-          </div>
-          <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-gold">
-            Nova conquista!
-          </p>
-          <p className="mt-1 font-destaque text-xl font-semibold text-coffee-800">
-            {conquistaNova.nome}
-          </p>
-          <p className="mt-2 text-sm text-coffee-400">{conquistaNova.descricao}</p>
-          <button
-            onClick={() => {
-              onConcluida?.();
-              onFechar();
-            }}
-            className="mt-5 w-full rounded-xl bg-coffee-700 py-3 text-sm font-semibold text-cream"
-          >
-            Continuar
-          </button>
-        </div>
-      </div>
-    );
   }
 
   if (srcCorte) {
@@ -344,10 +308,9 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
 
           <button
             onClick={handleConfirmar}
-            disabled={!podeEnviar || enviando}
+            disabled={!podeEnviar}
             className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-coffee-700 py-3.5 text-sm font-semibold text-cream disabled:opacity-40"
           >
-            {enviando && <Loader2 size={16} className="animate-spin" />}
             Enviar
           </button>
         </div>

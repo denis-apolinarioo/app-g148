@@ -1,11 +1,11 @@
 'use client';
 
 import * as Icons from 'lucide-react';
-import { Check, CornerUpRight } from 'lucide-react';
+import { Check, CornerUpRight, Loader2 } from 'lucide-react';
 import BowArrowIcon from '@/components/BowArrowIcon';
 import { iconePascalCase } from '@/lib/missionIcons';
 
-export default function MissionCard({ missao, concluida, onClick, bloqueada, progresso, onEncaminhar }) {
+export default function MissionCard({ missao, concluida, onClick, bloqueada, progresso, onEncaminhar, enviando }) {
   // Ícone padrão trocado de estrela genérica para arco-e-flecha (temática de
   // "missão"/"alvo"), usado sempre que a missão não tem um ícone específico
   // mapeado na biblioteca lucide-react.
@@ -20,8 +20,10 @@ export default function MissionCard({ missao, concluida, onClick, bloqueada, pro
   // pessoa já cumpriu esta missão pelo menos uma vez no período atual, pra
   // levar direto pro(s) post(s) já feitos. `onEncaminhar` decide sozinho se
   // é 1 (vai direto) ou mais de 1 (abre a listinha) — este card só precisa
-  // saber SE deve mostrar o botão.
-  const mostrarEncaminhar = !!onEncaminhar && (progresso?.usadas || 0) > 0;
+  // saber SE deve mostrar o botão. Enquanto o envio otimista ainda está em
+  // voo (ver missoes/page.js), não tem post de verdade pra encaminhar
+  // ainda — o botão fica escondido até confirmar.
+  const mostrarEncaminhar = !enviando && !!onEncaminhar && (progresso?.usadas || 0) > 0;
 
   // Pontos de Comunhão e/ou Dracma que a missão concede — `pontua` ausente
   // conta como true (missão criada antes desta opção existir, sempre
@@ -30,23 +32,30 @@ export default function MissionCard({ missao, concluida, onClick, bloqueada, pro
   if (missao.pontua !== false) recompensas.push(`+${missao.pontos} pontos`);
   if (missao.daDracma) recompensas.push(`+${missao.dracma || 0} Dracma`);
 
+  // PUBLICAÇÃO OTIMISTA — enquanto o envio desta missão está rodando em
+  // segundo plano (ver handleEnviarOtimista em missoes/page.js), o card já
+  // se comporta como concluído (não dá pra clicar de novo), mas com um
+  // spinner no lugar do check e "Enviando..." no lugar da recompensa, pra
+  // diferenciar visualmente de uma missão que já foi confirmada de verdade.
+  const bloqueadaVisual = concluida || bloqueada || enviando;
+
   // O card inteiro precisou deixar de ser um <button> (não dá pra colocar
   // um <button> dentro de outro <button> — HTML não permite) pra caber o
   // botão de encaminhar no canto sem interferir no toque de abrir a missão.
   return (
     <div
       role="button"
-      tabIndex={concluida || bloqueada ? -1 : 0}
-      onClick={() => !concluida && !bloqueada && onClick(missao)}
+      tabIndex={bloqueadaVisual ? -1 : 0}
+      onClick={() => !bloqueadaVisual && onClick(missao)}
       onKeyDown={(e) => {
-        if ((e.key === 'Enter' || e.key === ' ') && !concluida && !bloqueada) onClick(missao);
+        if ((e.key === 'Enter' || e.key === ' ') && !bloqueadaVisual) onClick(missao);
       }}
-      aria-disabled={concluida || bloqueada}
+      aria-disabled={bloqueadaVisual}
       className={`relative flex w-full items-center gap-3.5 rounded-xl2 border px-4 py-3.5 text-left transition-colors ${
-        concluida
+        concluida || enviando
           ? 'border-coffee-100 bg-coffee-50/60'
           : 'border-coffee-100 bg-cream-card shadow-card active:bg-coffee-50'
-      } ${concluida || bloqueada ? '' : 'cursor-pointer'}`}
+      } ${bloqueadaVisual ? '' : 'cursor-pointer'}`}
     >
       {mostrarEncaminhar && (
         <button
@@ -64,10 +73,12 @@ export default function MissionCard({ missao, concluida, onClick, bloqueada, pro
 
       <span
         className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full ${
-          concluida ? 'bg-green-100' : 'bg-coffee-100'
+          concluida || enviando ? 'bg-green-100' : 'bg-coffee-100'
         }`}
       >
-        {concluida ? (
+        {enviando ? (
+          <Loader2 size={18} className="animate-spin text-green-700" />
+        ) : concluida ? (
           <Check size={20} className="text-green-700" />
         ) : IconeLucide ? (
           <IconeLucide size={19} className="text-coffee-600" strokeWidth={1.8} />
@@ -78,14 +89,18 @@ export default function MissionCard({ missao, concluida, onClick, bloqueada, pro
       <span className="min-w-0 flex-1">
         <span
           className={`block text-xs font-semibold uppercase tracking-wider ${
-            concluida ? 'text-coffee-400 line-through' : 'text-coffee-600'
+            concluida || enviando ? 'text-coffee-400 line-through' : 'text-coffee-600'
           } ${mostrarEncaminhar ? 'pr-7' : ''}`}
         >
           {missao.titulo}
         </span>
         <span className="block text-xs text-coffee-400">
-          {recompensas.length > 0 ? recompensas.join(' · ') : 'Sem recompensa'}
-          {mostrarProgresso && ` · ${progresso.usadas}/${progresso.limite} no período`}
+          {enviando
+            ? 'Enviando...'
+            : recompensas.length > 0
+              ? recompensas.join(' · ')
+              : 'Sem recompensa'}
+          {!enviando && mostrarProgresso && ` · ${progresso.usadas}/${progresso.limite} no período`}
         </span>
       </span>
     </div>

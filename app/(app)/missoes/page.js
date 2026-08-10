@@ -8,6 +8,7 @@ import TopBar from '@/components/TopBar';
 import MissionCard from '@/components/MissionCard';
 import MissionSubmitModal from '@/components/MissionSubmitModal';
 import MissaoEnvioListaModal from '@/components/MissaoEnvioListaModal';
+import ConquistaDetalheModal from '@/components/ConquistaDetalheModal';
 import StreakBadge from '@/components/StreakBadge';
 import EmptyState from '@/components/EmptyState';
 import { getMissoesPorCategoria } from '@/lib/missionsRepo';
@@ -27,6 +28,39 @@ export default function MissoesPage() {
   // ({ missao, submissoes }) quando há mais de um envio no período.
   const [missaoBuscandoEnvios, setMissaoBuscandoEnvios] = useState(null);
   const [listaEnviosParaEscolher, setListaEnviosParaEscolher] = useState(null);
+
+  // PUBLICAÇÃO OTIMISTA — ver comentário grande em handleConfirmar de
+  // MissionSubmitModal.js. `missoesOtimistas` guarda os IDs de missão "em
+  // voo" (já aparecem concluídas na tela, mas o envio de verdade ainda
+  // está rodando em segundo plano). `rascunhoMissao` guarda a resposta que
+  // a pessoa tinha preenchido, pra reabrir o modal com tudo de volta se o
+  // envio falhar. `conquistaParaMostrar` é a conquista destravada
+  // descoberta depois que o modal já tinha fechado — o pop-up de
+  // parabéns aparece por cima da tela de Missões nesse caso.
+  const [missoesOtimistas, setMissoesOtimistas] = useState({});
+  const [rascunhoMissao, setRascunhoMissao] = useState(null);
+  const [conquistaParaMostrar, setConquistaParaMostrar] = useState(null);
+
+  const handleEnviarOtimista = useCallback((missaoId) => {
+    setMissoesOtimistas((m) => ({ ...m, [missaoId]: true }));
+  }, []);
+
+  const handleConfirmarEnviada = useCallback((missaoId, conquistaNova) => {
+    setMissoesOtimistas((m) => {
+      const { [missaoId]: _removida, ...resto } = m;
+      return resto;
+    });
+    if (conquistaNova) setConquistaParaMostrar({ ...conquistaNova, desbloqueada: true });
+  }, []);
+
+  const handleErroEnviar = useCallback((missao, rascunho, mensagemErro) => {
+    setMissoesOtimistas((m) => {
+      const { [missao.id]: _removida, ...resto } = m;
+      return resto;
+    });
+    setRascunhoMissao({ ...rascunho, mensagemErro });
+    setMissaoAtiva(missao);
+  }, []);
 
   // Busca as missões (agora vêm do Firestore, coleção "missoes" — o Admin
   // pode criar/editar/apagar pelo próprio painel, sem precisar de deploy).
@@ -64,6 +98,7 @@ export default function MissoesPage() {
   }, [carregandoMissoes, carregarStatus]);
 
   function abrirMissao(missao) {
+    setRascunhoMissao(null);
     setMissaoAtiva(missao);
   }
 
@@ -120,6 +155,7 @@ export default function MissoesPage() {
                     key={missao.id}
                     missao={missao}
                     concluida={!!status[missao.id]?.esgotada}
+                    enviando={!!missoesOtimistas[missao.id]}
                     progresso={status[missao.id]}
                     onClick={abrirMissao}
                     onEncaminhar={encaminharParaEnvioAnterior}
@@ -137,6 +173,7 @@ export default function MissoesPage() {
                     key={missao.id}
                     missao={missao}
                     concluida={!!status[missao.id]?.esgotada}
+                    enviando={!!missoesOtimistas[missao.id]}
                     progresso={status[missao.id]}
                     onClick={abrirMissao}
                     onEncaminhar={encaminharParaEnvioAnterior}
@@ -151,8 +188,25 @@ export default function MissoesPage() {
       {missaoAtiva && (
         <MissionSubmitModal
           missao={missaoAtiva}
-          onFechar={() => setMissaoAtiva(null)}
+          onFechar={() => {
+            setMissaoAtiva(null);
+            setRascunhoMissao(null);
+          }}
           onConcluida={carregarStatus}
+          rascunhoInicial={rascunhoMissao?.missaoId === missaoAtiva.id ? rascunhoMissao : null}
+          onEnviarOtimista={handleEnviarOtimista}
+          onConfirmarEnviada={handleConfirmarEnviada}
+          onErroEnviar={(missao, rascunho, mensagemErro) =>
+            handleErroEnviar(missao, { ...rascunho, missaoId: missao.id }, mensagemErro)
+          }
+        />
+      )}
+
+      {conquistaParaMostrar && (
+        <ConquistaDetalheModal
+          conquista={conquistaParaMostrar}
+          uid={perfil.uid}
+          onFechar={() => setConquistaParaMostrar(null)}
         />
       )}
 
