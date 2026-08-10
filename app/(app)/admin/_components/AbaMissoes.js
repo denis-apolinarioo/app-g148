@@ -36,7 +36,7 @@ import BuscaUsuario from './BuscaUsuario';
 import { useArrastarReordenar } from './useArrastarReordenar';
 
 const CATEGORIAS = [
-  { valor: 'exclusiva', label: 'Missões Exclusivas', legenda: 'Só quem for marcado em "Destinatários" vê' },
+  { valor: 'exclusiva', label: 'Missões Personalizadas', legenda: 'Só quem for marcado em "Destinatários" vê' },
   { valor: 'geral', label: 'Missões Gerais', legenda: 'Aparece pra todo mundo (a menos que restrinja por destinatários)' },
 ];
 
@@ -181,7 +181,7 @@ export default function AbaMissoes() {
 }
 
 // ----------------------------------------------------------------------------
-// Um grupo (Exclusivas ou Gerais) com sua própria lista arrastável — cada
+// Um grupo (Personalizadas ou Gerais) com sua própria lista arrastável — cada
 // grupo precisa da sua própria instância do hook de arrastar-e-soltar (por
 // isso vira um componente à parte, não um `.map()` inline).
 // ----------------------------------------------------------------------------
@@ -575,7 +575,7 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
                       : 'border-coffee-200 text-coffee-600'
                   }`}
                 >
-                  {c.valor === 'exclusiva' ? 'Exclusiva' : 'Geral'}
+                  {c.valor === 'exclusiva' ? 'Personalizada' : 'Geral'}
                 </button>
               ))}
             </div>

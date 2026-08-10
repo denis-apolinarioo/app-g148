@@ -47,7 +47,7 @@ const TITULOS_POR_TIPO = {
   mensagem: 'Nova mensagem da G148',
   conquista: 'Nova conquista desbloqueada!',
   missao_nova: 'Nova missão disponível',
-  missao_especial: 'Nova missão exclusiva',
+  missao_especial: 'Nova missão personalizada',
   pontos_admin: 'Você recebeu Pontos de Comunhão',
   dracma_admin: 'Você recebeu Dracmas',
 };
