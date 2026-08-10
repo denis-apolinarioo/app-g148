@@ -119,32 +119,33 @@ export default function VersiculoDiario({ uid, perfil }) {
               aberto ? 'opacity-100 delay-150' : 'opacity-0'
             }`}
           >
-            {/* Texto à esquerda, botão de recompensa à direita. */}
-            <div className="flex items-start gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="font-display text-lg italic leading-relaxed text-cream">{versiculo?.texto}</p>
-                <p className="mt-3 text-sm font-medium text-coffee-200">
-                  {versiculo?.referencia} · {versiculo?.versao || 'NAA'}
-                </p>
-              </div>
+            {/* Texto do verso, com o botão de recompensa embaixo, alinhado
+                à direita (antes ficava ao lado do texto, em cima). */}
+            <div>
+              <p className="font-display text-lg italic leading-relaxed text-cream">{versiculo?.texto}</p>
+              <p className="mt-3 text-sm font-medium text-coffee-200">
+                {versiculo?.referencia} · {versiculo?.versao || 'NAA'}
+              </p>
 
               {uid && (
-                <button
-                  type="button"
-                  onClick={handleResgatar}
-                  disabled={resgatando || jaRecebidoHoje}
-                  aria-label={jaRecebidoHoje ? 'Recompensa de hoje já resgatada' : 'Receber recompensa do dia'}
-                  className={`flex flex-shrink-0 flex-col items-center gap-1 rounded-xl2 px-3 py-2.5 transition-transform active:scale-95 ${
-                    jaRecebidoHoje
-                      ? 'bg-coffee-600/30 text-coffee-300'
-                      : 'bg-gold-soft/90 text-coffee-900 shadow-md active:bg-gold-soft'
-                  } disabled:opacity-70`}
-                >
-                  <Gift size={20} strokeWidth={1.8} />
-                  <span className="text-[10px] font-semibold leading-none">
-                    {jaRecebidoHoje ? 'Recebido' : 'Receber'}
-                  </span>
-                </button>
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleResgatar}
+                    disabled={resgatando || jaRecebidoHoje}
+                    aria-label={jaRecebidoHoje ? 'Recompensa de hoje já resgatada' : 'Receber recompensa do dia'}
+                    className={`flex flex-shrink-0 flex-col items-center gap-1 rounded-xl2 px-3 py-2.5 transition-transform active:scale-95 ${
+                      jaRecebidoHoje
+                        ? 'bg-coffee-600/30 text-coffee-300'
+                        : 'bg-gold-soft/90 text-coffee-900 shadow-md active:bg-gold-soft'
+                    } disabled:opacity-70`}
+                  >
+                    <Gift size={20} strokeWidth={1.8} />
+                    <span className="text-[10px] font-semibold leading-none">
+                      {jaRecebidoHoje ? 'Recebido' : 'Receber'}
+                    </span>
+                  </button>
+                </div>
               )}
             </div>
           </div>
