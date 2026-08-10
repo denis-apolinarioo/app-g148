@@ -1,20 +1,22 @@
 'use client';
 
 // ============================================================================
-// PACOTE 3, item 3.3 — 2º e 3º fator da confirmação tripla pros botões de
-// reset em massa (Pontos/Dracma) no Admin. O 1º fator (popup de
-// confirmação) já aconteceu antes deste componente ser montado — ver
-// handleAbrirConfirmacao() em AbaConfiguracoes.js, que usa o popup próprio
-// do app (components/ConfirmProvider.js).
+// PACOTE 3, item 3.3 — componente genérico reutilizável de confirmação
+// dupla (e-mail + senha), usado como as últimas camadas de qualquer ação
+// sensível que precise disso. Sempre vem depois de uma camada anterior (um
+// popup de aviso simples) que já aconteceu antes deste componente ser
+// montado. Usos atuais: reset em massa de Pontos/Dracma no Admin (1º fator
+// é o popup em handleAbrirConfirmacao() de AbaConfiguracoes.js, via
+// components/ConfirmProvider.js) e exclusão de conta em perfil/editar
+// (1º fator é o ConfirmarAcaoModal ali mesmo).
 //
 // Passo 1 (aqui dentro): código de 6 dígitos por e-mail — gerado no aparelho
-// do admin (igual à recuperação de PIN da Carteira, lib/dracma.js), enviado
-// pela rota app/api/confirmar-reset/route.js. Não é salvo em lugar nenhum
-// do Firestore — só vive no state deste componente durante o fluxo.
+// de quem confirma (igual à recuperação de PIN da Carteira, lib/dracma.js),
+// enviado pela rota app/api/confirmar-reset/route.js. Não é salvo em lugar
+// nenhum do Firestore — só vive no state deste componente durante o fluxo.
 //
-// Passo 2: reautenticação com a própria senha (ou Google) da conta do
-// admin — a "senha de transferências do admin" pedida na tarefa é a mesma
-// senha da conta, reaproveitando o mecanismo que já existe em
+// Passo 2: reautenticação com a própria senha (ou Google) da conta de quem
+// está confirmando — reaproveita o mesmo mecanismo que já existe em
 // AdminLoginGate.js pra entrar no Painel Admin.
 // ============================================================================
 

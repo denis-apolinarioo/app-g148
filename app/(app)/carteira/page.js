@@ -1,7 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Copy, Check, Loader2, Lock, Mail, RefreshCw, Send, ArrowUpRight, ArrowDownLeft, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { auth } from '@/lib/firebase';
@@ -38,22 +37,9 @@ const ROTULO_TIPO = {
   correio: 'Recompensa recebida no Correio',
 };
 
-// CORREÇÃO: useSearchParams() (usado pra ler ?modo=recuperar_solicitar,
-// vindo do link em Configurações) exige um limite de Suspense em volta —
-// sem isso o build de produção (next build) falha. O componente de verdade
-// fica em CarteiraPageInterna; isto aqui só entrega o Suspense.
 export default function CarteiraPage() {
-  return (
-    <Suspense fallback={<LoadingScreen />}>
-      <CarteiraPageInterna />
-    </Suspense>
-  );
-}
-
-function CarteiraPageInterna() {
   const { perfil, usuarioAuth } = useAuth();
   const config = useAppConfig();
-  const searchParams = useSearchParams();
   const [historico, setHistorico] = useState(null);
   const [copiado, setCopiado] = useState(false);
 
@@ -66,27 +52,20 @@ function CarteiraPageInterna() {
   const transferenciaAtiva = config?.[CHAVE_TRANSFERENCIA_DRACMA_ATIVA] !== false;
   const chaveRecebimento = montarChaveRecebimento(perfil);
 
-  // CORREÇÃO: alterar o PIN agora só é possível pelo fluxo "Esqueci meu
-  // PIN" (código por e-mail) — não existe mais um jeito de pular direto
-  // pra 'alterar_pin' sem passar por essa confirmação. O link "Alterar PIN
-  // da Carteira" em Configurações (perfil/editar) agora leva pra
-  // /carteira?modo=recuperar_solicitar, e é só esse valor de URL que a
-  // gente aceita aqui — 'alterar_pin' só é alcançado depois que
-  // RecuperarConfirmar confirma o código (mais abaixo neste arquivo).
+  // CORREÇÃO: alterar o PIN só é possível pelo fluxo "Esqueci meu PIN"
+  // (código por e-mail), acessado de dentro da própria Carteira — não
+  // existe mais um jeito de pular direto pra 'alterar_pin' sem passar por
+  // essa confirmação, nem um botão em Configurações apontando pra cá (foi
+  // removido de lá por ser redundante com este fluxo). 'alterar_pin' só é
+  // alcançado depois que RecuperarConfirmar confirma o código (mais abaixo
+  // neste arquivo).
   //
-  // Além disso, quem já tem PIN configurado agora precisa digitar o PIN
-  // pra ENTRAR na Carteira (modo 'confirmar_entrada'), não só pra
-  // transferir — item pedido.
+  // Além disso, quem já tem PIN configurado precisa digitar o PIN pra
+  // ENTRAR na Carteira (modo 'confirmar_entrada'), não só pra transferir —
+  // item pedido.
   useEffect(() => {
     if (!perfil) return;
-    const modoPedido = searchParams.get('modo');
-    if (modoPedido === 'recuperar_solicitar' && pinConfigurado(perfil)) {
-      setModo('recuperar_solicitar');
-    } else if (pinConfigurado(perfil)) {
-      setModo('confirmar_entrada');
-    } else {
-      setModo('criar_pin');
-    }
+    setModo(pinConfigurado(perfil) ? 'confirmar_entrada' : 'criar_pin');
   }, [perfil?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -169,19 +148,11 @@ function CarteiraPageInterna() {
 
         {modo === 'carteira' && (
           <>
-            <div className="relative rounded-2xl border border-coffee-100 bg-cream-card p-5 text-center shadow-card">
-              <button
-                type="button"
-                onClick={() => setSaldoOculto((atual) => !atual)}
-                aria-label={saldoOculto ? 'Mostrar saldo' : 'Esconder saldo'}
-                className="absolute right-3 top-3 rounded-full p-1.5 text-coffee-400"
-              >
-                {saldoOculto ? <Eye size={18} /> : <EyeOff size={18} />}
-              </button>
+            <div className="rounded-2xl border border-coffee-100 bg-cream-card p-5 text-center shadow-card">
               <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gold/15">
                 <DracmaIcon size={22} className="text-gold" />
               </div>
-              <div className="mt-3">
+              <div className="mt-3 flex items-center justify-center gap-2">
                 <p className="font-destaque text-3xl font-bold text-coffee-800">
                   {saldoOculto ? (
                     <span className="tracking-widest">••••</span>
@@ -190,6 +161,14 @@ function CarteiraPageInterna() {
                   )}{' '}
                   {!saldoOculto && <span className="text-base font-semibold text-coffee-400">dracmas</span>}
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setSaldoOculto((atual) => !atual)}
+                  aria-label={saldoOculto ? 'Mostrar saldo' : 'Esconder saldo'}
+                  className="flex-shrink-0 rounded-full p-1.5 text-coffee-400"
+                >
+                  {saldoOculto ? <Eye size={18} /> : <EyeOff size={18} />}
+                </button>
               </div>
             </div>
 
@@ -341,7 +320,7 @@ function FormularioPin({ titulo, descricao, onConfirmar, onVoltar }) {
           value={pin}
           onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
           placeholder="Novo PIN (4 dígitos)"
-          className="w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-center text-lg tracking-[0.4em] text-coffee-800 caret-transparent"
+          className="w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-center text-lg tracking-[0.4em] text-coffee-800"
         />
         <input
           type="password"
@@ -350,7 +329,7 @@ function FormularioPin({ titulo, descricao, onConfirmar, onVoltar }) {
           value={confirmacao}
           onChange={(e) => setConfirmacao(e.target.value.replace(/\D/g, ''))}
           placeholder="Confirme o PIN"
-          className="w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-center text-lg tracking-[0.4em] text-coffee-800 caret-transparent"
+          className="w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-center text-lg tracking-[0.4em] text-coffee-800"
         />
       </div>
 
@@ -435,7 +414,7 @@ function ConfirmarEntradaCarteira({ uid, onConfirmado, onEsqueciPin, onSemPin })
         }}
         placeholder="••••"
         autoFocus
-        className="mt-4 w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-center text-lg tracking-[0.4em] text-coffee-800 caret-transparent"
+        className="mt-4 w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-center text-lg tracking-[0.4em] text-coffee-800"
       />
 
       {erro && <p className="mt-2 text-xs text-red-600">{erro}</p>}
@@ -678,7 +657,7 @@ function FormularioTransferencia({ perfil, onVoltar, onEnviado, onEsqueciPin }) 
             value={pin}
             onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
             placeholder="••••"
-            className="w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-center text-lg tracking-[0.4em] text-coffee-800 caret-transparent"
+            className="w-full rounded-xl border border-coffee-100 bg-cream px-3 py-2.5 text-center text-lg tracking-[0.4em] text-coffee-800"
           />
           {/* CORREÇÃO: esse link não existia em lugar nenhum da tela — o
               fluxo de recuperação por e-mail (RecuperarSolicitar/

@@ -10,13 +10,14 @@ import Avatar from '@/components/Avatar';
 import LoadingScreen from '@/components/LoadingScreen';
 import ImageCropper from '@/components/ImageCropper';
 import ConfirmarAcaoModal from '@/components/ConfirmarAcaoModal';
+import ConfirmarResetModal from '@/components/ConfirmarResetModal';
 import { auth } from '@/lib/firebase';
 import { updateUserProfile } from '@/lib/firestore-helpers';
 import { atualizarUsuarioCache } from '@/lib/usersCache';
 import { uploadFotoPerfil } from '@/lib/storage';
 import { getFuncoesAtivas } from '@/lib/funcoesRepo';
 import { excluirConta } from '@/lib/excluirContaRepo';
-import { Camera, KeyRound, Loader2, UserX } from 'lucide-react';
+import { Camera, Loader2, UserX } from 'lucide-react';
 
 export default function EditarPerfilPage() {
   const router = useRouter();
@@ -34,9 +35,16 @@ export default function EditarPerfilPage() {
 
   // Exclusão de conta (LGPD) — ver comentário grande na Cloud Function
   // excluirConta (functions/index.js) pro que exatamente é apagado/
-  // anonimizado. Dois passos: o botão abre a confirmação; só ao confirmar
-  // de fato é que chama a function.
+  // anonimizado. Três camadas antes de chamar a function de verdade: (1)
+  // botão abre um aviso do que vai acontecer (ConfirmarAcaoModal); (2) ao
+  // confirmar o aviso, abre ConfirmarResetModal — mesmo componente usado no
+  // reset em massa do Admin (AbaConfiguracoes.js) — que pede o código de
+  // 6 dígitos por e-mail (igual à recuperação de PIN da Carteira, ver
+  // carteira/page.js) e, na sequência, a senha (ou Google) da própria
+  // conta; (3) só depois de tudo isso é que handleExcluirConta chama a
+  // Cloud Function de verdade.
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [autenticandoExclusao, setAutenticandoExclusao] = useState(false);
   const [excluindoConta, setExcluindoConta] = useState(false);
   const [erroExclusao, setErroExclusao] = useState('');
 
@@ -135,6 +143,7 @@ export default function EditarPerfilPage() {
           : 'Não foi possível excluir agora. Verifique sua internet e tente de novo.'
       );
       setExcluindoConta(false);
+      setAutenticandoExclusao(false);
     }
   }
 
@@ -225,17 +234,6 @@ export default function EditarPerfilPage() {
           Salvar alterações
         </button>
 
-        {/* CORREÇÃO: alterar o PIN agora só é possível pelo fluxo "Esqueci
-            meu PIN" (código por e-mail) — este link não pula mais direto
-            pra trocar o PIN sem confirmação nenhuma. */}
-        <Link
-          href="/carteira?modo=recuperar_solicitar"
-          className="flex items-center gap-3 rounded-xl border border-coffee-100 px-4 py-3 text-sm font-medium text-coffee-600"
-        >
-          <KeyRound size={16} className="text-coffee-500" />
-          Alterar PIN da Carteira
-        </Link>
-
         <Link
           href="/perfil/notificacoes"
           className="block rounded-xl border border-coffee-100 px-4 py-3 text-center text-sm font-medium text-coffee-600"
@@ -269,10 +267,25 @@ export default function EditarPerfilPage() {
         <ConfirmarAcaoModal
           titulo="Excluir sua conta?"
           mensagem='Seu perfil, carteira e conquistas somem de vez. Seus posts, comentários e pedidos de oração continuam no app, mas aparecem como "Usuário removido". Essa ação não pode ser desfeita e você será desconectado(a) na hora.'
-          textoConfirmar="Excluir conta"
-          confirmando={excluindoConta}
-          onFechar={() => !excluindoConta && setConfirmandoExclusao(false)}
-          onConfirmar={handleExcluirConta}
+          textoConfirmar="Continuar"
+          onFechar={() => setConfirmandoExclusao(false)}
+          onConfirmar={() => {
+            setConfirmandoExclusao(false);
+            setAutenticandoExclusao(true);
+          }}
+        />
+      )}
+
+      {/* Última camada: mesmo código por e-mail usado na recuperação do PIN
+          da Carteira, seguido da senha (ou Google) da própria conta — só
+          depois disso handleExcluirConta chama a Cloud Function de verdade. */}
+      {autenticandoExclusao && (
+        <ConfirmarResetModal
+          acao="excluir_conta"
+          titulo="Excluir sua conta"
+          descricao="Última etapa: confirme o código enviado por e-mail e depois sua senha pra excluir sua conta de vez. Essa ação não pode ser desfeita."
+          onFechar={() => !excluindoConta && setAutenticandoExclusao(false)}
+          onConfirmado={handleExcluirConta}
         />
       )}
 

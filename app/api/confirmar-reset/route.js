@@ -1,16 +1,18 @@
 // ============================================================================
-// PACOTE 3, item 3.3 — envia o código de confirmação por e-mail, 2º dos 3
-// fatores exigidos pra zerar Pontos ou Dracma de todo mundo (pop up ->
-// e-mail -> senha do admin).
+// PACOTE 3, item 3.3 — envia o código de confirmação por e-mail, usado por
+// qualquer fluxo que passa por ConfirmarResetModal.js: 2º de 3 fatores pra
+// zerar Pontos ou Dracma de todo mundo no Admin (pop up -> e-mail -> senha
+// do admin), e também 2ª camada da exclusão de conta em perfil/editar
+// (aviso -> e-mail -> senha da própria conta).
 //
 // Envio feito via Gmail (SMTP), usando lib/mailer.js — mesmo helper e mesmas
 // variáveis de ambiente de app/api/recuperar-pin/route.js (GMAIL_USER e
 // GMAIL_APP_PASSWORD, ação manual já explicada nessa outra rota).
 //
-// O código em si é gerado no aparelho do admin (componente do painel) —
-// esta rota só recebe o e-mail de destino, o nome, o código pronto e qual
-// ação está sendo confirmada, e manda o e-mail. Nunca fica salvo em nenhum
-// log do servidor.
+// O código em si é gerado no aparelho de quem confirma (dentro de
+// ConfirmarResetModal.js) — esta rota só recebe o e-mail de destino, o
+// nome, o código pronto e qual ação está sendo confirmada, e manda o
+// e-mail. Nunca fica salvo em nenhum log do servidor.
 // ============================================================================
 import { NextResponse } from 'next/server';
 import { getTransporter, remetentePadrao, origemValida } from '@/lib/mailer';
@@ -18,6 +20,7 @@ import { getTransporter, remetentePadrao, origemValida } from '@/lib/mailer';
 const ROTULO_ACAO = {
   pontos: 'zerar os Pontos de Comunhão de TODOS os usuários',
   dracmas: 'zerar os Dracmas de TODOS os usuários',
+  excluir_conta: 'excluir sua conta do app G148',
 };
 
 export async function POST(request) {
