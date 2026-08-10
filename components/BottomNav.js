@@ -100,13 +100,17 @@ export default function BottomNav() {
               key={href}
               href={href}
               aria-label={label}
-              title={label}
-              className="flex flex-1 flex-col items-center justify-center py-3"
+              draggable={false}
+              className="flex flex-1 flex-col items-center justify-center py-3 select-none [-webkit-touch-callout:none]"
             >
               <Icone size={28} ativo={ativo} />
               {/* Texto removido da barra (pedido anterior) — o label
-                  continua existindo como aria-label/title, pra não perder
-                  acessibilidade. */}
+                  continua existindo como aria-label, pra não perder
+                  acessibilidade. `title` foi tirado de propósito: no
+                  Android/Chrome ele faz aparecer um tooltip ao segurar o
+                  dedo (long press) no item da nav. select-none e
+                  -webkit-touch-callout evitam o menu de seleção/"salvar
+                  imagem" do navegador nos ícones em PNG. */}
               <span className="sr-only">{label}</span>
             </Link>
           );
