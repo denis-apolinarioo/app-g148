@@ -85,6 +85,15 @@ function descreverMissao(missao) {
   return `${resposta} · ${periodo}${vezes}${horario}`;
 }
 
+// Mesmo padrão de resumo usado em Ações básicas/Categorias de post (ver
+// AbaAcoes.js) — pontua e daDracma são independentes.
+function descreverRecompensaMissao(missao) {
+  const partes = [];
+  if (missao.pontua !== false) partes.push(`${missao.pontos || 0} ponto${missao.pontos === 1 ? '' : 's'}`);
+  if (missao.daDracma) partes.push(`${missao.dracma || 0} Dracma`);
+  return partes.length > 0 ? partes.join(' + ') : 'não pontua nem dá Dracma';
+}
+
 export default function AbaMissoes() {
   const { perfil } = useAuth();
   const confirmar = useConfirm();
@@ -105,7 +114,7 @@ export default function AbaMissoes() {
   async function handleApagar(missao) {
     const ok = await confirmar({
       titulo: `Apagar a missão "${missao.titulo}"?`,
-      descricao: 'Isso não afeta o histórico já registrado.',
+      descricao: 'Isso também apaga o histórico de envios dessa missão. Pontos e Dracma já ganhos continuam valendo.',
       perigo: true,
       labelConfirmar: 'Apagar',
     });
@@ -253,7 +262,7 @@ function GrupoDeMissoes({ grupo, onRecarregar, onNova, onEditar, onApagar, apaga
                   )}
                 </p>
                 <p className="text-xs text-coffee-400">
-                  {descreverMissao(missao)} · +{missao.pontos} pontos
+                  {descreverMissao(missao)} · {descreverRecompensaMissao(missao)}
                 </p>
               </div>
               <button
@@ -350,7 +359,13 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
   const [titulo, setTitulo] = useState(missaoInicial?.titulo || '');
   const [categoria, setCategoria] = useState(missaoInicial?.categoria || categoriaPadrao || 'geral');
   const [icone, setIcone] = useState(missaoInicial?.icone || '');
+  // Recompensa: pontua/daDracma independentes, mesmo padrão já usado em
+  // Ações básicas e Categorias de post (ver AbaAcoes.js) — dá pra ligar só
+  // pontos, só Dracma, os dois, ou nenhum dos dois.
+  const [pontua, setPontua] = useState(missaoInicial?.pontua ?? true);
   const [pontos, setPontos] = useState(missaoInicial?.pontos ?? 10);
+  const [daDracma, setDaDracma] = useState(missaoInicial?.daDracma ?? false);
+  const [dracma, setDracma] = useState(missaoInicial?.dracma ?? 0);
   const [postaNoFeed, setPostaNoFeed] = useState(missaoInicial?.postaNoFeed ?? false);
   const [ativa, setAtiva] = useState(missaoInicial?.ativa ?? true);
   const [instrucoes, setInstrucoes] = useState(missaoInicial?.instrucoes || '');
@@ -463,7 +478,10 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
       titulo: titulo.trim(),
       categoria,
       icone: icone.trim(),
-      pontos: Number(pontos) || 0,
+      pontua,
+      pontos: pontua ? Number(pontos) || 0 : 0,
+      daDracma,
+      dracma: daDracma ? Number(dracma) || 0 : 0,
       postaNoFeed,
       ativa,
       campos: campos
@@ -567,15 +585,42 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
             <IconGalleryPicker value={icone} onChange={setIcone} />
           </Campo>
 
-          <Campo label="Pontos">
-            <input
-              type="number"
-              min={0}
-              value={pontos}
-              onChange={(e) => setPontos(e.target.value)}
-              className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
-            />
-          </Campo>
+          <div>
+            <label className="flex items-center gap-2 text-xs text-coffee-500">
+              <input type="checkbox" checked={pontua} onChange={(e) => setPontua(e.target.checked)} />
+              Pontua
+            </label>
+            {pontua && (
+              <div className="mt-1.5 pl-6">
+                <input
+                  type="number"
+                  min={0}
+                  value={pontos}
+                  onChange={(e) => setPontos(e.target.value)}
+                  className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-xs text-coffee-500">
+              <input type="checkbox" checked={daDracma} onChange={(e) => setDaDracma(e.target.checked)} />
+              Dá Dracma
+            </label>
+            {daDracma && (
+              <div className="mt-1.5 pl-6">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={dracma}
+                  onChange={(e) => setDracma(e.target.value)}
+                  className="w-full rounded-lg border border-coffee-100 bg-cream-card px-3 py-2.5 text-sm text-coffee-800"
+                />
+              </div>
+            )}
+          </div>
 
           <div className="rounded-xl border border-coffee-100 bg-cream-card p-3.5">
             <p className="mb-3 text-xs font-semibold text-coffee-600">Período</p>

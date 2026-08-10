@@ -31,12 +31,32 @@ import { todayBrasilia, yesterdayBrasilia } from '@/lib/dateUtils';
 // (claro e a variante "-dark") ficam sempre os dois no DOM, e o CSS puro
 // do Tailwind (dark:) decide qual mostrar — mesmo mecanismo dos ícones do
 // nav (ver BottomNav.js) e dos ícones oficiais, sem JS/hook envolvido.
+// pointer-events-none + onContextMenu preventDefault: mesmo fix do
+// BottomNav.js — sem isso, segurar o dedo em cima do ícone abre o menu
+// "Salvar imagem" do navegador (o toque passa a ser sempre capturado pelo
+// botão da aba por trás, nunca pela <img>).
 function IconePosts({ size, ativo }) {
   const base = ativo ? 'post-active' : 'post-inactive';
   return (
     <>
-      <img src={`/icons/custom/${base}.png`} width={size} height={size} alt="" className="object-contain dark:hidden" />
-      <img src={`/icons/custom/${base}-dark.png`} width={size} height={size} alt="" className="hidden object-contain dark:block" />
+      <img
+        src={`/icons/custom/${base}.png`}
+        width={size}
+        height={size}
+        alt=""
+        draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        className="pointer-events-none select-none object-contain dark:hidden [-webkit-touch-callout:none] [-webkit-user-drag:none]"
+      />
+      <img
+        src={`/icons/custom/${base}-dark.png`}
+        width={size}
+        height={size}
+        alt=""
+        draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        className="hidden pointer-events-none select-none object-contain dark:block [-webkit-touch-callout:none] [-webkit-user-drag:none]"
+      />
     </>
   );
 }
@@ -45,8 +65,24 @@ function IconeOracoesPerfil({ size, ativo }) {
   const base = ativo ? 'hands-active-perfil' : 'hands-inactive';
   return (
     <>
-      <img src={`/icons/custom/${base}.png`} width={size} height={size} alt="" className="object-contain dark:hidden" />
-      <img src={`/icons/custom/${base}-dark.png`} width={size} height={size} alt="" className="hidden object-contain dark:block" />
+      <img
+        src={`/icons/custom/${base}.png`}
+        width={size}
+        height={size}
+        alt=""
+        draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        className="pointer-events-none select-none object-contain dark:hidden [-webkit-touch-callout:none] [-webkit-user-drag:none]"
+      />
+      <img
+        src={`/icons/custom/${base}-dark.png`}
+        width={size}
+        height={size}
+        alt=""
+        draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        className="hidden pointer-events-none select-none object-contain dark:block [-webkit-touch-callout:none] [-webkit-user-drag:none]"
+      />
     </>
   );
 }
@@ -55,8 +91,24 @@ function IconeConquistas({ size, ativo }) {
   const base = ativo ? 'medal-active' : 'medal-inactive';
   return (
     <>
-      <img src={`/icons/custom/${base}.png`} width={size} height={size} alt="" className="object-contain dark:hidden" />
-      <img src={`/icons/custom/${base}-dark.png`} width={size} height={size} alt="" className="hidden object-contain dark:block" />
+      <img
+        src={`/icons/custom/${base}.png`}
+        width={size}
+        height={size}
+        alt=""
+        draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        className="pointer-events-none select-none object-contain dark:hidden [-webkit-touch-callout:none] [-webkit-user-drag:none]"
+      />
+      <img
+        src={`/icons/custom/${base}-dark.png`}
+        width={size}
+        height={size}
+        alt=""
+        draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        className="hidden pointer-events-none select-none object-contain dark:block [-webkit-touch-callout:none] [-webkit-user-drag:none]"
+      />
     </>
   );
 }

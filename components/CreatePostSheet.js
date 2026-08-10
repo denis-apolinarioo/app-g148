@@ -15,6 +15,7 @@ import { uploadFotoComThumb, uploadAudio } from '@/lib/storage';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
 import ImageCropper from '@/components/ImageCropper';
 import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
+import { useToast } from '@/components/ToastProvider';
 
 const PROPORCOES = [
   { label: '1:1', w: 1, h: 1 },
@@ -24,6 +25,7 @@ const PROPORCOES = [
 
 export default function CreatePostSheet({ onFechar, onPublicado }) {
   const { perfil } = useAuth();
+  const mostrarToast = useToast();
   const [aba, setAba] = useState('texto');
   const [texto, setTexto] = useState('');
   // FASE 3 — categoria escolhida entre as configuráveis pelo Admin (Admin >
@@ -138,23 +140,19 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
         audioDuracaoSegundos: tipo === 'audio' ? duracaoAudio : null,
       });
 
-      // FASE 3 — com categoria escolhida, a pontuação/Dracma seguem o que o
-      // Admin configurou pra ela (aba Categorias); sem categoria, mantém o
-      // comportamento de sempre (pontos fixos de "Post no Feed", editável em
-      // Admin > Ações).
-      if (categoria?.id) {
-        const resultado = await registrarAcaoCategoria(perfil.uid, categoria.id, 'post', postId);
-        if (resultado.pontosGanhos > 0 || resultado.dracmaGanho > 0) {
-          await updateDoc(doc(db, 'posts', postId), {
-            pontosGanhos: resultado.pontosGanhos,
-            dracmaGanho: resultado.dracmaGanho,
-          });
-        }
-      } else {
-        await pontuarPostFeed(perfil.uid, postId);
-      }
-      await verificarConquistas(perfil.uid, perfil.streakAtual || 0, 'post');
+      // PERFORMANCE — a partir daqui o post já existe de verdade: já foi
+      // salvo no Firestore e já apareceu no Feed de todo mundo (o listener
+      // em tempo real do Feed pega o post assim que este createPost grava,
+      // ver subscribeToFeed em lib/firestore-helpers.js). O que falta é só
+      // a "burocracia" de pontos/Dracma/conquistas, que NUNCA deveria travar
+      // a tela (ver o comentário no topo de lib/achievements.js) — então
+      // roda em segundo plano, sem a pessoa esperar: ela já vê a
+      // confirmação e volta pro Feed na hora.
+      finalizarPontuacaoDoPost(postId).catch((err) => {
+        console.error('Erro ao pontuar/verificar conquistas do post:', err);
+      });
 
+      mostrarToast('Publicado com sucesso!');
       onPublicado?.();
       onFechar();
     } catch (err) {
@@ -162,9 +160,31 @@ export default function CreatePostSheet({ onFechar, onPublicado }) {
       setErro(
         'Não foi possível publicar agora. Verifique sua internet — se o problema for o Storage do Firebase (upload de mídia), confirme que o plano Blaze está ativo.'
       );
-    } finally {
       setPublicando(false);
     }
+  }
+
+  // Pontos, Dracma e conquistas do post recém-criado — separado de
+  // handlePublicar de propósito pra poder rodar em segundo plano (ver
+  // comentário acima). Mesma lógica de sempre, só não bloqueia mais o
+  // fechamento da tela.
+  async function finalizarPontuacaoDoPost(postId) {
+    // FASE 3 — com categoria escolhida, a pontuação/Dracma seguem o que o
+    // Admin configurou pra ela (aba Categorias); sem categoria, mantém o
+    // comportamento de sempre (pontos fixos de "Post no Feed", editável em
+    // Admin > Ações).
+    if (categoria?.id) {
+      const resultado = await registrarAcaoCategoria(perfil.uid, categoria.id, 'post', postId);
+      if (resultado.pontosGanhos > 0 || resultado.dracmaGanho > 0) {
+        await updateDoc(doc(db, 'posts', postId), {
+          pontosGanhos: resultado.pontosGanhos,
+          dracmaGanho: resultado.dracmaGanho,
+        });
+      }
+    } else {
+      await pontuarPostFeed(perfil.uid, postId);
+    }
+    await verificarConquistas(perfil.uid, perfil.streakAtual || 0, 'post');
   }
 
   // Tela de corte sobrepõe tudo

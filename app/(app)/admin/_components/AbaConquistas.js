@@ -814,12 +814,22 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
                   key={tier.id}
                   type="button"
                   onClick={() => setEmblema(tier.id)}
-                  title={tier.nome}
-                  className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full ${
+                  aria-label={tier.nome}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className={`flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full select-none [-webkit-touch-callout:none] ${
                     emblema === tier.id ? 'ring-2 ring-coffee-600 ring-offset-2 ring-offset-cream' : ''
                   }`}
                 >
-                  <img src={caminhoEmblema(tier.id)} alt={tier.nome} className="h-full w-full" />
+                  {/* title trocado por aria-label e img travada contra o menu
+                      "Salvar imagem" / tooltip no long press — mesmo fix do
+                      BottomNav.js e ProfileView.js. */}
+                  <img
+                    src={caminhoEmblema(tier.id)}
+                    alt={tier.nome}
+                    draggable={false}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="h-full w-full pointer-events-none select-none [-webkit-touch-callout:none] [-webkit-user-drag:none]"
+                  />
                 </button>
               ))}
             </div>

@@ -10,6 +10,8 @@ import { uploadFoto, uploadAudio } from '@/lib/storage';
 import ImageCropper from '@/components/ImageCropper';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
 import EmblemaConquista from '@/components/EmblemaConquista';
+import { useToast } from '@/components/ToastProvider';
+import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
 
 const PROPORCOES = [
   { label: '1:1', w: 1, h: 1 },
@@ -19,6 +21,10 @@ const PROPORCOES = [
 
 export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
   const { perfil } = useAuth();
+  const mostrarToast = useToast();
+  // Mesma proteção contra duplo toque rápido usada em curtir/comentar/postar
+  // (ver lib/useProtecaoCliqueDuplo.js) — aqui pro botão "Enviar".
+  const emDebounceEnviar = useProtecaoCliqueDuplo();
   const [resposta, setResposta] = useState({});
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
@@ -87,7 +93,7 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
   const podeEnviar = camposObrigatoriosOk && fotoOk && audioOk && temAlgumConteudo;
 
   async function handleConfirmar() {
-    if (enviando || !podeEnviar) return;
+    if (enviando || !podeEnviar || emDebounceEnviar()) return;
     setEnviando(true);
     setErro('');
 
@@ -106,6 +112,9 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
 
       vibrarMissaoConcluida();
 
+      // A missão já foi registrada de verdade aqui — falta só checar se ela
+      // destravou alguma conquista nova. As checagens rodam todas em
+      // paralelo (ver lib/achievements.js), então isso é rápido.
       const novas = await verificarConquistas(perfil.uid, (perfil.streakAtual || 0) + 1, 'missao_diaria');
       if (novas.length > 0) {
         setConquistaNova(novas[0]);
@@ -113,6 +122,7 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida }) {
         return; // mostra a tela de conquista antes de fechar
       }
 
+      mostrarToast('Missão enviada com sucesso!');
       onConcluida?.();
       onFechar();
     } catch (err) {

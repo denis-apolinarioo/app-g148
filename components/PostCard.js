@@ -243,14 +243,15 @@ export default function PostCard({ post, usuarioAtual }) {
     try {
       await deletePost(post.id);
       if (post.origemMissaoId && post.origemMissaoSubmissaoId) {
-        // Post veio de missão — remove os pontos dela (e libera a missão
-        // de novo, se a submissão ainda for do ciclo/período atual).
+        // Post veio de missão — remove os pontos e o Dracma dela (e libera
+        // a missão de novo, se a submissão ainda for do ciclo/período atual).
         try {
           await removerPontosMissaoDoPostApagado(
             post.autorId,
             post.origemMissaoId,
             post.origemMissaoSubmissaoId,
-            post.pontosGanhos
+            post.pontosGanhos,
+            post.dracmaGanho
           );
         } catch (err) {
           console.error('Erro ao remover pontos da missão apagada:', err);
@@ -287,14 +288,15 @@ export default function PostCard({ post, usuarioAtual }) {
   // ficava claro na hora, só um "Apagar este post?" seco. Agora o aviso
   // sempre menciona o prejuízo, de forma simples.
   function mensagemPerdaAoApagar() {
-    if (post.origemMissaoId) {
-      return post.pontosGanhos
-        ? `Você vai perder os ${post.pontosGanhos} ponto${post.pontosGanhos === 1 ? '' : 's'} que ganhou com essa missão. Essa ação não pode ser desfeita.`
-        : 'Você vai perder os pontos que ganhou com essa missão. Essa ação não pode ser desfeita.';
-    }
     const partes = [];
     if (post.pontosGanhos) partes.push(`${post.pontosGanhos} ponto${post.pontosGanhos === 1 ? '' : 's'}`);
     if (post.dracmaGanho) partes.push(`${post.dracmaGanho} Dracma`);
+
+    if (post.origemMissaoId) {
+      return partes.length > 0
+        ? `Você vai perder ${partes.join(' e ')} que ganhou com essa missão. Essa ação não pode ser desfeita.`
+        : 'Você vai perder os pontos que ganhou com essa missão. Essa ação não pode ser desfeita.';
+    }
     if (partes.length === 0) return 'Essa ação não pode ser desfeita.';
     return `Você vai perder ${partes.join(' e ')} que ganhou com esse post. Essa ação não pode ser desfeita.`;
   }

@@ -23,6 +23,13 @@ export default function MissionCard({ missao, concluida, onClick, bloqueada, pro
   // saber SE deve mostrar o botão.
   const mostrarEncaminhar = !!onEncaminhar && (progresso?.usadas || 0) > 0;
 
+  // Pontos de Comunhão e/ou Dracma que a missão concede — `pontua` ausente
+  // conta como true (missão criada antes desta opção existir, sempre
+  // pontuou); `daDracma` só entra quando realmente marcado.
+  const recompensas = [];
+  if (missao.pontua !== false) recompensas.push(`+${missao.pontos} pontos`);
+  if (missao.daDracma) recompensas.push(`+${missao.dracma || 0} Dracma`);
+
   // O card inteiro precisou deixar de ser um <button> (não dá pra colocar
   // um <button> dentro de outro <button> — HTML não permite) pra caber o
   // botão de encaminhar no canto sem interferir no toque de abrir a missão.
@@ -77,7 +84,7 @@ export default function MissionCard({ missao, concluida, onClick, bloqueada, pro
           {missao.titulo}
         </span>
         <span className="block text-xs text-coffee-400">
-          +{missao.pontos} pontos
+          {recompensas.length > 0 ? recompensas.join(' · ') : 'Sem recompensa'}
           {mostrarProgresso && ` · ${progresso.usadas}/${progresso.limite} no período`}
         </span>
       </span>
