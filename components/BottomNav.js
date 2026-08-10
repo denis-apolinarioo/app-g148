@@ -39,14 +39,18 @@ function IconeArcoFlecha({ size, ativo }) {
         width={size}
         height={size}
         alt=""
-        className="object-contain dark:hidden"
+        draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        className="pointer-events-none select-none object-contain dark:hidden [-webkit-touch-callout:none] [-webkit-user-drag:none]"
       />
       <img
         src={`/icons/custom/${base}-dark.png`}
         width={size}
         height={size}
         alt=""
-        className="hidden object-contain dark:block"
+        draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        className="hidden pointer-events-none select-none object-contain dark:block [-webkit-touch-callout:none] [-webkit-user-drag:none]"
       />
     </>
   );
@@ -61,14 +65,18 @@ function IconeMaosOrando({ size, ativo }) {
         width={size}
         height={size}
         alt=""
-        className="object-contain dark:hidden"
+        draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        className="pointer-events-none select-none object-contain dark:hidden [-webkit-touch-callout:none] [-webkit-user-drag:none]"
       />
       <img
         src={`/icons/custom/${base}-dark.png`}
         width={size}
         height={size}
         alt=""
-        className="hidden object-contain dark:block"
+        draggable={false}
+        onContextMenu={(e) => e.preventDefault()}
+        className="hidden pointer-events-none select-none object-contain dark:block [-webkit-touch-callout:none] [-webkit-user-drag:none]"
       />
     </>
   );
@@ -101,16 +109,18 @@ export default function BottomNav() {
               href={href}
               aria-label={label}
               draggable={false}
+              onContextMenu={(e) => e.preventDefault()}
               className="flex flex-1 flex-col items-center justify-center py-3 select-none [-webkit-touch-callout:none]"
             >
               <Icone size={28} ativo={ativo} />
               {/* Texto removido da barra (pedido anterior) — o label
                   continua existindo como aria-label, pra não perder
-                  acessibilidade. `title` foi tirado de propósito: no
-                  Android/Chrome ele faz aparecer um tooltip ao segurar o
-                  dedo (long press) no item da nav. select-none e
-                  -webkit-touch-callout evitam o menu de seleção/"salvar
-                  imagem" do navegador nos ícones em PNG. */}
+                  acessibilidade. `title` foi tirado de propósito (tooltip
+                  no long press no Android/Chrome). Os ícones em PNG têm
+                  pointer-events-none (o toque sempre é capturado por este
+                  Link, nunca pela <img>, que é quem o Android abriria o
+                  menu de "salvar imagem" em cima) + onContextMenu/
+                  -webkit-touch-callout como camada extra de segurança. */}
               <span className="sr-only">{label}</span>
             </Link>
           );
