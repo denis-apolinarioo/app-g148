@@ -5,6 +5,7 @@ import { X, Loader2, Trash2, RefreshCw } from 'lucide-react';
 import { updatePost } from '@/lib/firestore-helpers';
 import { uploadFotoComThumb, uploadAudio } from '@/lib/storage';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
+import AudioPlayer from '@/components/AudioPlayer';
 
 /**
  * Correção do bug "dá pra editar o título da missão": antes, o botão
@@ -239,7 +240,10 @@ export default function EditarPostModal({ post, onFechar }) {
               <p className="mb-1.5 text-xs font-medium text-coffee-500">Áudio</p>
               {!trocandoAudioManual ? (
                 <>
-                  <audio controls src={previewAudioManual || post.midiaURL} className="mb-2 w-full" />
+                  <AudioPlayer
+                    src={previewAudioManual || post.midiaURL}
+                    className="mb-2 rounded-2xl border border-coffee-100 bg-cream-card px-4 py-2"
+                  />
                   <button
                     type="button"
                     onClick={() => setTrocandoAudioManual(true)}
@@ -315,10 +319,9 @@ export default function EditarPostModal({ post, onFechar }) {
                         />
                       ) : (
                         <>
-                          <audio
-                            controls
+                          <AudioPlayer
                             src={item._audioPreviewURL || item.url}
-                            className="mb-2 w-full"
+                            className="mb-2 rounded-2xl border border-coffee-100 bg-cream-card px-4 py-2"
                           />
                           <div className="flex gap-2">
                             <button

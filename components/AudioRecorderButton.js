@@ -1,29 +1,26 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
-import { Mic, Square, Trash2, Play, Pause } from 'lucide-react';
-import useAudioBars from '@/lib/useAudioBars';
+import { Mic, Square } from 'lucide-react';
+import AudioPlayer from '@/components/AudioPlayer';
 
+// A prévia do que foi gravado (depois de parar) usa o mesmo AudioPlayer.js
+// do Feed — mesma onda real, play/pause e arrastar pra buscar — em vez de
+// uma versão própria e mais simples só de tocar; só a lixeira de descartar
+// (onExcluir) é extra, pra poder gravar de novo.
 export default function AudioRecorderButton({ onGravado, onLimpar }) {
   const [gravando, setGravando] = useState(false);
   const [segundos, setSegundos] = useState(0);
   const [audioURL, setAudioURL] = useState('');
-  const [duracao, setDuracao] = useState(0);
-  const [progresso, setProgresso] = useState(0);
-  const [tocando, setTocando] = useState(false);
   const [erro, setErro] = useState('');
   const [barras, setBarras] = useState(Array(28).fill(3));
-  const [tempoAtual, setTempoAtual] = useState(0);
 
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
   const intervalRef = useRef(null);
-  const audioRef = useRef(null);
   const streamRef = useRef(null);
   const analyserRef = useRef(null);
   const animFrameRef = useRef(null);
-  const duracaoRef = useRef(0);
-  const corrigindoDuracaoRef = useRef(false);
   // Espelha `segundos` (contador visível durante a gravação) num ref, pra
   // poder ler o valor exato assim que a gravação para (recorder.onstop) —
   // nesse momento o state `segundos` capturado no closure de
@@ -37,13 +34,6 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
   // aqui pra poder chamar ctx.close() assim que a gravação parar (ou se o
   // componente desmontar no meio de uma gravação).
   const audioCtxRef = useRef(null);
-
-  // Barras da PRÉVIA (depois de gravado, ao dar play pra conferir) reagindo
-  // ao som de verdade — diferente das `barras` acima, que reagem ao
-  // microfone durante a gravação em si. Parada, mostra a forma de onda
-  // real do que foi gravado (audioURL é um blob: local, mesma origem —
-  // não depende do CORS do Storage).
-  const barrasPlayback = useAudioBars(audioRef, tocando, audioURL);
 
   useEffect(() => {
     return () => {
@@ -190,87 +180,12 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
     setGravando(false);
   }
 
+  // A prévia (AudioPlayer) cuida do próprio <audio> internamente — aqui só
+  // precisa zerar o que pertence à gravação em si.
   function limpar() {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
-    }
     setAudioURL('');
     setSegundos(0);
-    setProgresso(0);
-    setDuracao(0);
-    setTempoAtual(0);
-    setTocando(false);
-    duracaoRef.current = 0;
     onLimpar?.();
-  }
-
-  function alternarPlay() {
-    if (!audioRef.current) return;
-    if (tocando) {
-      audioRef.current.pause();
-      setTocando(false);
-    } else {
-      audioRef.current.play();
-      setTocando(true);
-    }
-  }
-
-  function handleTimeUpdate() {
-    if (!audioRef.current) return;
-    setTempoAtual(audioRef.current.currentTime);
-    if (duracaoRef.current > 0)
-      setProgresso(audioRef.current.currentTime / duracaoRef.current);
-  }
-
-  function handleLoadedMetadata() {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const dur = audio.duration;
-    if ((dur === Infinity || Number.isNaN(dur)) && !corrigindoDuracaoRef.current) {
-      // Bug conhecido do Chrome com áudio gravado (MediaRecorder/webm): o
-      // arquivo não guarda a duração no cabeçalho, então o navegador só
-      // consegue calcular depois de "varrer" o arquivo inteiro uma vez.
-      corrigindoDuracaoRef.current = true;
-      audio.currentTime = 1e101;
-      const aoVarrer = () => {
-        audio.removeEventListener('timeupdate', aoVarrer);
-        const durReal = audio.duration && isFinite(audio.duration) ? audio.duration : segundos;
-        duracaoRef.current = durReal;
-        setDuracao(durReal);
-        audio.currentTime = 0;
-        setProgresso(0);
-        setTempoAtual(0);
-        corrigindoDuracaoRef.current = false;
-      };
-      audio.addEventListener('timeupdate', aoVarrer);
-      return;
-    }
-    const durFinal = dur && isFinite(dur) ? dur : segundos;
-    duracaoRef.current = durFinal;
-    setDuracao(durFinal);
-    audio.currentTime = 0;
-    setProgresso(0);
-    setTempoAtual(0);
-  }
-
-  function handleEnded() {
-    setTocando(false);
-    setProgresso(0);
-    setTempoAtual(0);
-    if (audioRef.current) audioRef.current.currentTime = 0;
-  }
-
-  function handleBarraClick(e) {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const dur = audio.duration && isFinite(audio.duration) ? audio.duration : duracaoRef.current;
-    if (!dur) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    audio.currentTime = pct * dur;
-    setProgresso(pct);
-    setTempoAtual(pct * dur);
   }
 
   function fmt(s) {
@@ -280,64 +195,11 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
 
   if (audioURL) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl border border-coffee-100 bg-cream-card px-4 py-2">
-        <button
-          type="button"
-          onClick={alternarPlay}
-          className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-coffee-700 text-cream shadow-sm"
-        >
-          {tocando
-            ? <Pause size={15} fill="currentColor" />
-            : <Play size={15} fill="currentColor" className="ml-0.5" />}
-        </button>
-
-        {/* py aqui é a MESMA medida em cima e embaixo por construção. */}
-        <div className="flex flex-1 flex-col min-w-0 px-2 py-1">
-          <div
-            className="relative flex items-center justify-between h-7 cursor-pointer"
-            onClick={handleBarraClick}
-          >
-            {barrasPlayback.map((altura, i) => {
-              const passado = progresso > 0 && i / barrasPlayback.length <= progresso;
-              return (
-                <div
-                  key={i}
-                  className="w-[2px] flex-shrink-0 rounded-full transition-colors duration-75"
-                  style={{
-                    height: `${altura}px`,
-                    backgroundColor: passado ? '#3F2C1C' : '#D4C4B0',
-                  }}
-                />
-              );
-            })}
-            {duracao > 0 && (
-              <div
-                className="pointer-events-none absolute top-1/2 z-10 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-coffee-700"
-                style={{ left: `${progresso * 100}%` }}
-              />
-            )}
-          </div>
-          <div className="flex justify-between text-[10px] leading-tight text-coffee-400 mt-1">
-            <span>{fmt(tempoAtual)}</span>
-            <span>{fmt(duracao || segundos)}</span>
-          </div>
-        </div>
-
-        <button type="button" onClick={limpar} className="text-coffee-300 hover:text-red-600 flex-shrink-0">
-          <Trash2 size={16} />
-        </button>
-
-        <audio
-          ref={audioRef}
-          src={audioURL}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onDurationChange={handleLoadedMetadata}
-          onEnded={handleEnded}
-          preload="metadata"
-          className="hidden"
-        />
-      </div>
+      <AudioPlayer
+        src={audioURL}
+        onExcluir={limpar}
+        className="rounded-2xl border border-coffee-100 bg-cream-card px-4 py-2"
+      />
     );
   }
 

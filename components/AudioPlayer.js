@@ -1,22 +1,29 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, Trash2 } from 'lucide-react';
 import useAudioBars from '@/lib/useAudioBars';
 
 // ============================================================================
-// Player de áudio dos POSTS (Feed/perfil) — usa o mesmo padrão de onda +
-// play/pause da prévia de gravação (AudioRecorderButton.js), sem botão de mudo.
+// Player de áudio "oficial" do app — onda real + play/pause + arrastar pra
+// buscar. Usado no Feed/perfil (post publicado), na prévia de gravação
+// (AudioRecorderButton.js) e na tela de editar post (EditarPostModal.js) —
+// um só componente pra não ter versões divergentes da mesma peça de UI.
 //
 // O progresso segue o áudio via eventos nativos do <audio>
 // (onTimeUpdate/onLoadedMetadata/onEnded) — o <audio> fica escondido.
 //
-// DUPLO TOQUE: este componente não gerencia o duplo toque. O pai (PostCard)
-// envolve o player num div com onClick={handleDuploToque}, e os cliques em
-// qualquer parte do player sobem normalmente pelo bubbling até esse div.
-// O play e a barra NÃO chamam stopPropagation pra não bloquear esse bubbling.
+// `onExcluir`, se passado, mostra um botão de lixeira ao final (usado na
+// prévia de gravação e ao trocar áudio na edição, pra descartar e gravar de
+// novo). Sem essa prop, o player fica só leitura — é o caso do Feed.
+//
+// DUPLO TOQUE: sem onExcluir, este componente não gerencia o duplo toque. O
+// pai (PostCard) envolve o player num div com onClick={handleDuploToque}, e
+// os cliques em qualquer parte do player sobem normalmente pelo bubbling até
+// esse div. O play e a barra NÃO chamam stopPropagation pra não bloquear
+// esse bubbling.
 // ============================================================================
-export default function AudioPlayer({ src, className = '' }) {
+export default function AudioPlayer({ src, className = '', onExcluir }) {
   const [tocando, setTocando] = useState(false);
   const [duracao, setDuracao] = useState(0);
   const [tempoAtual, setTempoAtual] = useState(0);
@@ -196,6 +203,17 @@ export default function AudioPlayer({ src, className = '' }) {
           <span>{fmt(duracao)}</span>
         </div>
       </div>
+
+      {onExcluir && (
+        <button
+          type="button"
+          onClick={onExcluir}
+          className="flex-shrink-0 text-coffee-300 hover:text-red-600"
+          aria-label="Excluir áudio"
+        >
+          <Trash2 size={16} />
+        </button>
+      )}
 
       <audio
         ref={audioRef}
