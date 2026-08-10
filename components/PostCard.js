@@ -54,10 +54,10 @@ export default function PostCard({ post, usuarioAtual }) {
   const [midiaListaURL, setMidiaListaURL] = useState(post.midiaThumbURL || post.midiaURL || '');
   const [mostrarComentarios, setMostrarComentarios] = useState(false);
   const [imagemAberta, setImagemAberta] = useState(false);
-  // Qual "zona" do post está mostrando o coração de curtida animado agora
-  // (null = nenhuma) — ver comentário completo perto de
+  // Coração de curtida animado, preso ao balão do post inteiro (não mais a
+  // uma zona específica dele) — ver comentário completo perto de
   // dispararCurtidaComAnimacao, mais abaixo.
-  const [zonaCurtida, setZonaCurtida] = useState(null);
+  const [curtidaAnimando, setCurtidaAnimando] = useState(false);
   const [mostrarCurtidas, setMostrarCurtidas] = useState(false);
   const [editandoAberto, setEditandoAberto] = useState(false);
   const [alternandoOculto, setAlternandoOculto] = useState(false);
@@ -168,35 +168,34 @@ export default function PostCard({ post, usuarioAtual }) {
 
   // ── Duplo toque centralizado ─────────────────────────────────────────────
   // Um único ref de timestamp controla a janela de tempo entre toques, não
-  // importa em qual elemento eles aconteceram. Já o coração animado guarda
-  // qual ZONA foi tocada (`zonaCurtida`) — antes era um booleano só, então
-  // toda zona com overlay (título + foto/áudio/item da missão) aparecia ao
-  // mesmo tempo sempre que qualquer uma delas era tocada, duplicando o
-  // coração. Agora só a zona realmente tocada mostra o coração.
+  // importa em qual elemento do balão eles aconteceram (título, foto, áudio,
+  // item de missão — incluindo os revelados pelo "Ver mais", já que é tudo
+  // o mesmo balão). O coração é um só, preso ao balão do post inteiro e
+  // sempre centralizado nele (ver overlay único no JSX, perto do rodapé).
   const animandoRef = useRef(false);
 
-  function dispararCurtidaComAnimacao(zona) {
+  function dispararCurtidaComAnimacao() {
     if (animandoRef.current) return; // já animando — ignora clique extra
     animandoRef.current = true;
     if (!jaCurtiuExibido) handleLike();
-    setZonaCurtida(zona);
+    setCurtidaAnimando(true);
     setTimeout(() => {
-      setZonaCurtida(null);
+      setCurtidaAnimando(false);
       animandoRef.current = false;
     }, 700);
   }
 
   // Usado em áreas sem ação concorrente (texto, áudio, check, link…)
-  function handleDuploToque(zona) {
+  function handleDuploToque() {
     const agora = Date.now();
     if (agora - ultimoTapRef.current < JANELA_DUPLO_TOQUE) {
-      dispararCurtidaComAnimacao(zona);
+      dispararCurtidaComAnimacao();
     }
     ultimoTapRef.current = agora;
   }
 
   // Foto distingue toque único (abre em tela cheia) de duplo (curte).
-  function handleTapNaFoto(zona) {
+  function handleTapNaFoto() {
     const agora = Date.now();
     const desdeUltimoTap = agora - ultimoTapRef.current;
     ultimoTapRef.current = agora;
@@ -206,7 +205,7 @@ export default function PostCard({ post, usuarioAtual }) {
         clearTimeout(timeoutTapRef.current);
         timeoutTapRef.current = null;
       }
-      dispararCurtidaComAnimacao(zona);
+      dispararCurtidaComAnimacao();
     } else {
       timeoutTapRef.current = setTimeout(() => {
         setImagemAberta(true);
@@ -349,39 +348,29 @@ export default function PostCard({ post, usuarioAtual }) {
   }
 
   // Renderiza um item da hierarquia de um post de missão (foto, áudio, ou
-  // um campo de resposta). `comDuploToque` só é passado pro primeiro item
-  // visível — os que aparecem depois de "Ver mais" não disputam o gesto de
-  // duplo toque com o resto da tela.
+  // um campo de resposta). `comDuploToque` é true pra todo item VISÍVEL no
+  // momento — inclusive os revelados pelo "Ver mais", já que fazem parte do
+  // mesmo balão do post e o coração de curtida é único (preso ao balão
+  // inteiro, não a este item específico).
   function renderItemMissao(item, key, comDuploToque) {
-    const zona = `item-${key}`;
     if (item.tipo === 'foto') {
       const url = item.url === post.midiaURL ? midiaURL : item.url;
       return (
         <button
           key={key}
-          onClick={comDuploToque ? () => handleTapNaFoto(zona) : () => setImagemAberta(true)}
+          onClick={comDuploToque ? () => handleTapNaFoto() : () => setImagemAberta(true)}
           className="relative mb-2.5 block w-full overflow-hidden rounded-xl"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={url} alt="Foto da missão" className="w-full object-cover max-h-80" />
-          {comDuploToque && zonaCurtida === zona && (
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <Heart size={72} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
-            </span>
-          )}
         </button>
       );
     }
 
     if (item.tipo === 'audio') {
       return (
-        <div key={key} className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3 pt-1 pb-1" onClick={comDuploToque ? () => handleDuploToque(zona) : undefined}>
+        <div key={key} className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3 pt-1 pb-1" onClick={comDuploToque ? () => handleDuploToque() : undefined}>
           <AudioPlayer src={item.url} />
-          {comDuploToque && zonaCurtida === zona && (
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <Heart size={56} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
-            </span>
-          )}
         </div>
       );
     }
@@ -390,16 +379,11 @@ export default function PostCard({ post, usuarioAtual }) {
       return (
         <div
           key={key}
-          onClick={comDuploToque ? () => handleDuploToque(zona) : undefined}
+          onClick={comDuploToque ? () => handleDuploToque() : undefined}
           className="relative mb-2.5 flex items-center gap-2 rounded-xl bg-green-50 px-3.5 py-2.5 text-sm text-green-800"
         >
           <CheckCircle2 size={16} className="flex-shrink-0 text-green-600" />
           <span>{item.label}</span>
-          {comDuploToque && zonaCurtida === zona && (
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <Heart size={44} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
-            </span>
-          )}
         </div>
       );
     }
@@ -411,17 +395,12 @@ export default function PostCard({ post, usuarioAtual }) {
             href={item.valor}
             target="_blank"
             rel="noreferrer"
-            onClick={comDuploToque ? () => handleDuploToque(zona) : undefined}
+            onClick={comDuploToque ? () => handleDuploToque() : undefined}
             className="flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5 text-sm text-coffee-700"
           >
             <Link2 size={15} className="flex-shrink-0 text-coffee-400" />
             <span className="truncate">{item.label || item.valor}</span>
           </a>
-          {comDuploToque && zonaCurtida === zona && (
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <Heart size={44} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
-            </span>
-          )}
         </div>
       );
     }
@@ -430,16 +409,11 @@ export default function PostCard({ post, usuarioAtual }) {
     return (
       <div
         key={key}
-        onClick={comDuploToque ? () => handleDuploToque(zona) : undefined}
+        onClick={comDuploToque ? () => handleDuploToque() : undefined}
         className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5"
       >
         {item.label && <p className="mb-0.5 text-[11px] font-medium text-coffee-400">{item.label}</p>}
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-coffee-700">{item.valor}</p>
-        {comDuploToque && zonaCurtida === zona && (
-          <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <Heart size={44} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
-          </span>
-        )}
       </div>
     );
   }
@@ -473,7 +447,7 @@ export default function PostCard({ post, usuarioAtual }) {
   }
 
   return (
-    <div className="rounded-2xl border border-coffee-100 bg-cream-card p-4">
+    <div className="relative rounded-2xl border border-coffee-100 bg-cream-card p-4">
       {/* Cabeçalho — nome e avatar levam ao perfil do autor */}
       <div className="mb-3 flex items-center gap-2.5">
         <Link href={`/u/${autor?.username || post.autorId}`} className="flex-shrink-0">
@@ -532,7 +506,7 @@ export default function PostCard({ post, usuarioAtual }) {
           EditarPostModal.js) e com mais contraste/destaque que o resto do
           post, já que é o título, não um item de resposta qualquer. */}
       {post.texto && (
-        <div onClick={() => handleDuploToque('titulo')} className="relative">
+        <div onClick={() => handleDuploToque()} className="relative">
           {ehPostDeMissao ? (
             <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-coffee-500">{post.texto}</p>
           ) : (
@@ -540,11 +514,6 @@ export default function PostCard({ post, usuarioAtual }) {
               texto={post.texto}
               className="mb-4 text-sm leading-relaxed text-coffee-700"
             />
-          )}
-          {zonaCurtida === 'titulo' && (
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <Heart size={44} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
-            </span>
           )}
         </div>
       )}
@@ -554,7 +523,7 @@ export default function PostCard({ post, usuarioAtual }) {
           atrás de "Ver mais" pra não abarrotar o feed. */}
       {itensVisiveis && (
         <div className="mb-1">
-          {itensVisiveis.map((item, i) => renderItemMissao(item, i, i === 0))}
+          {itensVisiveis.map((item, i) => renderItemMissao(item, i, true))}
 
           {temMaisItens && (
             <button
@@ -578,7 +547,7 @@ export default function PostCard({ post, usuarioAtual }) {
       {/* Post manual (fora do fluxo de missões) — foto/áudio simples, como antes */}
       {!itensMissao && post.tipo === 'foto' && midiaURL && (
         <button
-          onClick={() => handleTapNaFoto('foto-manual')}
+          onClick={() => handleTapNaFoto()}
           className="relative mb-3 block w-full overflow-hidden rounded-xl"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -587,11 +556,6 @@ export default function PostCard({ post, usuarioAtual }) {
             alt="Foto do post"
             className="w-full object-cover max-h-80"
           />
-          {zonaCurtida === 'foto-manual' && (
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <Heart size={72} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
-            </span>
-          )}
         </button>
       )}
 
@@ -599,13 +563,8 @@ export default function PostCard({ post, usuarioAtual }) {
           duplo toque pra curtir em qualquer parte dele (play, onda, ou o
           espaço vazio ao redor). */}
       {!itensMissao && post.tipo === 'audio' && post.midiaURL && (
-        <div className="relative mb-3 rounded-xl border border-coffee-100 bg-cream px-3 pt-1 pb-1" onClick={() => handleDuploToque('audio-manual')}>
+        <div className="relative mb-3 rounded-xl border border-coffee-100 bg-cream px-3 pt-1 pb-1" onClick={() => handleDuploToque()}>
           <AudioPlayer src={post.midiaURL} />
-          {zonaCurtida === 'audio-manual' && (
-            <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
-              <Heart size={56} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
-            </span>
-          )}
         </div>
       )}
 
@@ -660,6 +619,18 @@ export default function PostCard({ post, usuarioAtual }) {
             <CommentSection postId={post.id} postAutorId={post.autorId} usuarioAtual={usuarioAtual} />
           )}
         </>
+      )}
+
+      {/* Coração de curtida por duplo toque — um só, preso ao balão do post
+          inteiro (não a uma zona específica dele). Como o balão inteiro
+          (className="relative" lá em cima) é a referência de posicionamento,
+          o coração fica sempre centralizado nele, inclusive quando "Ver
+          mais" muda a altura do balão — o centro acompanha sozinho (desce
+          ao abrir, sobe ao fechar), sem precisar calcular nada na mão. */}
+      {curtidaAnimando && (
+        <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+          <Heart size={72} className="animate-curtidaPop text-red-500 drop-shadow-lg" fill="currentColor" />
+        </span>
       )}
 
       {imagemAberta && (
