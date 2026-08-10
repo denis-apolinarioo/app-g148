@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { X, Image as ImageIcon, Mic as MicIcon, Type, Camera } from 'lucide-react';
+import { X, Image as ImageIcon, Camera } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { db } from '@/lib/firebase';
 import { createPost } from '@/lib/firestore-helpers';
@@ -29,7 +29,6 @@ export default function CreatePostSheet({ onFechar, onPublicado, rascunhoInicial
   // PUBLICAÇÃO OTIMISTA — quando a tela reabre depois de um erro de envio
   // (ver onErroPublicar), `rascunhoInicial` traz de volta exatamente o que
   // a pessoa tinha digitado/escolhido, pra não perder nada.
-  const [aba, setAba] = useState(rascunhoInicial?.aba || 'texto');
   const [texto, setTexto] = useState(rascunhoInicial?.texto || '');
   // FASE 3 — categoria escolhida entre as configuráveis pelo Admin (Admin >
   // Ações > Ações específicas). `null` = "Nenhuma", mesmo comportamento de
@@ -110,18 +109,20 @@ export default function CreatePostSheet({ onFechar, onPublicado, rascunhoInicial
     });
   }, []);
 
-  const podePublicarConteudo =
-    (aba === 'texto' && texto.trim()) ||
-    (aba === 'foto' && arquivoFoto) ||
-    (aba === 'audio' && blobAudio);
+  // SEM ABAS — texto, foto e áudio ficam todos visíveis ao mesmo tempo
+  // (empilhados), então "o que a pessoa preencheu" já basta pra saber se dá
+  // pra publicar. Cada publicação só carrega uma mídia (foto OU áudio, nunca
+  // as duas — ver prioridade `foto > áudio` mais abaixo), mas o texto
+  // funciona como legenda independente do que for anexado.
+  const podePublicarConteudo = texto.trim() || arquivoFoto || blobAudio;
 
   // FASE — categoria pode exigir imagem/texto/áudio (configurado em Admin >
   // Ações > Ações específicas). `exigenciasPendentes` lista só o que ainda
   // falta, e vai encolhendo conforme a pessoa preenche cada campo.
   const exigenciasPendentes = [];
   if (categoria?.exigeTexto && !texto.trim()) exigenciasPendentes.push('texto');
-  if (categoria?.exigeImagem && !(aba === 'foto' && arquivoFoto)) exigenciasPendentes.push('imagem');
-  if (categoria?.exigeAudio && !(aba === 'audio' && blobAudio)) exigenciasPendentes.push('áudio');
+  if (categoria?.exigeImagem && !arquivoFoto) exigenciasPendentes.push('imagem');
+  if (categoria?.exigeAudio && !blobAudio) exigenciasPendentes.push('áudio');
 
   const podePublicar = podePublicarConteudo && exigenciasPendentes.length === 0;
 
@@ -138,14 +139,16 @@ export default function CreatePostSheet({ onFechar, onPublicado, rascunhoInicial
     if (!podePublicar || emDebouncePublicar()) return;
     setErro('');
 
-    const tipoOtimista = aba === 'foto' && arquivoFoto ? 'foto' : aba === 'audio' && blobAudio ? 'audio' : 'texto';
+    // Prioridade foto > áudio quando (raramente) as duas estiverem
+    // preenchidas ao mesmo tempo — cada post só guarda uma mídia.
+    const tipoOtimista = arquivoFoto ? 'foto' : blobAudio ? 'audio' : 'texto';
     // URL própria pro card otimista (independente da preview da tela, que
     // é revogada quando a tela fecha) — quem cuida de revogar essa aqui é o
     // FeedPage, quando o post otimista sai da lista (ver handleConfirmarPublicado/handleErroPublicar).
     const midiaURLLocal = tipoOtimista === 'foto' && arquivoFoto ? URL.createObjectURL(arquivoFoto) : '';
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-    const rascunho = { aba, texto, categoria, arquivoFoto, blobAudio, duracaoAudio };
+    const rascunho = { texto, categoria, arquivoFoto, blobAudio, duracaoAudio };
 
     onPublicarOtimista?.({
       id: tempId,
@@ -163,12 +166,12 @@ export default function CreatePostSheet({ onFechar, onPublicado, rascunhoInicial
       let midiaURL = '';
       let midiaThumbURL = '';
 
-      if (aba === 'foto' && arquivoFoto) {
+      if (arquivoFoto) {
         tipo = 'foto';
         const resultado = await uploadFotoComThumb(perfil.uid, arquivoFoto);
         midiaURL = resultado.url;
         midiaThumbURL = resultado.thumbURL;
-      } else if (aba === 'audio' && blobAudio) {
+      } else if (blobAudio) {
         tipo = 'audio';
         midiaURL = await uploadAudio(perfil.uid, blobAudio);
       }
@@ -257,21 +260,20 @@ export default function CreatePostSheet({ onFechar, onPublicado, rascunhoInicial
         </div>
 
         <div className="px-5 py-4">
-          <div className="mb-4 flex items-center gap-2 border-b border-coffee-100">
-            <AbaBtn ativo={aba === 'texto'} onClick={() => setAba('texto')} icone={Type} label="Texto" />
-            <AbaBtn ativo={aba === 'foto'} onClick={() => setAba('foto')} icone={ImageIcon} label="Foto" />
-            <AbaBtn ativo={aba === 'audio'} onClick={() => setAba('audio')} icone={MicIcon} label="Áudio" />
-          </div>
-
+          {/* SEM ABAS — texto, imagem e áudio aparecem sempre em fila (nessa
+              ordem), sem precisar clicar em nada pra trocar de seção.
+              Cada post só carrega uma mídia: anexar foto esconde a seção de
+              áudio (e vice-versa) pra não ter as duas ao mesmo tempo; o
+              texto funciona como legenda em qualquer caso. */}
           <textarea
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
-            placeholder={aba === 'texto' ? 'No que você está pensando?' : 'Adicione uma legenda (opcional)'}
+            placeholder="No que você está pensando?"
             rows={4}
             className="w-full resize-none rounded-xl border border-coffee-100 bg-cream-card p-3.5 text-sm text-coffee-800 placeholder:text-coffee-300"
           />
 
-          {aba === 'foto' && (
+          {!blobAudio && (
             <div className="mt-3">
               {previewFoto ? (
                 <button
@@ -291,18 +293,18 @@ export default function CreatePostSheet({ onFechar, onPublicado, rascunhoInicial
                   <button
                     type="button"
                     onClick={() => inputFotoRef.current?.click()}
-                    className="flex flex-1 flex-col items-center gap-2 rounded-xl border-2 border-dashed border-coffee-200 py-7 text-coffee-400"
+                    className="flex flex-1 flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-coffee-200 py-4 text-coffee-400"
                   >
-                    <ImageIcon size={24} />
+                    <ImageIcon size={20} />
                     <span className="text-xs">Galeria</span>
                   </button>
                   {/* Câmera */}
                   <button
                     type="button"
                     onClick={() => inputCameraRef.current?.click()}
-                    className="flex flex-1 flex-col items-center gap-2 rounded-xl border-2 border-dashed border-coffee-200 py-7 text-coffee-400"
+                    className="flex flex-1 flex-col items-center gap-1.5 rounded-xl border-2 border-dashed border-coffee-200 py-4 text-coffee-400"
                   >
-                    <Camera size={24} />
+                    <Camera size={20} />
                     <span className="text-xs">Câmera</span>
                   </button>
                 </div>
@@ -327,7 +329,7 @@ export default function CreatePostSheet({ onFechar, onPublicado, rascunhoInicial
             </div>
           )}
 
-          {aba === 'audio' && (
+          {!arquivoFoto && (
             <div className="mt-3">
               <AudioRecorderButton
                 onGravado={(blob, segundos) => {
@@ -388,22 +390,5 @@ export default function CreatePostSheet({ onFechar, onPublicado, rascunhoInicial
         </div>
       </div>
     </div>
-  );
-}
-
-function AbaBtn({ ativo, onClick, icone: Icone, label }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-1.5 border-b-2 px-1 pb-2 text-sm font-medium ${
-        ativo
-          ? 'border-coffee-700 text-coffee-800'
-          : 'border-transparent text-coffee-400'
-      }`}
-    >
-      <Icone size={16} />
-      {label}
-    </button>
   );
 }
