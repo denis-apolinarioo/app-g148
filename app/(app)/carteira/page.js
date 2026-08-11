@@ -107,7 +107,7 @@ export default function CarteiraPage() {
       <div className="space-y-5 px-5 py-5">
         {modo === 'criar_pin' && (
           <FormularioPin
-            titulo="Crie o PIN da sua Carteira"
+            titulo="Crie o PIN"
             descricao="Antes de continuar, crie um PIN de 4 dígitos pra proteger sua Carteira. Você vai usar esse PIN em futuras transferências."
             onConfirmar={async (pin) => {
               await configurarPin(perfil.uid, pin);
@@ -185,21 +185,8 @@ export default function CarteiraPage() {
                 {saldoOculto ? <Eye size={18} /> : <EyeOff size={18} />}
               </button>
 
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gold/15">
-                {/* Logo real da moeda (public/icons/custom/dracma-coin.png), no
-                    lugar do DracmaIcon vetorial — mesmo padrão de "foto virou
-                    ícone" do BottomNav (arco-flecha/mãos orando): pointer-events
-                    none pra o toque sempre cair no elemento por trás (nunca abre
-                    menu de salvar imagem), sem drag, sem menu de contexto. */}
-                <img
-                  src="/icons/custom/dracma-coin.png"
-                  width={72}
-                  height={72}
-                  alt=""
-                  draggable={false}
-                  onContextMenu={(e) => e.preventDefault()}
-                  className="pointer-events-none select-none object-contain [-webkit-touch-callout:none] [-webkit-user-drag:none]"
-                />
+              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gold/15">
+                <DracmaIcon size={22} className="text-gold" />
               </div>
               <div className="mt-3">
                 <p className="font-destaque text-3xl font-bold text-coffee-800">
@@ -411,7 +398,7 @@ function ConfirmarEntradaCarteira({ uid, onConfirmado, onEsqueciPin, onSemPin })
 
   async function handleConfirmar() {
     if (!/^\d{4}$/.test(pin)) {
-      setErro('Digite o PIN de 4 dígitos da sua Carteira.');
+      setErro('Digite o PIN de 4 dígitos.');
       return;
     }
     setConfirmando(true);
@@ -440,7 +427,7 @@ function ConfirmarEntradaCarteira({ uid, onConfirmado, onEsqueciPin, onSemPin })
         <Lock size={20} className="text-coffee-600" />
       </div>
       <p className="mt-3 font-destaque text-base font-semibold text-coffee-800">
-        Digite o PIN da Carteira
+        Digite o PIN
       </p>
       <p className="mt-1 text-sm text-coffee-400">Confirme seu PIN pra entrar.</p>
 
@@ -624,7 +611,7 @@ function FormularioTransferencia({ perfil, onVoltar, onEnviado, onEsqueciPin }) 
       return;
     }
     if (!/^\d{4}$/.test(pin)) {
-      setErro('Digite o PIN de 4 dígitos da sua Carteira.');
+      setErro('Digite o PIN de 4 dígitos.');
       return;
     }
 
@@ -690,7 +677,7 @@ function FormularioTransferencia({ perfil, onVoltar, onEnviado, onEsqueciPin }) 
         </div>
 
         <div>
-          <label className="mb-1 block text-xs font-medium text-coffee-500">PIN da Carteira</label>
+          <label className="mb-1 block text-xs font-medium text-coffee-500">PIN</label>
           <input
             type="password"
             inputMode="numeric"

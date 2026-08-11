@@ -45,11 +45,11 @@ export async function POST(request) {
     await transporter.sendMail({
       from: remetentePadrao(),
       to: email,
-      subject: 'Seu código para recuperar o PIN da Carteira — G148',
+      subject: 'Seu código para recuperar o PIN — G148',
       html: `
         <div style="font-family: sans-serif; max-width: 420px; margin: 0 auto;">
           <p>Oi, ${primeiroNome}!</p>
-          <p>Alguém (esperamos que você) pediu pra recuperar o PIN da sua Carteira no app G148.</p>
+          <p>Alguém (esperamos que você) pediu pra recuperar o PIN no app G148.</p>
           <p style="font-size: 28px; font-weight: bold; letter-spacing: 4px; margin: 24px 0;">${codigo}</p>
           <p>Esse código vale por 10 minutos. Se você não pediu essa recuperação, pode ignorar este e-mail.</p>
         </div>
