@@ -1,7 +1,12 @@
 import Link from 'next/link';
 import Avatar from '@/components/Avatar';
 
-const MEDALHAS = ['🥇', '🥈', '🥉'];
+// Medalhas do top 3 (1º, 2º, 3º lugar) em public/icons/ranking/.
+const MEDALHAS = [
+  '/icons/ranking/medalha-1.png',
+  '/icons/ranking/medalha-2.png',
+  '/icons/ranking/medalha-3.png',
+];
 
 export default function RankingRow({ posicao, usuario, souEu }) {
   const medalha = MEDALHAS[posicao - 1];
@@ -15,12 +20,22 @@ export default function RankingRow({ posicao, usuario, souEu }) {
     >
       {/* Medalhas do top 3 um pouco maiores que o número puro das demais
           posições, pra dar mais destaque sem exagerar. */}
-      <span
-        className={`flex w-9 flex-shrink-0 items-center justify-center font-destaque font-semibold text-coffee-400 ${
-          medalha ? 'text-3xl' : 'text-base'
-        }`}
-      >
-        {medalha || posicao}
+      <span className="flex w-9 flex-shrink-0 items-center justify-center">
+        {medalha ? (
+          <img
+            src={medalha}
+            width={36}
+            height={36}
+            alt={`${posicao}º lugar`}
+            draggable={false}
+            onContextMenu={(e) => e.preventDefault()}
+            className="pointer-events-none select-none object-contain [-webkit-touch-callout:none] [-webkit-user-drag:none]"
+          />
+        ) : (
+          <span className="font-destaque text-base font-semibold text-coffee-400">
+            {posicao}
+          </span>
+        )}
       </span>
       <Avatar src={usuario.fotoURL} nome={usuario.nome} tamanho="sm" />
       <div className="min-w-0 flex-1">

@@ -7,8 +7,10 @@
 // popup de aviso simples) que já aconteceu antes deste componente ser
 // montado. Usos atuais: reset em massa de Pontos/Dracma no Admin (1º fator
 // é o popup em handleAbrirConfirmacao() de AbaConfiguracoes.js, via
-// components/ConfirmProvider.js) e exclusão de conta em perfil/editar
-// (1º fator é o ConfirmarAcaoModal ali mesmo).
+// components/ConfirmProvider.js), exclusão da PRÓPRIA conta em
+// perfil/editar e exclusão da conta de OUTRA pessoa pelo Admin em
+// AbaUsuarios.js (1º fator, nos dois casos de exclusão, é o
+// ConfirmarAcaoModal ali mesmo).
 //
 // Passo 1 (aqui dentro): código de 6 dígitos por e-mail — gerado no aparelho
 // de quem confirma (igual à recuperação de PIN da Carteira, lib/dracma.js),
@@ -46,7 +48,7 @@ function mensagemErroReauth(codigo) {
   return mapa[codigo] ?? 'Não foi possível confirmar. Tente novamente.';
 }
 
-export default function ConfirmarResetModal({ acao, titulo, descricao, onFechar, onConfirmado }) {
+export default function ConfirmarResetModal({ acao, alvo, titulo, descricao, onFechar, onConfirmado }) {
   const { perfil, usuarioAuth } = useAuth();
   const [etapa, setEtapa] = useState('email'); // 'email' | 'senha'
 
@@ -71,7 +73,10 @@ export default function ConfirmarResetModal({ acao, titulo, descricao, onFechar,
       const resposta = await fetch('/api/confirmar-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, nome: perfil?.nome, codigo: novoCodigo, acao }),
+        // `alvo` só é usado na exclusão de conta feita pelo Admin em nome
+        // de outra pessoa (ver AbaUsuarios.js) — nos outros usos vem
+        // undefined e o JSON.stringify simplesmente omite o campo.
+        body: JSON.stringify({ email, nome: perfil?.nome, codigo: novoCodigo, acao, alvo }),
       });
       if (!resposta.ok) throw new Error('FALHA_ENVIO');
       setCodigoGerado(novoCodigo);

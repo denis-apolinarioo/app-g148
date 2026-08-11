@@ -2,8 +2,10 @@
 // PACOTE 3, item 3.3 — envia o código de confirmação por e-mail, usado por
 // qualquer fluxo que passa por ConfirmarResetModal.js: 2º de 3 fatores pra
 // zerar Pontos ou Dracma de todo mundo no Admin (pop up -> e-mail -> senha
-// do admin), e também 2ª camada da exclusão de conta em perfil/editar
-// (aviso -> e-mail -> senha da própria conta).
+// do admin), pra exclusão da PRÓPRIA conta em perfil/editar (aviso ->
+// e-mail -> senha da própria conta) e pra exclusão da conta de OUTRA
+// pessoa pelo Admin em AbaUsuarios.js (mesma sequência; o e-mail mostra o
+// nome de quem está sendo excluído como checagem extra).
 //
 // Envio feito via Gmail (SMTP), usando lib/mailer.js — mesmo helper e mesmas
 // variáveis de ambiente de app/api/recuperar-pin/route.js (GMAIL_USER e
@@ -11,8 +13,9 @@
 //
 // O código em si é gerado no aparelho de quem confirma (dentro de
 // ConfirmarResetModal.js) — esta rota só recebe o e-mail de destino, o
-// nome, o código pronto e qual ação está sendo confirmada, e manda o
-// e-mail. Nunca fica salvo em nenhum log do servidor.
+// nome, o código pronto, qual ação está sendo confirmada e (só na exclusão
+// pelo Admin) o nome de quem está sendo excluído, e manda o e-mail. Nunca
+// fica salvo em nenhum log do servidor.
 // ============================================================================
 import { NextResponse } from 'next/server';
 import { getTransporter, remetentePadrao, origemValida } from '@/lib/mailer';
@@ -21,7 +24,9 @@ const ROTULO_ACAO = {
   pontos: 'zerar os Pontos de Comunhão de TODOS os usuários',
   dracmas: 'zerar os Dracmas de TODOS os usuários',
   excluir_conta: 'excluir sua conta do app G148',
+  excluir_conta_admin: 'excluir a conta de outro usuário do app G148',
 };
+
 
 export async function POST(request) {
   if (!origemValida(request)) {
@@ -35,7 +40,7 @@ export async function POST(request) {
     return NextResponse.json({ erro: 'CORPO_INVALIDO' }, { status: 400 });
   }
 
-  const { email, nome, codigo, acao } = body || {};
+  const { email, nome, codigo, acao, alvo } = body || {};
   if (!email || !codigo || !/^\d{6}$/.test(codigo)) {
     return NextResponse.json({ erro: 'DADOS_INVALIDOS' }, { status: 400 });
   }
@@ -47,7 +52,13 @@ export async function POST(request) {
   }
 
   const primeiroNome = (nome || '').trim().split(' ')[0] || 'admin';
-  const descricaoAcao = ROTULO_ACAO[acao] || 'realizar uma ação sensível no Painel Admin';
+  // Exclusão de conta feita pelo Admin em nome de outra pessoa: troca o
+  // rótulo genérico pelo nome de quem está sendo excluído, pra servir de
+  // última checagem no e-mail (evita excluir a conta errada por engano).
+  const descricaoAcao =
+    acao === 'excluir_conta_admin' && alvo
+      ? `excluir a conta de ${alvo} do app G148`
+      : ROTULO_ACAO[acao] || 'realizar uma ação sensível no Painel Admin';
 
   try {
     await transporter.sendMail({

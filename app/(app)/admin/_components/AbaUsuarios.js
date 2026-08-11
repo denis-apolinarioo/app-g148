@@ -5,6 +5,7 @@ import { Lock, Unlock, Loader2, SlidersHorizontal, Search, X, UserCog, UserX } f
 import DracmaIcon from '@/components/DracmaIcon';
 import Avatar from '@/components/Avatar';
 import ConfirmarAcaoModal from '@/components/ConfirmarAcaoModal';
+import ConfirmarResetModal from '@/components/ConfirmarResetModal';
 import { useAuth } from '@/components/AuthProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { getAllUsers, toggleTravarUsuario, updateUserProfile } from '@/lib/firestore-helpers';
@@ -29,7 +30,15 @@ export default function AbaUsuarios() {
   // Excluir conta (LGPD) — mesma function do botão em Perfil → Editar,
   // agora pro Admin poder acionar em nome de qualquer pessoa (ver
   // excluirConta em functions/index.js pro que exatamente acontece).
+  // Mesmas 3 camadas de confirmação da auto-exclusão em Perfil → Editar:
+  // (1) aviso do que vai acontecer (ConfirmarAcaoModal); (2) código de
+  // 6 dígitos por e-mail + senha (ou Google) da conta de quem está
+  // confirmando (ConfirmarResetModal — o e-mail mostra o nome de quem
+  // está sendo excluído, como checagem final antes de excluir a conta
+  // errada); (3) só depois de tudo isso é que handleExcluirUsuario chama
+  // a Cloud Function de verdade.
   const [excluindo, setExcluindo] = useState(null); // usuário sendo confirmado/excluído
+  const [autenticandoExclusao, setAutenticandoExclusao] = useState(false);
   const [processandoExclusao, setProcessandoExclusao] = useState(false);
   const [erroExclusao, setErroExclusao] = useState('');
 
@@ -92,6 +101,16 @@ export default function AbaUsuarios() {
     setUsuarios((lista) => lista.map((u) => (u.id === uid ? { ...u, ...patch } : u)));
   }
 
+  // Sempre entra pela 1ª camada (aviso), mesmo que o Admin já tenha
+  // excluído outra pessoa antes na mesma sessão — sem isso, autenticandoExclusao
+  // ficaria "true" de uma exclusão anterior e a próxima pularia direto pro
+  // e-mail/senha sem passar pelo aviso de novo.
+  function abrirExclusao(usuario) {
+    setExcluindo(usuario);
+    setAutenticandoExclusao(false);
+    setErroExclusao('');
+  }
+
   // Excluir conta (LGPD) — o Admin não pode excluir a PRÓPRIA conta por
   // aqui (evita acidente; se ele mesmo quiser sair do app de vez, usa o
   // botão em Perfil → Editar, que passa por outra confirmação, específica
@@ -104,6 +123,7 @@ export default function AbaUsuarios() {
       await excluirConta(excluindo.id);
       setUsuarios((lista) => lista.filter((u) => u.id !== excluindo.id));
       setExcluindo(null);
+      setAutenticandoExclusao(false);
     } catch (err) {
       console.error('Erro ao excluir conta:', err);
       // Mostra a mensagem real que a Cloud Function mandou (ex.: "Falha ao
@@ -228,7 +248,7 @@ export default function AbaUsuarios() {
                 própria conta é só pelo botão em Perfil → Editar). */}
             {u.id !== perfil?.uid && (
               <button
-                onClick={() => setExcluindo(u)}
+                onClick={() => abrirExclusao(u)}
                 title="Excluir conta"
                 className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg border border-coffee-100 text-coffee-400 hover:border-red-200 hover:text-red-600"
               >
@@ -278,29 +298,46 @@ export default function AbaUsuarios() {
         />
       )}
 
-      {excluindo && (
-        <div>
-          <ConfirmarAcaoModal
-            titulo={`Excluir a conta de ${excluindo.nome}?`}
-            mensagem={`O perfil, a carteira e as conquistas de ${excluindo.nome} somem de vez, e ela é desconectada do app na hora. Os posts, comentários e pedidos de oração que ela já fez continuam no app, mas aparecem como "Usuário removido". Essa ação não pode ser desfeita.`}
-            textoConfirmar="Excluir conta"
-            confirmando={processandoExclusao}
-            onFechar={() => {
-              if (!processandoExclusao) {
-                setExcluindo(null);
-                setErroExclusao('');
-              }
-            }}
-            onConfirmar={handleExcluirUsuario}
-          />
-          {/* Erro (se houver) fica por cima do modal — ConfirmarAcaoModal
-              não tem slot próprio pra isso, então mostramos como um toast
-              simples ancorado embaixo, sem fechar o popup de confirmação. */}
-          {erroExclusao && (
-            <div className="fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-xs rounded-xl bg-red-700 px-4 py-2.5 text-center text-xs font-medium text-cream shadow-lg">
-              {erroExclusao}
-            </div>
-          )}
+      {excluindo && !autenticandoExclusao && (
+        <ConfirmarAcaoModal
+          titulo={`Excluir a conta de ${excluindo.nome}?`}
+          mensagem={`O perfil, a carteira e as conquistas de ${excluindo.nome} somem de vez, e ela é desconectada do app na hora. Os posts, comentários e pedidos de oração que ela já fez continuam no app, mas aparecem como "Usuário removido". Essa ação não pode ser desfeita.`}
+          textoConfirmar="Continuar"
+          onFechar={() => setExcluindo(null)}
+          onConfirmar={() => setAutenticandoExclusao(true)}
+        />
+      )}
+
+      {/* 2ª camada, mesmo padrão da auto-exclusão em Perfil → Editar: código
+          de 6 dígitos por e-mail (pro e-mail de quem está confirmando, o
+          Admin logado — não pra pessoa sendo excluída) seguido da senha
+          (ou Google) da própria conta. O e-mail mostra o nome de quem vai
+          ser excluído, como última checagem antes de excluir a conta
+          errada. Só depois de tudo isso handleExcluirUsuario chama a
+          Cloud Function de verdade. */}
+      {excluindo && autenticandoExclusao && (
+        <ConfirmarResetModal
+          acao="excluir_conta_admin"
+          alvo={excluindo.nome}
+          titulo="Excluir conta de outro usuário"
+          descricao={`Última etapa: confirme o código enviado por e-mail e depois sua senha pra excluir a conta de ${excluindo.nome} de vez. Essa ação não pode ser desfeita.`}
+          onFechar={() => {
+            if (!processandoExclusao) {
+              setAutenticandoExclusao(false);
+              setExcluindo(null);
+              setErroExclusao('');
+            }
+          }}
+          onConfirmado={handleExcluirUsuario}
+        />
+      )}
+
+      {/* Erro (se houver) fica por cima dos modais acima — nenhum dos dois
+          tem slot próprio pra isso, então mostramos como um toast simples
+          ancorado embaixo, sem fechar o popup em aberto. */}
+      {excluindo && erroExclusao && (
+        <div className="fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-xs rounded-xl bg-red-700 px-4 py-2.5 text-center text-xs font-medium text-cream shadow-lg">
+          {erroExclusao}
         </div>
       )}
     </div>
