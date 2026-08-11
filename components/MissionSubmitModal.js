@@ -7,7 +7,7 @@ import { submeterMissao } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
 import { vibrarMissaoConcluida } from '@/lib/haptics';
 import { uploadFoto, uploadAudio } from '@/lib/storage';
-import ImageCropper from '@/components/ImageCropper';
+import ImageCropper, { PROPORCAO_ORIGINAL } from '@/components/ImageCropper';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
 import { useToast } from '@/components/ToastProvider';
 import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
@@ -16,6 +16,7 @@ const PROPORCOES = [
   { label: '1:1', w: 1, h: 1 },
   { label: '4:5', w: 4, h: 5 },
   { label: '3:4', w: 3, h: 4 },
+  { label: 'Original', w: PROPORCAO_ORIGINAL, h: PROPORCAO_ORIGINAL },
 ];
 
 export default function MissionSubmitModal({ missao, onFechar, onConcluida, rascunhoInicial, onEnviarOtimista, onConfirmarEnviada, onErroEnviar }) {

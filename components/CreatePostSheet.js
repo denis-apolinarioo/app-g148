@@ -13,7 +13,7 @@ import { dentroDaJanelaHorario } from '@/lib/dateUtils';
 import { verificarConquistas } from '@/lib/achievements';
 import { uploadFotoComThumb, uploadAudio } from '@/lib/storage';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
-import ImageCropper from '@/components/ImageCropper';
+import ImageCropper, { PROPORCAO_ORIGINAL } from '@/components/ImageCropper';
 import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
 import { useToast } from '@/components/ToastProvider';
 
@@ -21,6 +21,7 @@ const PROPORCOES = [
   { label: '1:1', w: 1, h: 1 },
   { label: '4:5', w: 4, h: 5 },
   { label: '3:4', w: 3, h: 4 },
+  { label: 'Original', w: PROPORCAO_ORIGINAL, h: PROPORCAO_ORIGINAL },
 ];
 
 export default function CreatePostSheet({ onFechar, onPublicado, rascunhoInicial, onPublicarOtimista, onConfirmarPublicado, onErroPublicar }) {
