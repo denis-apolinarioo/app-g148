@@ -34,6 +34,21 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
   // proporção nativa da própria imagem (calculada quando ela termina de
   // carregar, ver efeito abaixo) em vez de uma das proporções fixas.
   const [ehOriginal, setEhOriginal] = useState(razao === PROPORCAO_ORIGINAL);
+  // CORREÇÃO DE BUG GRAVE (falta de memória / app travando em fotos
+  // pesadas tiradas na hora): a prévia da imagem era gerada chamando
+  // `workingCanvasRef.current.toDataURL(...)` DIRETO NO JSX — ou seja, em
+  // TODO re-render do componente. Arrastar ou dar zoom dispara dezenas de
+  // re-renders por segundo (um a cada pixel de movimento), e cada chamada
+  // de toDataURL re-codifica o canvas inteiro (já reduzido a até 1600px,
+  // ainda 1-3MB) para uma nova string base64 do zero. Numa foto pesada de
+  // câmera, isso cria um punhado de strings grandes por segundo que o
+  // navegador não consegue coletar (GC) rápido o bastante durante o
+  // gesto — em celulares com menos memória, isso é exatamente o que
+  // derruba a aba com "sem memória". A correção: gera a prévia (data URL)
+  // UMA ÚNICA VEZ, assim que o canvas de trabalho fica pronto, e guarda
+  // num estado — nunca mais chama toDataURL durante o zoom/arrasto,
+  // que já é feito só com CSS transform (não precisa recriar a imagem).
+  const [previewDataUrl, setPreviewDataUrl] = useState('');
 
   const workingCanvasRef = useRef(null); // canvas escondido com a imagem já reduzida
   const frameRef = useRef(null); // moldura visível (a "janela" de corte)
@@ -53,6 +68,9 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
     let cancelado = false;
     setProntoParaCortar(false);
     setErro('');
+    // Solta a prévia anterior (se houver) antes de processar a nova imagem
+    // — evita reter em memória a string base64 de uma foto já trocada.
+    setPreviewDataUrl('');
 
     const img = new Image();
     img.onload = () => {
@@ -74,6 +92,22 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
+
+      // Solta a referência à imagem original (potencialmente 20-50MB
+      // descomprimida em memória numa foto de câmera moderna) assim que
+      // ela já foi copiada pro canvas reduzido — não precisamos mais dela
+      // a partir daqui, e held onto por mais tempo só aumenta o pico de
+      // memória durante o processamento.
+      img.src = '';
+
+      // Gera a prévia UMA ÚNICA VEZ aqui (ver comentário no estado
+      // previewDataUrl acima) — depois disso, zoom/arrasto usam só CSS
+      // transform em cima dessa mesma imagem, sem recriar nada. Qualidade
+      // mais baixa que o corte final (0.7 em vez de 0.9): esta imagem é só
+      // visual, pra pessoa enquadrar a foto — o resultado que realmente é
+      // enviado sai do canvas de trabalho na hora de confirmar (ver
+      // handleConfirmar), então não precisa da mesma qualidade aqui.
+      setPreviewDataUrl(canvas.toDataURL('image/jpeg', 0.7));
 
       // "Original" — a moldura assume a proporção real da imagem (já
       // reduzida ao tamanho de trabalho), então a foto inteira cabe nela
@@ -301,9 +335,9 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
             onTouchMove={handlePointerMove}
             onTouchEnd={handlePointerUp}
           >
-            {prontoParaCortar && (
+            {prontoParaCortar && previewDataUrl && (
               <img
-                src={workingCanvasRef.current?.toDataURL('image/jpeg', 0.85)}
+                src={previewDataUrl}
                 alt="Prévia para corte"
                 draggable={false}
                 className="pointer-events-none absolute left-1/2 top-1/2 max-w-none select-none"
