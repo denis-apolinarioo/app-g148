@@ -37,6 +37,13 @@ const ROTULO_TIPO = {
   correio: 'Recompensa recebida no Correio',
 };
 
+// Preferência de esconder/mostrar o saldo — deliberadamente por
+// DISPOSITIVO (localStorage), não por conta: mesmo padrão do tema claro/
+// escuro (lib/theme.js, chave 'g148_tema'). Fica marcada mesmo fechando e
+// reabrindo o app anos depois, e independe da Carteira estar
+// bloqueada/desbloqueada (PIN) — não tem nenhuma lógica de expirar.
+const CHAVE_SALDO_OCULTO = 'g148_saldo_oculto';
+
 export default function CarteiraPage() {
   const { perfil, usuarioAuth } = useAuth();
   const config = useAppConfig();
@@ -47,7 +54,17 @@ export default function CarteiraPage() {
   // 'recuperar_solicitar' | 'recuperar_confirmar' | 'enviar_dracma'
   const [modo, setModo] = useState(null);
   // Item pedido: esconder/mostrar o saldo (só o valor, não os outros dados).
-  const [saldoOculto, setSaldoOculto] = useState(false);
+  // Lê o valor salvo (se houver) já na 1ª renderização, pra não piscar o
+  // saldo visível por um instante antes de esconder de novo.
+  const [saldoOculto, setSaldoOculto] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.localStorage.getItem(CHAVE_SALDO_OCULTO) === '1';
+    } catch {
+      // localStorage indisponível (ex.: aba anônima) — some sempre desmarcado.
+      return false;
+    }
+  });
 
   const transferenciaAtiva = config?.[CHAVE_TRANSFERENCIA_DRACMA_ATIVA] !== false;
   const chaveRecebimento = montarChaveRecebimento(perfil);
@@ -151,7 +168,17 @@ export default function CarteiraPage() {
             <div className="relative rounded-2xl border border-coffee-100 bg-cream-card p-5 text-center shadow-card">
               <button
                 type="button"
-                onClick={() => setSaldoOculto((atual) => !atual)}
+                onClick={() =>
+                  setSaldoOculto((atual) => {
+                    const novo = !atual;
+                    try {
+                      window.localStorage.setItem(CHAVE_SALDO_OCULTO, novo ? '1' : '0');
+                    } catch {
+                      // localStorage indisponível — vale só pra esta sessão.
+                    }
+                    return novo;
+                  })
+                }
                 aria-label={saldoOculto ? 'Mostrar saldo' : 'Esconder saldo'}
                 className="absolute right-3 top-3 rounded-full p-1.5 text-coffee-400"
               >
