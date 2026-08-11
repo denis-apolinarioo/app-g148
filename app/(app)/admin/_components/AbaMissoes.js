@@ -228,7 +228,7 @@ function GrupoDeMissoes({ grupo, onRecarregar, onNova, onEditar, onApagar, apaga
             >
               <span
                 {...propsDaAlca(index)}
-                className="flex-shrink-0 cursor-grab touch-none text-coffee-200 active:cursor-grabbing"
+                className="-m-1.5 flex-shrink-0 cursor-grab touch-none p-1.5 text-coffee-200 active:cursor-grabbing"
                 aria-label="Arrastar para reordenar"
               >
                 <GripVertical size={15} />
