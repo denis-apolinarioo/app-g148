@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import {
   getTodasAsMissoes,
+  subscribeATodasAsMissoes,
   criarMissao,
   atualizarMissao,
   apagarMissao,
@@ -107,9 +108,18 @@ export default function AbaMissoes() {
     getTodasAsMissoes().then(setMissoes);
   }, []);
 
+  // Escuta a coleção de missões em tempo real (onSnapshot) em vez de buscar
+  // uma vez só — qualquer mudança aparece na hora, sem sair-e-voltar nem
+  // recarregar: arrastar pra reordenar, criar/editar/apagar aqui, ou até
+  // outro Admin mexendo em outra aba/dispositivo ao mesmo tempo. `carregar`
+  // (acima) continua existindo e sendo chamada logo depois de algumas ações
+  // abaixo — com a escuta já ativa isso virou redundante, mas inofensivo:
+  // só garante que ESTE Admin veja sua própria ação sem nem esperar o
+  // pinguinho de latência da escuta.
   useEffect(() => {
-    carregar();
-  }, [carregar]);
+    const unsub = subscribeATodasAsMissoes(setMissoes);
+    return unsub;
+  }, []);
 
   async function handleApagar(missao) {
     const ok = await confirmar({

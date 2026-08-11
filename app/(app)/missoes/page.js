@@ -11,7 +11,7 @@ import MissaoEnvioListaModal from '@/components/MissaoEnvioListaModal';
 import ConquistaDetalheModal from '@/components/ConquistaDetalheModal';
 import StreakBadge from '@/components/StreakBadge';
 import EmptyState from '@/components/EmptyState';
-import { getMissoesPorCategoria } from '@/lib/missionsRepo';
+import { subscribeATodasAsMissoes } from '@/lib/missionsRepo';
 import { calcularCicloAtual, getStatusMissoesNoCiclo, getSubmissoesDoCicloComPost } from '@/lib/missionCycles';
 import { dentroDaJanelaHorario } from '@/lib/dateUtils';
 
@@ -62,27 +62,33 @@ export default function MissoesPage() {
     setMissaoAtiva(missao);
   }, []);
 
-  // Busca as missões (agora vêm do Firestore, coleção "missoes" — o Admin
-  // pode criar/editar/apagar pelo próprio painel, sem precisar de deploy).
-  // Só entram na lista as que já começaram e ainda não encerraram (ver
-  // calcularCicloAtual) — uma missão sem repetição automática cujo período
-  // já passou some sozinha daqui, sem o Admin precisar desativar à mão.
+  // Escuta as missões em tempo real (onSnapshot na coleção "missoes" —
+  // Admin cria/edita/apaga/reordena pelo painel, sem precisar de deploy).
+  // ANTES buscava uma vez só (getMissoesPorCategoria); agora qualquer
+  // mudança aparece na hora pra quem já está com a tela de Missões aberta,
+  // sem precisar sair-e-voltar nem recarregar. Só entram na lista as que já
+  // começaram e ainda não encerraram (ver calcularCicloAtual) — uma missão
+  // sem repetição automática cujo período já passou some sozinha daqui, sem
+  // o Admin precisar desativar à mão.
   useEffect(() => {
-    Promise.all([
-      getMissoesPorCategoria('exclusiva'),
-      getMissoesPorCategoria('geral'),
-    ]).then(([exclusivas, gerais]) => {
+    const unsub = subscribeATodasAsMissoes((todas) => {
       const visivelPara = (missao) =>
+        missao.ativa !== false &&
         calcularCicloAtual(missao) !== null &&
         (!Array.isArray(missao.destinatarios) ||
           missao.destinatarios.length === 0 ||
           missao.destinatarios.includes(perfil.uid)) &&
         (!missao.horarioAtivo || dentroDaJanelaHorario(missao.horarioInicio, missao.horarioFim));
 
-      setMissoesExclusivas(exclusivas.filter(visivelPara));
-      setMissoesGerais(gerais.filter(visivelPara));
+      setMissoesExclusivas(
+        todas.filter((m) => (m.categoria || 'geral') === 'exclusiva' && visivelPara(m))
+      );
+      setMissoesGerais(
+        todas.filter((m) => (m.categoria || 'geral') === 'geral' && visivelPara(m))
+      );
       setCarregandoMissoes(false);
     });
+    return unsub;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
