@@ -17,6 +17,8 @@ import { combinaComBusca } from '@/lib/searchUtils';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { formatarDracma } from '@/lib/dracma';
 import { useConfirm } from '@/components/ConfirmProvider';
+import { useToast } from '@/components/ToastProvider';
+import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
 
 export default function AbaCorreio() {
   const confirmar = useConfirm();
@@ -27,13 +29,16 @@ export default function AbaCorreio() {
   const [fixada, setFixada] = useState(false);
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
-  const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [erroEnvio, setErroEnvio] = useState('');
   const [anexarRecompensa, setAnexarRecompensa] = useState(false);
   const [pontosAnexados, setPontosAnexados] = useState('');
   const [dracmasAnexados, setDracmasAnexados] = useState('');
   const { perfil } = useAuth();
+  const mostrarToast = useToast();
+  // Mesma proteção contra duplo toque rápido usada em curtir/comentar/postar/
+  // enviar missão (ver lib/useProtecaoCliqueDuplo.js) — aqui pro botão "Enviar".
+  const emDebounceEnviar = useProtecaoCliqueDuplo();
   const inputFotoRef = useRef(null);
 
   useEffect(() => {
@@ -78,54 +83,95 @@ export default function AbaCorreio() {
     };
   }, [previewFoto]);
 
+  // ENVIO OTIMISTA (CORREÇÃO DE BUG: foto grande fazia o Correio "não ir").
+  // Antes, este handler ficava preso — botão só com um spinner — até
+  // TERMINAR compressão da foto + upload + gravação no Firestore, tudo em
+  // sequência, antes de qualquer retorno pra tela. Numa foto grande, a
+  // compressão sozinha pode levar bem mais que o resto do app pra
+  // resolver (ver as 3 camadas com timeout em lib/imageCompress.js —
+  // até uns 27s no pior caso, antes mesmo do upload em si), e sem
+  // nenhuma pista de progresso isso parecia travado.
+  //
+  // Agora segue o mesmo padrão de publicar post / enviar missão (ver
+  // handlePublicar em CreatePostSheet.js e handleConfirmar em
+  // MissionSubmitModal.js): o formulário limpa NA HORA e a compressão
+  // padrão do app (mesma de sempre, só o MOMENTO em que ela roda mudou)
+  // + upload + envio acontecem em segundo plano, sem travar a tela. Como
+  // isso praticamente nunca falha (a não ser sem internet ou foto num
+  // formato que o navegador não consegue abrir), o ganho de velocidade
+  // percebida vale a troca — e no raro caso de erro, o formulário volta
+  // com tudo que a pessoa tinha preenchido, sem precisar redigitar nada
+  // (ver catch abaixo).
   async function handleEnviar() {
-    if (selecionados.length === 0 || !texto.trim() || enviando) return;
-    setEnviando(true);
+    if (selecionados.length === 0 || !texto.trim() || emDebounceEnviar()) return;
     setErroEnvio('');
+
+    const rascunho = {
+      selecionados,
+      texto,
+      fixada,
+      arquivoFoto,
+      anexarRecompensa,
+      pontosAnexados,
+      dracmasAnexados,
+    };
+
+    setTexto('');
+    setArquivoFoto(null);
+    setPreviewFoto('');
+    setFixada(false);
+    setAnexarRecompensa(false);
+    setPontosAnexados('');
+    setDracmasAnexados('');
+    setSelecionados([]);
+    setEnviado(true);
+    setTimeout(() => setEnviado(false), 2000);
+
     try {
       let fotoURL = '';
       let fotoThumbURL = '';
-      if (arquivoFoto) {
-        const resultado = await uploadFotoCorreioComThumb(perfil.uid, arquivoFoto);
+      if (rascunho.arquivoFoto) {
+        const resultado = await uploadFotoCorreioComThumb(perfil.uid, rascunho.arquivoFoto);
         fotoURL = resultado.url;
         fotoThumbURL = resultado.thumbURL;
       }
       const opts = {
         fotoURL,
         fotoThumbURL,
-        fixada,
-        pontosAnexados: anexarRecompensa ? Number(pontosAnexados) || 0 : 0,
-        dracmasAnexados: anexarRecompensa ? Number(dracmasAnexados) || 0 : 0,
+        fixada: rascunho.fixada,
+        pontosAnexados: rascunho.anexarRecompensa ? Number(rascunho.pontosAnexados) || 0 : 0,
+        dracmasAnexados: rascunho.anexarRecompensa ? Number(rascunho.dracmasAnexados) || 0 : 0,
       };
-      if (selecionados.length === 1) {
-        await sendMailMessage(perfil.uid, selecionados[0], texto.trim(), opts);
+      if (rascunho.selecionados.length === 1) {
+        await sendMailMessage(perfil.uid, rascunho.selecionados[0], rascunho.texto.trim(), opts);
       } else {
-        await sendMailToMultiple(perfil.uid, selecionados, texto.trim(), opts);
+        await sendMailToMultiple(perfil.uid, rascunho.selecionados, rascunho.texto.trim(), opts);
       }
-      setTexto('');
-      setArquivoFoto(null);
-      setPreviewFoto('');
-      setFixada(false);
-      setAnexarRecompensa(false);
-      setPontosAnexados('');
-      setDracmasAnexados('');
-      setSelecionados([]);
-      setEnviado(true);
-      setTimeout(() => setEnviado(false), 2000);
     } catch (err) {
       console.error('Erro ao enviar mensagem:', err);
-      // CORREÇÃO DE BUG (envio "não vai" com foto grande): antes esse catch
-      // só logava no console — o admin via o carregando parar e nada mais,
-      // sem nenhuma pista do que aconteceu. Agora mostra uma mensagem na
-      // tela; quando a causa for a foto (ver comprimirImagem em
-      // lib/imageCompress.js), a mensagem específica aparece aqui.
+      setEnviado(false);
+      // Devolve exatamente o que a pessoa tinha preenchido — nada se perde.
+      setSelecionados(rascunho.selecionados);
+      setTexto(rascunho.texto);
+      setFixada(rascunho.fixada);
+      setArquivoFoto(rascunho.arquivoFoto);
+      if (rascunho.arquivoFoto) setPreviewFoto(URL.createObjectURL(rascunho.arquivoFoto));
+      setAnexarRecompensa(rascunho.anexarRecompensa);
+      setPontosAnexados(rascunho.pontosAnexados);
+      setDracmasAnexados(rascunho.dracmasAnexados);
+      // Antes esse catch só logava no console — o admin via o carregando
+      // parar e nada mais, sem nenhuma pista do que aconteceu. Agora
+      // mostra uma mensagem no formulário (quando a causa for a foto, ver
+      // comprimirImagem em lib/imageCompress.js, a mensagem específica
+      // aparece aqui) e também um toast — o formulário já tinha limpado,
+      // então a pessoa pode ter saído dele de vista quando o erro raro
+      // aparecer.
       setErroEnvio(
         err.message?.includes('comprimir')
           ? err.message
           : 'Não foi possível enviar. Verifique sua internet e tente de novo.'
       );
-    } finally {
-      setEnviando(false);
+      mostrarToast('Não foi possível enviar a mensagem. Confira o formulário.');
     }
   }
 
@@ -291,10 +337,9 @@ export default function AbaCorreio() {
 
       <button
         onClick={handleEnviar}
-        disabled={selecionados.length === 0 || !texto.trim() || enviando}
+        disabled={selecionados.length === 0 || !texto.trim()}
         className="flex w-full items-center justify-center gap-2 rounded-lg bg-coffee-700 py-2.5 text-sm font-semibold text-cream disabled:opacity-40"
       >
-        {enviando && <Loader2 size={14} className="animate-spin" />}
         {enviado
           ? 'Enviado!'
           : `Enviar mensagem${selecionados.length > 1 ? ` (${selecionados.length} pessoas)` : ''}`}
