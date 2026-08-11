@@ -100,13 +100,33 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
   // 2) Calcula o tamanho da moldura de corte (proporção atual) e a escala
   //    mínima pra imagem cobrir a moldura inteira (sem sobrar vazio)
   // --------------------------------------------------------------------
+  // CORREÇÃO DE BUG (foto tirada na hora "quebrava" a tela / opção
+  // "Original" não aparecia certo): antes, a moldura sempre usava a
+  // largura cheia da tela e calculava a altura a partir da proporção —
+  // `frameH = frameW * razaoAtual.h / razaoAtual.w`. Isso funciona bem
+  // pras proporções fixas (1:1, 4:5, 3:4 — todas "baixas"), mas fotos de
+  // câmera em retrato (o caso mais comum ao tirar foto na hora, ex.:
+  // 3024×4032) têm razão bem mais alta. No modo "Original", isso gerava
+  // uma moldura MUITO mais alta que a tela disponível — estourando o
+  // layout pra fora da área visível (parecia que a tela de corte tinha
+  // "quebrado": botões cortados, imagem sumindo). Agora a moldura respeita
+  // também a altura disponível: calcula pelos dois lados (largura cheia OU
+  // altura cheia) e usa o que sobrar menor, mantendo a foto sempre inteira
+  // dentro da área visível, do mesmo jeito nos dois eixos.
   const recalcularEscalaBase = useCallback(() => {
     const canvas = workingCanvasRef.current;
     if (!canvas.width || !canvas.height) return;
 
-    const larguraTela = Math.min(window.innerWidth, 480) - 32; // padding lateral
-    const frameW = larguraTela;
-    const frameH = (frameW * razaoAtual.h) / razaoAtual.w;
+    const larguraDisponivel = Math.min(window.innerWidth, 480) - 32; // padding lateral
+    const alturaDisponivel = Math.max(window.innerHeight - 260, 200); // desconta topo/rodapé fixos da tela de corte
+
+    let frameW = larguraDisponivel;
+    let frameH = (frameW * razaoAtual.h) / razaoAtual.w;
+
+    if (frameH > alturaDisponivel) {
+      frameH = alturaDisponivel;
+      frameW = (frameH * razaoAtual.w) / razaoAtual.h;
+    }
 
     frameWRef.current = frameW;
     frameHRef.current = frameH;
@@ -311,6 +331,15 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
               return (
                 <button
                   key={op.label}
+                  // CORREÇÃO DE BUG ("Original" não fazia nada / não
+                  // aparecia selecionada): antes o clique lia
+                  // workingCanvasRef.current.width/height direto — se a
+                  // pessoa clicasse antes da imagem terminar de carregar
+                  // (prontoParaCortar ainda false, comum em fotos grandes
+                  // de câmera), o canvas ainda estava com 0×0 e nada
+                  // acontecia. Agora o botão fica desabilitado até a
+                  // imagem estar pronta, igual ao botão "Usar foto".
+                  disabled={!prontoParaCortar}
                   onClick={() => {
                     if (opEhOriginal) {
                       const canvas = workingCanvasRef.current;
@@ -324,7 +353,7 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
                     }
                   }}
                   className={
-                    'rounded-full border px-3.5 py-1.5 text-xs font-medium ' +
+                    'rounded-full border px-3.5 py-1.5 text-xs font-medium disabled:opacity-40 ' +
                     (selecionada
                       ? 'border-[#FAF6EF] bg-[#FAF6EF] text-[#2C1F14]'
                       : 'border-cream/30 text-cream/70')
