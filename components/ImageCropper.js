@@ -18,6 +18,11 @@ import { X, Check, ZoomIn, ZoomOut } from 'lucide-react';
 
 const LADO_MAXIMO_TRABALHO = 1600; // limite de segurança pra não estourar memória
 
+// Valor especial de opção — em vez de cortar numa proporção fixa, usa a
+// proporção ORIGINAL da própria imagem (sem cortar nada, só limitando o
+// lado maior por segurança/compressão, igual às outras opções).
+export const PROPORCAO_ORIGINAL = 'original';
+
 export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancelar }) {
   const [prontoParaCortar, setProntoParaCortar] = useState(false);
   const [erro, setErro] = useState('');
@@ -25,6 +30,10 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [processando, setProcessando] = useState(false);
+  // Quando a pessoa escolhe "Original", a moldura de corte passa a usar a
+  // proporção nativa da própria imagem (calculada quando ela termina de
+  // carregar, ver efeito abaixo) em vez de uma das proporções fixas.
+  const [ehOriginal, setEhOriginal] = useState(razao === PROPORCAO_ORIGINAL);
 
   const workingCanvasRef = useRef(null); // canvas escondido com a imagem já reduzida
   const frameRef = useRef(null); // moldura visível (a "janela" de corte)
@@ -65,6 +74,13 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
+
+      // "Original" — a moldura assume a proporção real da imagem (já
+      // reduzida ao tamanho de trabalho), então a foto inteira cabe nela
+      // sem cortar nada.
+      if (razao === PROPORCAO_ORIGINAL) {
+        setRazaoAtual({ w: width, h: height });
+      }
 
       setZoom(1);
       setOffset({ x: 0, y: 0 });
@@ -286,21 +302,38 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
 
       <div className="space-y-4 px-5 pb-6 pt-2">
         {opcoes && opcoes.length > 0 && (
-          <div className="flex justify-center gap-2">
-            {opcoes.map((op) => (
-              <button
-                key={op.label}
-                onClick={() => setRazaoAtual({ w: op.w, h: op.h })}
-                className={
-                  'rounded-full border px-3.5 py-1.5 text-xs font-medium ' +
-                  (razaoAtual.w === op.w && razaoAtual.h === op.h
-                    ? 'border-[#FAF6EF] bg-[#FAF6EF] text-[#2C1F14]'
-                    : 'border-cream/30 text-cream/70')
-                }
-              >
-                {op.label}
-              </button>
-            ))}
+          <div className="flex flex-wrap justify-center gap-2">
+            {opcoes.map((op) => {
+              const opEhOriginal = op.w === PROPORCAO_ORIGINAL;
+              const selecionada = opEhOriginal
+                ? ehOriginal
+                : !ehOriginal && razaoAtual.w === op.w && razaoAtual.h === op.h;
+              return (
+                <button
+                  key={op.label}
+                  onClick={() => {
+                    if (opEhOriginal) {
+                      const canvas = workingCanvasRef.current;
+                      setEhOriginal(true);
+                      if (canvas.width && canvas.height) {
+                        setRazaoAtual({ w: canvas.width, h: canvas.height });
+                      }
+                    } else {
+                      setEhOriginal(false);
+                      setRazaoAtual({ w: op.w, h: op.h });
+                    }
+                  }}
+                  className={
+                    'rounded-full border px-3.5 py-1.5 text-xs font-medium ' +
+                    (selecionada
+                      ? 'border-[#FAF6EF] bg-[#FAF6EF] text-[#2C1F14]'
+                      : 'border-cream/30 text-cream/70')
+                  }
+                >
+                  {op.label}
+                </button>
+              );
+            })}
           </div>
         )}
 

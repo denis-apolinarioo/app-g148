@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Coins, Gift, Loader2, Pin, Search, Trash2, X } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import DracmaIcon from '@/components/DracmaIcon';
+import ImageCropper, { PROPORCAO_ORIGINAL } from '@/components/ImageCropper';
 import { useAuth } from '@/components/AuthProvider';
 import {
   getAllUsers,
@@ -13,13 +14,22 @@ import {
   deleteMailMessage,
 } from '@/lib/firestore-helpers';
 import { uploadFotoCorreioComThumb } from '@/lib/storage';
-import { reduzirImagemAoAnexar } from '@/lib/imageCompress';
 import { combinaComBusca } from '@/lib/searchUtils';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { formatarDracma } from '@/lib/dracma';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { useToast } from '@/components/ToastProvider';
 import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
+
+// Item novo — igual ao Feed (CreatePostSheet.js), mas com uma 4ª opção:
+// "Original" mantém a proporção nativa da foto, sem cortar nada (ver
+// PROPORCAO_ORIGINAL em ImageCropper.js). As outras 3 são as mesmas do Feed.
+const PROPORCOES_CORREIO = [
+  { label: '1:1', w: 1, h: 1 },
+  { label: '4:5', w: 4, h: 5 },
+  { label: '3:4', w: 3, h: 4 },
+  { label: 'Original', w: PROPORCAO_ORIGINAL, h: PROPORCAO_ORIGINAL },
+];
 
 export default function AbaCorreio() {
   const confirmar = useConfirm();
@@ -30,6 +40,7 @@ export default function AbaCorreio() {
   const [fixada, setFixada] = useState(false);
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
+  const [srcCorte, setSrcCorte] = useState(''); // URL da imagem bruta pra tela de corte
   const [enviado, setEnviado] = useState(false);
   const [erroEnvio, setErroEnvio] = useState('');
   const [anexarRecompensa, setAnexarRecompensa] = useState(false);
@@ -68,14 +79,21 @@ export default function AbaCorreio() {
   }
 
   // CORREÇÃO DE BUG (foto "não vai" no Correio): antes, o arquivo CRU da
-  // câmera/galeria virava `arquivoFoto` direto — só era reduzido lá na
-  // hora de enviar, dentro de comprimirImagem(), o que deixava o Correio
-  // muito mais sujeito ao bug de travamento do Web Worker em fotos grandes
-  // do que o Feed (que sempre passa pelo recorte antes, já reduzindo a
-  // imagem sem querer). Agora reduz aqui, assim que a foto é escolhida —
-  // ver reduzirImagemAoAnexar em lib/imageCompress.js pro raciocínio
-  // completo.
-  async function handleFotoChange(e) {
+  // câmera/galeria era reduzido "no escuro" (sem tela de corte) e só depois
+  // comprimido de verdade na hora de enviar — ficava sujeito ao bug de
+  // travamento do Web Worker em fotos grandes. Agora o Correio segue
+  // EXATAMENTE o mesmo caminho do Feed (ver abrirCorte/handleCortado em
+  // CreatePostSheet.js): a foto crua abre na tela de corte (ImageCropper),
+  // que já redesenha a imagem num canvas de no máximo 1600px antes de
+  // qualquer outra coisa — chegando pequena na hora de comprimir/enviar,
+  // do mesmo jeito que sempre funcionou bem no Feed. Única diferença: aqui
+  // são 4 opções de proporção em vez de 3 (ver PROPORCOES_CORREIO acima),
+  // com "Original" mantendo o enquadramento da foto sem cortar nada.
+  function abrirCorte(arquivo) {
+    setSrcCorte(URL.createObjectURL(arquivo));
+  }
+
+  function handleFotoChange(e) {
     const arquivo = e.target.files?.[0];
     // Limpa o campo já aqui — sem isso, escolher a MESMA foto de novo
     // (ex.: depois de trocar por outra e desistir) não dispara este evento
@@ -83,18 +101,19 @@ export default function AbaCorreio() {
     e.target.value = '';
     if (!arquivo) return;
     setErroEnvio('');
-    try {
-      const reduzida = await reduzirImagemAoAnexar(arquivo);
-      setArquivoFoto(reduzida);
-      setPreviewFoto(URL.createObjectURL(reduzida));
-    } catch (err) {
-      // CORREÇÃO DE BUG (algumas fotos do Correio apareciam quebradas):
-      // antes, uma foto num formato que o navegador não sabe abrir (ex.:
-      // .heic do iPhone fora do Safari) passava direto e só ficava
-      // quebrada depois de enviada, sem nenhum aviso. Agora mostra o
-      // problema já aqui, antes de preencher e enviar a mensagem.
-      setErroEnvio(err.message || 'Não foi possível abrir essa foto. Tente outra.');
-    }
+    abrirCorte(arquivo);
+  }
+
+  function fecharCorte() {
+    if (srcCorte) URL.revokeObjectURL(srcCorte);
+    setSrcCorte('');
+  }
+
+  function handleCortado(blob) {
+    fecharCorte();
+    const file = new File([blob], 'foto.jpg', { type: 'image/jpeg' });
+    setArquivoFoto(file);
+    setPreviewFoto(URL.createObjectURL(blob));
   }
 
   // CORREÇÃO DE VAZAMENTO: previewFoto (blob: local) nunca era revogada —
@@ -105,6 +124,13 @@ export default function AbaCorreio() {
       if (previewFoto) URL.revokeObjectURL(previewFoto);
     };
   }, [previewFoto]);
+
+  // Mesma limpeza acima, mas pra URL bruta usada só na tela de corte.
+  useEffect(() => {
+    return () => {
+      if (srcCorte) URL.revokeObjectURL(srcCorte);
+    };
+  }, [srcCorte]);
 
   // ENVIO OTIMISTA (CORREÇÃO DE BUG: foto grande fazia o Correio "não ir").
   // Antes, este handler ficava preso — botão só com um spinner — até
@@ -198,6 +224,19 @@ export default function AbaCorreio() {
     }
   }
 
+  // Tela de corte sobrepõe tudo, igual ao Feed (CreatePostSheet.js)
+  if (srcCorte) {
+    return (
+      <ImageCropper
+        src={srcCorte}
+        razao={{ w: 4, h: 5 }}
+        opcoes={PROPORCOES_CORREIO}
+        onConfirmar={handleCortado}
+        onCancelar={fecharCorte}
+      />
+    );
+  }
+
   return (
     <div className="space-y-3">
       {/* Item 15º — busca de usuário, pra facilitar achar destinatário numa lista maior */}
@@ -274,8 +313,10 @@ export default function AbaCorreio() {
       {/* Item 35 — anexar foto */}
       {previewFoto ? (
         <div className="relative w-32">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={previewFoto} alt="Prévia" className="w-full rounded-lg" />
+          <button type="button" onClick={() => abrirCorte(arquivoFoto)} className="block w-full">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewFoto} alt="Prévia" className="w-full rounded-lg" />
+          </button>
           <button
             type="button"
             onClick={() => {
