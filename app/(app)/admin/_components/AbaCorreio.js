@@ -13,6 +13,7 @@ import {
   deleteMailMessage,
 } from '@/lib/firestore-helpers';
 import { uploadFotoCorreioComThumb } from '@/lib/storage';
+import { reduzirImagemAoAnexar } from '@/lib/imageCompress';
 import { combinaComBusca } from '@/lib/searchUtils';
 import { formatDateTimeBR } from '@/lib/dateUtils';
 import { formatarDracma } from '@/lib/dracma';
@@ -66,12 +67,21 @@ export default function AbaCorreio() {
     setSelecionados((sel) => (sel.includes(uid) ? sel.filter((id) => id !== uid) : [...sel, uid]));
   }
 
-  function handleFotoChange(e) {
+  // CORREÇÃO DE BUG (foto "não vai" no Correio): antes, o arquivo CRU da
+  // câmera/galeria virava `arquivoFoto` direto — só era reduzido lá na
+  // hora de enviar, dentro de comprimirImagem(), o que deixava o Correio
+  // muito mais sujeito ao bug de travamento do Web Worker em fotos grandes
+  // do que o Feed (que sempre passa pelo recorte antes, já reduzindo a
+  // imagem sem querer). Agora reduz aqui, assim que a foto é escolhida —
+  // ver reduzirImagemAoAnexar em lib/imageCompress.js pro raciocínio
+  // completo.
+  async function handleFotoChange(e) {
     const arquivo = e.target.files?.[0];
     if (!arquivo) return;
-    setArquivoFoto(arquivo);
-    setPreviewFoto(URL.createObjectURL(arquivo));
     setErroEnvio('');
+    const reduzida = await reduzirImagemAoAnexar(arquivo);
+    setArquivoFoto(reduzida);
+    setPreviewFoto(URL.createObjectURL(reduzida));
   }
 
   // CORREÇÃO DE VAZAMENTO: previewFoto (blob: local) nunca era revogada —
