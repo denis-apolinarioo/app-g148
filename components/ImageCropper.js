@@ -64,6 +64,27 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
   // --------------------------------------------------------------------
   // 1) Reduz a imagem original pra um tamanho seguro de trabalho
   // --------------------------------------------------------------------
+  // CORREÇÃO DE BUG GRAVE (foto "não vai pro corte" / erro "não foi
+  // possível abrir" ao tirar foto na hora ou selecionar da galeria, em
+  // QUALQUER lugar do app — Feed, Correio, Missão): antes, a única forma de
+  // decodificar a imagem aqui era `new Image()` + `img.src = blobURL`. Isso
+  // funciona bem pra JPEG/PNG/WebP comuns, mas fotos tiradas na hora por
+  // câmeras de celular modernas (principalmente iPhone) costumam vir no
+  // formato HEIC/HEIF — e a tag <img> do navegador (o que `new Image()`
+  // usa por baixo) NÃO decodifica HEIC na grande maioria dos navegadores
+  // Android e em WebViews, mesmo o arquivo sendo perfeitamente válido.
+  // Resultado: img.onerror disparava sempre, pra toda foto de câmera nesse
+  // formato — daí "erro ao tirar foto" ser universal a todos os lugares do
+  // app que usam este mesmo componente.
+  //
+  // Correção: agora existem DUAS tentativas de decodificação, em cascata.
+  // 1ª: `createImageBitmap(blob)` — usa o decodificador de imagem do
+  //     sistema operacional por baixo dos panos (não só o motor de <img>
+  //     do navegador), e por isso consegue abrir HEIC em bem mais
+  //     aparelhos/navegadores Android do que `new Image()` sozinho.
+  // 2ª: `new Image()` (comportamento antigo) — fallback pra navegadores
+  //     sem suporte a createImageBitmap (bem raros hoje).
+  // Só mostra a mensagem de erro se as DUAS tentativas falharem de fato.
   useEffect(() => {
     let cancelado = false;
     setProntoParaCortar(false);
@@ -72,10 +93,10 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
     // — evita reter em memória a string base64 de uma foto já trocada.
     setPreviewDataUrl('');
 
-    const img = new Image();
-    img.onload = () => {
+    function desenharNoCanvas(fonte, larguraOriginal, alturaOriginal) {
       if (cancelado) return;
-      let { width, height } = img;
+      let width = larguraOriginal;
+      let height = alturaOriginal;
 
       if (width > LADO_MAXIMO_TRABALHO || height > LADO_MAXIMO_TRABALHO) {
         if (width > height) {
@@ -91,22 +112,20 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
+      ctx.drawImage(fonte, 0, 0, width, height);
 
-      // Solta a referência à imagem original (potencialmente 20-50MB
-      // descomprimida em memória numa foto de câmera moderna) assim que
-      // ela já foi copiada pro canvas reduzido — não precisamos mais dela
-      // a partir daqui, e held onto por mais tempo só aumenta o pico de
-      // memória durante o processamento.
-      img.src = '';
+      // Libera a fonte original (bitmap ou <img>), potencialmente 20-50MB
+      // descomprimida em memória numa foto de câmera moderna, assim que já
+      // foi copiada pro canvas reduzido — não precisamos mais dela.
+      if (typeof fonte.close === 'function') fonte.close(); // ImageBitmap
+      else fonte.src = ''; // HTMLImageElement
 
-      // Gera a prévia UMA ÚNICA VEZ aqui (ver comentário no estado
-      // previewDataUrl acima) — depois disso, zoom/arrasto usam só CSS
-      // transform em cima dessa mesma imagem, sem recriar nada. Qualidade
-      // mais baixa que o corte final (0.7 em vez de 0.9): esta imagem é só
-      // visual, pra pessoa enquadrar a foto — o resultado que realmente é
-      // enviado sai do canvas de trabalho na hora de confirmar (ver
-      // handleConfirmar), então não precisa da mesma qualidade aqui.
+      // Gera a prévia UMA ÚNICA VEZ aqui (ver estado previewDataUrl acima)
+      // — depois disso, zoom/arrasto usam só CSS transform em cima dessa
+      // mesma imagem, sem recriar nada. Qualidade mais baixa que o corte
+      // final (0.7 em vez de 0.9): esta imagem é só visual, pra pessoa
+      // enquadrar a foto — o resultado que realmente é enviado sai do
+      // canvas de trabalho na hora de confirmar (ver handleConfirmar).
       setPreviewDataUrl(canvas.toDataURL('image/jpeg', 0.7));
 
       // "Original" — a moldura assume a proporção real da imagem (já
@@ -119,11 +138,45 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
       setZoom(1);
       setOffset({ x: 0, y: 0 });
       setProntoParaCortar(true);
-    };
-    img.onerror = () => {
-      if (!cancelado) setErro('Não foi possível abrir essa imagem.');
-    };
-    img.src = src;
+    }
+
+    function tentarComImageElement() {
+      const img = new Image();
+      img.onload = () => desenharNoCanvas(img, img.width, img.height);
+      img.onerror = () => {
+        if (!cancelado) {
+          setErro(
+            'Não foi possível abrir essa imagem. Tente escolher outra foto ou, se veio direto da câmera, salvá-la como JPEG antes de enviar.'
+          );
+        }
+      };
+      img.src = src;
+    }
+
+    // Recupera o Blob original a partir da blob: URL recebida (sempre
+    // funciona, já que é um recurso local criado pelo próprio app — ver
+    // abrirCorte em CreatePostSheet.js/AbaCorreio.js/MissionSubmitModal.js)
+    // pra poder tentar createImageBitmap primeiro.
+    if (typeof createImageBitmap === 'function') {
+      fetch(src)
+        .then((r) => r.blob())
+        .then((blob) => createImageBitmap(blob))
+        .then((bitmap) => {
+          if (cancelado) {
+            bitmap.close();
+            return;
+          }
+          desenharNoCanvas(bitmap, bitmap.width, bitmap.height);
+        })
+        .catch(() => {
+          // createImageBitmap falhou (formato não suportado por essa via,
+          // ou navegador com suporte parcial) — tenta o caminho antigo
+          // antes de desistir de vez.
+          if (!cancelado) tentarComImageElement();
+        });
+    } else {
+      tentarComImageElement();
+    }
 
     return () => {
       cancelado = true;
