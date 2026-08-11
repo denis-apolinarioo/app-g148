@@ -77,11 +77,24 @@ export default function AbaCorreio() {
   // completo.
   async function handleFotoChange(e) {
     const arquivo = e.target.files?.[0];
+    // Limpa o campo já aqui — sem isso, escolher a MESMA foto de novo
+    // (ex.: depois de trocar por outra e desistir) não dispara este evento
+    // de novo.
+    e.target.value = '';
     if (!arquivo) return;
     setErroEnvio('');
-    const reduzida = await reduzirImagemAoAnexar(arquivo);
-    setArquivoFoto(reduzida);
-    setPreviewFoto(URL.createObjectURL(reduzida));
+    try {
+      const reduzida = await reduzirImagemAoAnexar(arquivo);
+      setArquivoFoto(reduzida);
+      setPreviewFoto(URL.createObjectURL(reduzida));
+    } catch (err) {
+      // CORREÇÃO DE BUG (algumas fotos do Correio apareciam quebradas):
+      // antes, uma foto num formato que o navegador não sabe abrir (ex.:
+      // .heic do iPhone fora do Safari) passava direto e só ficava
+      // quebrada depois de enviada, sem nenhum aviso. Agora mostra o
+      // problema já aqui, antes de preencher e enviar a mensagem.
+      setErroEnvio(err.message || 'Não foi possível abrir essa foto. Tente outra.');
+    }
   }
 
   // CORREÇÃO DE VAZAMENTO: previewFoto (blob: local) nunca era revogada —
