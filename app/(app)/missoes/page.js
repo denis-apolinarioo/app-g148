@@ -148,7 +148,7 @@ export default function MissoesPage() {
           <>
             <Secao titulo="Missões Personalizadas" subtitulo="Só pra quem foi convidado" icone={Sparkles}>
               {missoesExclusivas.length === 0 ? (
-                <EmptyState titulo="Nenhuma missão personalizada por enquanto" compacto />
+                <EmptyState titulo="Nenhuma missão personalizada por enquanto" compacto textoPequeno />
               ) : (
                 missoesExclusivas.map((missao) => (
                   <MissionCard
@@ -166,7 +166,7 @@ export default function MissoesPage() {
 
             <Secao titulo="Missões Gerais" subtitulo="Pra todo mundo" icone={ListChecks}>
               {missoesGerais.length === 0 ? (
-                <EmptyState icone={ListChecks} titulo="Nenhuma missão geral por enquanto" compacto />
+                <EmptyState icone={ListChecks} titulo="Nenhuma missão geral por enquanto" compacto textoPequeno />
               ) : (
                 missoesGerais.map((missao) => (
                   <MissionCard
