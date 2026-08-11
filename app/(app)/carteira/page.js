@@ -148,11 +148,20 @@ export default function CarteiraPage() {
 
         {modo === 'carteira' && (
           <>
-            <div className="rounded-2xl border border-coffee-100 bg-cream-card p-5 text-center shadow-card">
+            <div className="relative rounded-2xl border border-coffee-100 bg-cream-card p-5 text-center shadow-card">
+              <button
+                type="button"
+                onClick={() => setSaldoOculto((atual) => !atual)}
+                aria-label={saldoOculto ? 'Mostrar saldo' : 'Esconder saldo'}
+                className="absolute right-3 top-3 rounded-full p-1.5 text-coffee-400"
+              >
+                {saldoOculto ? <Eye size={18} /> : <EyeOff size={18} />}
+              </button>
+
               <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gold/15">
                 <DracmaIcon size={22} className="text-gold" />
               </div>
-              <div className="mt-3 flex items-center justify-center gap-2">
+              <div className="mt-3">
                 <p className="font-destaque text-3xl font-bold text-coffee-800">
                   {saldoOculto ? (
                     <span className="tracking-widest">••••</span>
@@ -161,14 +170,6 @@ export default function CarteiraPage() {
                   )}{' '}
                   {!saldoOculto && <span className="text-base font-semibold text-coffee-400">dracmas</span>}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setSaldoOculto((atual) => !atual)}
-                  aria-label={saldoOculto ? 'Mostrar saldo' : 'Esconder saldo'}
-                  className="flex-shrink-0 rounded-full p-1.5 text-coffee-400"
-                >
-                  {saldoOculto ? <Eye size={18} /> : <EyeOff size={18} />}
-                </button>
               </div>
             </div>
 

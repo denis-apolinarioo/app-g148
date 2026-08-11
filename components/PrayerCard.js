@@ -195,10 +195,22 @@ export default function PrayerCard({ pedido }) {
         <div className="flex shrink-0 flex-col items-end gap-1 pt-0.5">
           {(ehAutor || ehAdmin) && (
             <div className="flex items-center gap-2">
+              {/* Mesmo padrão do PostCard.js: pro Admin, quando o pedido
+                  está oculto, o ícone fica vermelho e ganha o rótulo
+                  "Oculto" ao lado — só o Admin vê isso; pra quem não é
+                  Admin nem autor, o pedido nem chega a aparecer na lista
+                  (ver placeholder "Esse pedido foi ocultado" acima). */}
+              {pedido.oculto && ehAdmin && (
+                <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600">
+                  Oculto
+                </span>
+              )}
               <button
                 onClick={handleAlternarOcultar}
                 disabled={alternandoOculto}
-                className="text-coffee-200 hover:text-coffee-600 disabled:opacity-50"
+                className={`disabled:opacity-50 ${
+                  pedido.oculto ? 'text-red-500 hover:text-red-600' : 'text-coffee-200 hover:text-coffee-600'
+                }`}
                 aria-label={pedido.oculto ? 'Reexibir pedido' : 'Ocultar pedido'}
               >
                 {pedido.oculto ? <Eye size={14} /> : <EyeOff size={14} />}
