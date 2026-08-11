@@ -185,8 +185,21 @@ export default function CarteiraPage() {
                 {saldoOculto ? <Eye size={18} /> : <EyeOff size={18} />}
               </button>
 
-              <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-gold/15">
-                <DracmaIcon size={22} className="text-gold" />
+              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gold/15">
+                {/* Logo real da moeda (public/icons/custom/dracma-coin.png), no
+                    lugar do DracmaIcon vetorial — mesmo padrão de "foto virou
+                    ícone" do BottomNav (arco-flecha/mãos orando): pointer-events
+                    none pra o toque sempre cair no elemento por trás (nunca abre
+                    menu de salvar imagem), sem drag, sem menu de contexto. */}
+                <img
+                  src="/icons/custom/dracma-coin.png"
+                  width={72}
+                  height={72}
+                  alt=""
+                  draggable={false}
+                  onContextMenu={(e) => e.preventDefault()}
+                  className="pointer-events-none select-none object-contain [-webkit-touch-callout:none] [-webkit-user-drag:none]"
+                />
               </div>
               <div className="mt-3">
                 <p className="font-destaque text-3xl font-bold text-coffee-800">
