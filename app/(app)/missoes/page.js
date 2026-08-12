@@ -132,7 +132,7 @@ export default function MissoesPage() {
       <TopBar titulo="Missões" />
 
       <div className="space-y-6 px-4 py-4">
-        <div className="flex items-center justify-between rounded-xl2 border border-coffee-100 bg-cream-card px-4 py-3.5 shadow-card">
+        <div className="flex items-center justify-between rounded-xl2 bg-cream-card px-4 py-3.5 shadow-flutuante">
           <div>
             <p className="text-xs font-medium text-coffee-400">Progresso</p>
             <p className="font-destaque text-lg font-semibold text-coffee-800">

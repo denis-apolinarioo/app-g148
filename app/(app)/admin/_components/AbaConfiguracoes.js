@@ -4,13 +4,15 @@
 // (1ª configuração de verdade: liga/desliga a função de bloquear usuário).
 
 import { useState } from 'react';
-import { Loader2, ShieldOff, Send, Award, AlertTriangle } from 'lucide-react';
+import { Loader2, ShieldOff, Send, Award, AlertTriangle, Check } from 'lucide-react';
 import DracmaIcon from '@/components/DracmaIcon';
 import { useAuth } from '@/components/AuthProvider';
 import { useAppConfig } from '@/lib/useAppConfig';
 import {
   CHAVE_BLOQUEIO_USUARIO_ATIVO,
   CHAVE_TRANSFERENCIA_DRACMA_ATIVA,
+  CHAVE_NOME_COMUNIDADE,
+  NOME_APP_PADRAO,
   salvarConfiguracoesApp,
 } from '@/lib/appConfig';
 import { resetarPontosDeTodos } from '@/lib/points';
@@ -48,6 +50,11 @@ export default function AbaConfiguracoes() {
           Configurações gerais
         </h3>
 
+        <CampoNomeComunidade
+          valorSalvo={config[CHAVE_NOME_COMUNIDADE] || NOME_APP_PADRAO}
+          admin={perfil}
+        />
+
         <ToggleConfig
           icone={ShieldOff}
           titulo="Bloquear/desbloquear usuário"
@@ -70,6 +77,66 @@ export default function AbaConfiguracoes() {
       </div>
 
       <ZonaDePerigo admin={perfil} />
+    </div>
+  );
+}
+
+// Item novo — nome da comunidade (cabeçalho do Feed, tela de login). Campo
+// de texto livre, diferente dos toggles acima: salva só quando a pessoa
+// aperta "Salvar" (não a cada letra digitada, que geraria uma escrita no
+// Firestore por tecla) — o botão só aparece quando o texto muda de verdade.
+function CampoNomeComunidade({ valorSalvo, admin }) {
+  const [valor, setValor] = useState(valorSalvo);
+  const [salvando, setSalvando] = useState(false);
+  const [salvo, setSalvo] = useState(false);
+
+  const mudou = valor.trim() !== valorSalvo && valor.trim() !== '';
+
+  async function handleSalvar() {
+    if (!mudou || salvando) return;
+    setSalvando(true);
+    try {
+      await salvarConfiguracoesApp({ [CHAVE_NOME_COMUNIDADE]: valor.trim() }, admin);
+      setSalvo(true);
+      setTimeout(() => setSalvo(false), 2000);
+    } catch (err) {
+      console.error('Erro ao salvar nome da comunidade:', err);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl2 border border-coffee-100 bg-cream-card px-3.5 py-3">
+      <label className="mb-1.5 block text-xs font-medium text-coffee-500">
+        Nome da comunidade
+      </label>
+      <p className="mb-2 text-xs text-coffee-400">
+        Aparece no cabeçalho do Feed e na tela de login. Não muda o título da aba do navegador
+        nem o nome ao adicionar à tela inicial — isso depende do código, não deste campo.
+      </p>
+      <div className="flex items-center gap-2">
+        <input
+          value={valor}
+          onChange={(e) => setValor(e.target.value)}
+          maxLength={40}
+          placeholder={NOME_APP_PADRAO}
+          className="w-full min-w-0 rounded-lg border border-coffee-100 bg-cream px-3 py-2 text-sm text-coffee-800 outline-none"
+        />
+        <button
+          onClick={handleSalvar}
+          disabled={!mudou || salvando}
+          className="flex h-9 flex-shrink-0 items-center justify-center gap-1.5 rounded-lg bg-forte px-3.5 text-xs font-semibold text-texto-forte disabled:opacity-40"
+        >
+          {salvando ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : salvo ? (
+            <Check size={14} />
+          ) : (
+            'Salvar'
+          )}
+        </button>
+      </div>
     </div>
   );
 }

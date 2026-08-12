@@ -91,6 +91,12 @@ module.exports = {
       boxShadow: {
         soft: '0 2px 16px rgba(44, 31, 20, 0.06)',
         card: '0 1px 3px rgba(44, 31, 20, 0.08), 0 1px 2px rgba(44, 31, 20, 0.05)',
+        // Item novo — pedido do Denis: post/oração/missão/ranking/versículo
+        // sem borda, com uma "sombrinha" que dá sensação de flutuar, sem
+        // exagero. Um pouco mais de espalhamento/deslocamento que `card`
+        // (que é bem colada no cartão, quase imperceptível) — o suficiente
+        // pra "descolar" visualmente do fundo sem pesar a tela.
+        flutuante: '0 3px 10px rgba(44, 31, 20, 0.07), 0 1px 3px rgba(44, 31, 20, 0.05)',
       },
       keyframes: {
         curtidaPop: {

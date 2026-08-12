@@ -369,7 +369,7 @@ export default function PostCard({ post, usuarioAtual }) {
 
     if (item.tipo === 'audio') {
       return (
-        <div key={key} className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3 pt-1 pb-1" onClick={comDuploToque ? () => handleDuploToque() : undefined}>
+        <div key={key} className="relative mb-2.5 rounded-xl bg-cream px-3 pt-1 pb-1" onClick={comDuploToque ? () => handleDuploToque() : undefined}>
           <AudioPlayer src={item.url} />
         </div>
       );
@@ -396,7 +396,7 @@ export default function PostCard({ post, usuarioAtual }) {
             target="_blank"
             rel="noreferrer"
             onClick={comDuploToque ? () => handleDuploToque() : undefined}
-            className="flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5 text-sm text-coffee-700"
+            className="flex items-center gap-2 rounded-xl bg-cream px-3.5 py-2.5 text-sm text-coffee-700"
           >
             <Link2 size={15} className="flex-shrink-0 text-coffee-400" />
             <span className="truncate">{item.label || item.valor}</span>
@@ -410,7 +410,7 @@ export default function PostCard({ post, usuarioAtual }) {
       <div
         key={key}
         onClick={comDuploToque ? () => handleDuploToque() : undefined}
-        className="relative mb-2.5 rounded-xl border border-coffee-100 bg-cream px-3.5 py-2.5"
+        className="relative mb-2.5 rounded-xl bg-cream px-3.5 py-2.5"
       >
         {item.label && <p className="mb-0.5 text-[11px] font-medium text-coffee-400">{item.label}</p>}
         <p className="whitespace-pre-wrap text-sm leading-relaxed text-coffee-700">{item.valor}</p>
@@ -431,7 +431,7 @@ export default function PostCard({ post, usuarioAtual }) {
   // link direto pra um post oculto de outra pessoa.
   if (post.oculto && !ehAdmin) {
     return (
-      <div className="rounded-2xl border border-coffee-100 bg-cream-card p-4">
+      <div className="rounded-2xl bg-cream-card p-4 shadow-flutuante">
         <p className="text-sm italic text-coffee-400">Esse post foi ocultado</p>
         {ehDono && (
           <button
@@ -447,7 +447,7 @@ export default function PostCard({ post, usuarioAtual }) {
   }
 
   return (
-    <div className="relative rounded-2xl border border-coffee-100 bg-cream-card p-4">
+    <div className="relative rounded-2xl bg-cream-card p-4 shadow-flutuante">
       {/* Cabeçalho — nome e avatar levam ao perfil do autor */}
       <div className="mb-3 flex items-center gap-2.5">
         <Link href={`/u/${autor?.username || post.autorId}`} className="flex-shrink-0">
@@ -563,7 +563,7 @@ export default function PostCard({ post, usuarioAtual }) {
           duplo toque pra curtir em qualquer parte dele (play, onda, ou o
           espaço vazio ao redor). */}
       {!itensMissao && post.tipo === 'audio' && post.midiaURL && (
-        <div className="relative mb-3 rounded-xl border border-coffee-100 bg-cream px-3 pt-1 pb-1" onClick={() => handleDuploToque()}>
+        <div className="relative mb-3 rounded-xl bg-cream px-3 pt-1 pb-1" onClick={() => handleDuploToque()}>
           <AudioPlayer src={post.midiaURL} />
         </div>
       )}

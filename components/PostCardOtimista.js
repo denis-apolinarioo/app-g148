@@ -14,7 +14,7 @@ import Avatar from '@/components/Avatar';
  */
 export default function PostCardOtimista({ post, usuarioAtual }) {
   return (
-    <div className="relative overflow-hidden rounded-xl2 border border-coffee-100 bg-cream-card p-4 shadow-card opacity-70">
+    <div className="relative overflow-hidden rounded-xl2 bg-cream-card p-4 shadow-flutuante opacity-70">
       <div className="flex items-center gap-2.5">
         <Avatar src={usuarioAtual?.fotoURL} nome={usuarioAtual?.nome} tamanho={36} />
         <div className="min-w-0 flex-1">

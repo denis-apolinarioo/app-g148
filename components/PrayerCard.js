@@ -158,7 +158,7 @@ export default function PrayerCard({ pedido }) {
   // este placeholder só cobre quem abrir um link direto pra ele.
   if (pedido.oculto && !ehAdmin) {
     return (
-      <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-4 shadow-card">
+      <div className="rounded-xl2 bg-cream-card p-4 shadow-flutuante">
         <p className="text-sm italic text-coffee-400">Esse pedido foi ocultado</p>
         {ehAutor && (
           <button
@@ -174,7 +174,7 @@ export default function PrayerCard({ pedido }) {
   }
 
   return (
-    <div className="rounded-xl2 border border-coffee-100 bg-cream-card p-4 shadow-card">
+    <div className="rounded-xl2 bg-cream-card p-4 shadow-flutuante">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 flex-1 items-start gap-3">
           <Link href={`/u/${autor.username || pedido.autorId}`}>

@@ -191,22 +191,6 @@ textarea:focus-visible {
   overflow: hidden;
 }
 
-/* Item novo — pedido do Denis: bordas com contraste demais, quer um app
-   "com cara de app moderno", mais integrado. Em vez de editar borda por
-   borda em ~50 arquivos, suaviza TODAS de uma vez só aqui, reduzindo a
-   OPACIDADE (não a cor) — cada borda continua na cor que já tinha (não
-   fica tudo igual/achatado), só menos "gritante". `!important` porque
-   precisa vencer o valor que o próprio Tailwind já define por classe.
-   Fácil de reverter: é só apagar este bloco. Fácil de ajustar: só mudar
-   o número (0 = borda totalmente invisível, 1 = borda cheia, como era
-   antes desta regra existir). */
-[class*='border-coffee-'] {
-  --tw-border-opacity: 0 !important;
-}
-[class*='divide-coffee-'] > :not([hidden]) ~ :not([hidden]) {
-  --tw-divide-opacity: 0 !important;
-}
-
 /* ============================================================================
  * COR DO APP (aba Estética do Admin)
  * ----------------------------------------------------------------------------

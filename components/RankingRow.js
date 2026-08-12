@@ -14,8 +14,8 @@ export default function RankingRow({ posicao, usuario, souEu }) {
   return (
     <Link
       href={`/u/${usuario.username}`}
-      className={`flex items-center gap-3 rounded-xl2 border px-3.5 py-3 ${
-        souEu ? 'border-coffee-400 bg-coffee-50' : 'border-coffee-100 bg-cream-card'
+      className={`flex items-center gap-3 rounded-xl2 px-3.5 py-3 shadow-flutuante ${
+        souEu ? 'bg-coffee-50' : 'bg-cream-card'
       }`}
     >
       {/* Medalhas do top 3 um pouco maiores que o número puro das demais

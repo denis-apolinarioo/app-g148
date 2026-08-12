@@ -15,7 +15,7 @@ import EmptyState from '@/components/EmptyState';
 import StreakBadge from '@/components/StreakBadge';
 import { MessageSquare } from 'lucide-react';
 import { useAppConfig } from '@/lib/useAppConfig';
-import { CHAVE_BLOQUEIO_USUARIO_ATIVO } from '@/lib/appConfig';
+import { CHAVE_BLOQUEIO_USUARIO_ATIVO, CHAVE_NOME_COMUNIDADE, NOME_APP_PADRAO } from '@/lib/appConfig';
 
 const QUANTIDADE_BASE = 15;
 const QUANTIDADE_INCREMENTO = 15;
@@ -116,7 +116,9 @@ export default function FeedPage() {
           linha fina embaixo da barra de notificação ao trocar de tema. */}
       <header className="sticky top-0 z-30 flex items-center justify-between bg-cream/95 px-5 py-3.5 backdrop-blur pt-[calc(env(safe-area-inset-top)+0.875rem)] transition-colors duration-300">
         <div>
-          <p className="font-destaque text-lg font-semibold text-coffee-800">Geração 148</p>
+          <p className="font-destaque text-lg font-semibold text-coffee-800">
+            {config?.[CHAVE_NOME_COMUNIDADE] || NOME_APP_PADRAO}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <StreakBadge dias={perfil?.streakAtual || 0} />

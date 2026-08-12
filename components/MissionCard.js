@@ -51,10 +51,10 @@ export default function MissionCard({ missao, concluida, onClick, bloqueada, pro
         if ((e.key === 'Enter' || e.key === ' ') && !bloqueadaVisual) onClick(missao);
       }}
       aria-disabled={bloqueadaVisual}
-      className={`relative flex w-full items-center gap-3.5 rounded-xl2 border px-4 py-3.5 text-left transition-colors ${
+      className={`relative flex w-full items-center gap-3.5 rounded-xl2 px-4 py-3.5 text-left transition-colors ${
         concluida || enviando
-          ? 'border-coffee-100 bg-coffee-50/60'
-          : 'border-coffee-100 bg-cream-card shadow-card active:bg-coffee-50'
+          ? 'bg-coffee-50/60 shadow-flutuante'
+          : 'bg-cream-card shadow-flutuante active:bg-coffee-50'
       } ${bloqueadaVisual ? '' : 'cursor-pointer'}`}
     >
       {mostrarEncaminhar && (

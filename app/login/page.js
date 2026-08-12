@@ -12,10 +12,13 @@ import { auth, googleProvider } from '@/lib/firebase';
 import { useAuth } from '@/components/AuthProvider';
 import LoadingScreen from '@/components/LoadingScreen';
 import { Mail, Lock, Loader2, Eye, EyeOff, MailCheck } from 'lucide-react';
+import { useAppConfig } from '@/lib/useAppConfig';
+import { CHAVE_NOME_COMUNIDADE, NOME_APP_PADRAO } from '@/lib/appConfig';
 
 export default function LoginPage() {
   const router = useRouter();
   const { usuarioAuth, carregando } = useAuth();
+  const config = useAppConfig();
   const [modo, setModo] = useState('entrar'); // 'entrar' | 'criar'
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -96,7 +99,9 @@ export default function LoginPage() {
           <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-forte font-display text-2xl font-semibold text-texto-forte">
             G148
           </div>
-          <h1 className="font-destaque text-2xl font-semibold text-coffee-800">Geração 148</h1>
+          <h1 className="font-destaque text-2xl font-semibold text-coffee-800">
+            {config?.[CHAVE_NOME_COMUNIDADE] || NOME_APP_PADRAO}
+          </h1>
           <p className="mt-1 text-sm text-coffee-400">
             &ldquo;Quer vivamos, quer morramos, pertencemos ao Senhor.&rdquo; — Romanos 14:8
           </p>
