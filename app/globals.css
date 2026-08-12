@@ -201,10 +201,10 @@ textarea:focus-visible {
    o número (0 = borda totalmente invisível, 1 = borda cheia, como era
    antes desta regra existir). */
 [class*='border-coffee-'] {
-  --tw-border-opacity: 0.55 !important;
+  --tw-border-opacity: 0 !important;
 }
 [class*='divide-coffee-'] > :not([hidden]) ~ :not([hidden]) {
-  --tw-divide-opacity: 0.55 !important;
+  --tw-divide-opacity: 0 !important;
 }
 
 /* ============================================================================
