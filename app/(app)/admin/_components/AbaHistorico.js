@@ -33,6 +33,28 @@ const ROTULOS_ACAO = {
   destravar_usuario: 'Usuário destravado',
   resolver_denuncia: 'Denúncia resolvida',
   reabrir_denuncia: 'Denúncia reaberta',
+  // Item novo — estes rótulos já deveriam existir desde que as abas
+  // Conquistas/Funções/Ações específicas/Estética ganharam CRUD próprio
+  // (cada uma chama registrarAcaoAdmin, mas nunca ganhou entrada aqui);
+  // sem isso o histórico mostrava a string crua (ex.: "criar_conquista")
+  // em vez de um rótulo legível. Aproveitado pra já cadastrar Materiais
+  // (aba nova) do mesmo jeito, sem deixar o mesmo buraco de novo.
+  criar_conquista: 'Conquista criada',
+  editar_conquista: 'Conquista editada',
+  excluir_conquista: 'Conquista excluída',
+  conceder_conquista_manual: 'Conquista concedida manualmente',
+  criar_funcao: 'Função criada',
+  editar_funcao: 'Função editada',
+  excluir_funcao: 'Função excluída',
+  criar_categoria_acao: 'Ação criada',
+  editar_categoria_acao: 'Ação editada',
+  excluir_categoria_acao: 'Ação excluída',
+  criar_preset_estetica: 'Preset de estética criado',
+  editar_preset_estetica: 'Preset de estética editado',
+  excluir_preset_estetica: 'Preset de estética excluído',
+  criar_material: 'Material criado',
+  editar_material: 'Material editado',
+  excluir_material: 'Material excluído',
 };
 
 // Rótulos por tipo de lançamento de dracmaLog, usados na sub-aba "Dracma"

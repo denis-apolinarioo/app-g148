@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
+import * as Icons from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import TopBar from '@/components/TopBar';
 import Avatar from '@/components/Avatar';
@@ -11,17 +12,23 @@ import LoadingScreen from '@/components/LoadingScreen';
 import ImageCropper from '@/components/ImageCropper';
 import ConfirmarAcaoModal from '@/components/ConfirmarAcaoModal';
 import ConfirmarResetModal from '@/components/ConfirmarResetModal';
+import { useConfirm } from '@/components/ConfirmProvider';
 import { auth } from '@/lib/firebase';
 import { updateUserProfile } from '@/lib/firestore-helpers';
 import { atualizarUsuarioCache } from '@/lib/usersCache';
 import { uploadFotoPerfil } from '@/lib/storage';
 import { getFuncoesAtivas } from '@/lib/funcoesRepo';
 import { excluirConta } from '@/lib/excluirContaRepo';
-import { Camera, Loader2, UserX } from 'lucide-react';
+import { limparTokenAoSair } from '@/lib/push';
+import { usePresetAtivo } from '@/lib/theme';
+import { iconePascalCase } from '@/lib/missionIcons';
+import { Camera, Loader2, UserX, Palette, ChevronRight, X, Check, LogOut } from 'lucide-react';
 
 export default function EditarPerfilPage() {
   const router = useRouter();
   const { perfil } = useAuth();
+  const confirmar = useConfirm();
+  const { presetAtivoId, presetsDisponiveis, trocarPreset } = usePresetAtivo();
   const [nome, setNome] = useState(perfil?.nome || '');
   const [proposito, setProposito] = useState(perfil?.proposito || '');
   const [tagFuncao, setTagFuncao] = useState(perfil?.tagFuncao || '');
@@ -32,6 +39,29 @@ export default function EditarPerfilPage() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const inputFotoRef = useRef(null);
+
+  // Item novo — seletor de tema (antes ficava no cabeçalho do Perfil, ver
+  // comentário em app/(app)/perfil/page.js) e botão de sair, os dois
+  // movidos pra dentro de Editar perfil, que virou a tela de "Config" de
+  // fato. `usePresetAtivo` pode ser chamado de qualquer tela (cada
+  // instância monta sua própria escuta em tempo real) — a reconciliação
+  // do preset (aplicar o padrão do Admin, validar cache) já roda sempre,
+  // de qualquer forma, em app/(app)/layout.js; esta aqui é só pra
+  // alimentar o seletor abaixo.
+  const [temaAberto, setTemaAberto] = useState(false);
+  const presetAtual = presetsDisponiveis?.find((p) => p.id === presetAtivoId);
+  const IconePresetAtual = presetAtual?.icone ? Icons[iconePascalCase(presetAtual.icone)] : null;
+
+  async function handleSair() {
+    const ok = await confirmar({ titulo: 'Sair da sua conta?', labelConfirmar: 'Sair' });
+    if (ok) {
+      // Item 25 do Bloco 10 — remove o token de push deste aparelho ANTES
+      // de sair, senão quem ficar logado em outra conta nesse mesmo
+      // navegador continuaria recebendo pushes da conta anterior.
+      await limparTokenAoSair();
+      await signOut(auth);
+    }
+  }
 
   // Exclusão de conta (LGPD) — ver comentário grande na Cloud Function
   // excluirConta (functions/index.js) pro que exatamente é apagado/
@@ -241,6 +271,44 @@ export default function EditarPerfilPage() {
           Notificações
         </Link>
 
+        {/* Item novo — seletor de tema, migrado do cabeçalho do Perfil pra
+            cá (mesmo espírito de "config" da Notificações acima). Abre uma
+            folha inferior com os presets ATIVOS (aba Estética do Admin),
+            cada um com o próprio ícone — mesma fonte de dados que já
+            alimentava o botão antigo (usePresetAtivo), só a apresentação
+            mudou de dropdown ancorado pra folha inferior, mais adequada
+            numa lista de configurações do que num ícone isolado. */}
+        <button
+          type="button"
+          onClick={() => setTemaAberto(true)}
+          className="flex w-full items-center justify-between rounded-xl border border-coffee-100 px-4 py-3 text-sm font-medium text-coffee-600"
+        >
+          <span className="flex items-center gap-2">
+            {IconePresetAtual ? (
+              <IconePresetAtual size={16} className="text-coffee-400" />
+            ) : (
+              <Palette size={16} className="text-coffee-400" />
+            )}
+            Tema do app
+          </span>
+          <span className="flex items-center gap-1 text-coffee-400">
+            {presetAtual?.nome || 'Claro'}
+            <ChevronRight size={14} />
+          </span>
+        </button>
+
+        {/* Item novo — botão de sair, migrado do cabeçalho do Perfil pra
+            cá. Mesma lógica de sempre (limpa o token de push antes de
+            deslogar), só a localização mudou. */}
+        <button
+          type="button"
+          onClick={handleSair}
+          className="flex w-full items-center gap-2 rounded-xl border border-coffee-100 px-4 py-3 text-sm font-medium text-coffee-600"
+        >
+          <LogOut size={16} className="text-coffee-400" />
+          Sair da conta
+        </button>
+
         <Link
           href="/termos"
           className="block pt-1 text-center text-xs text-coffee-300 underline underline-offset-2"
@@ -287,6 +355,56 @@ export default function EditarPerfilPage() {
           onFechar={() => !excluindoConta && setAutenticandoExclusao(false)}
           onConfirmado={handleExcluirConta}
         />
+      )}
+
+      {/* Folha inferior do seletor de tema (ver botão "Tema do app" acima). */}
+      {temaAberto && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-forte-900/40 sm:items-center"
+          onClick={() => setTemaAberto(false)}
+        >
+          <div
+            className="max-h-[70vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-cream sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-coffee-100 px-5 py-4">
+              <h3 className="font-destaque text-base font-semibold text-coffee-800">Tema do app</h3>
+              <button onClick={() => setTemaAberto(false)} className="text-coffee-400">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-2">
+              {!presetsDisponiveis ? (
+                <div className="h-24 animate-pulse rounded-xl bg-coffee-100/60" />
+              ) : (
+                presetsDisponiveis.map((preset) => {
+                  const IconePreset = preset.icone ? Icons[iconePascalCase(preset.icone)] : null;
+                  const selecionado = preset.id === presetAtivoId;
+                  return (
+                    <button
+                      key={preset.id}
+                      onClick={() => {
+                        trocarPreset(preset.id);
+                        setTemaAberto(false);
+                      }}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-sm ${
+                        selecionado ? 'bg-coffee-50 font-semibold text-coffee-800' : 'text-coffee-600'
+                      }`}
+                    >
+                      {IconePreset ? (
+                        <IconePreset size={18} className={selecionado ? 'text-coffee-800' : 'text-coffee-400'} />
+                      ) : (
+                        <Palette size={18} className="text-coffee-400" />
+                      )}
+                      {preset.nome}
+                      {selecionado && <Check size={16} className="ml-auto text-coffee-800" />}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       <style jsx global>{`
