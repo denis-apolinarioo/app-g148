@@ -80,27 +80,6 @@ module.exports = {
           soft: withOpacity('--cor-gold-soft'),
         },
       },
-      // Item novo — borderColor à parte de `colors` (Tailwind aceita essa
-      // chave separada e funde com o que `colors.coffee` já resolve, ver
-      // https://tailwindcss.com/docs/customizing-colors — por padrão
-      // borderColor herda de colors, então só os 5 degraus abaixo mudam;
-      // border-coffee-50/500/600/800/900 continuam vindo de `colors.coffee`
-      // acima, sem precisar repetir). SÓ afeta `border-coffee-*` — bg-*
-      // e text-coffee-* continuam na escala normal. Ver gerarBorda() em
-      // lib/paletaGerador.js pro raciocínio completo: reproduz uma
-      // correção que o app original já tinha (borda mais clara que a
-      // escala normal nesses degraus específicos, só no modo escuro — no
-      // claro os valores são idênticos aos de `colors.coffee`, ou seja,
-      // não muda nada visualmente).
-      borderColor: {
-        coffee: {
-          100: withOpacity('--cor-borda-100'),
-          200: withOpacity('--cor-borda-200'),
-          300: withOpacity('--cor-borda-300'),
-          400: withOpacity('--cor-borda-400'),
-          700: withOpacity('--cor-borda-700'),
-        },
-      },
       fontFamily: {
         display: ['var(--font-display)', 'Georgia', 'serif'],
         body: ['var(--font-body)', 'system-ui', 'sans-serif'],
