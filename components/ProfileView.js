@@ -12,6 +12,7 @@ import EmptyState from '@/components/EmptyState';
 import ImageViewerModal from '@/components/ImageViewerModal';
 import ConquistaDetalheModal from '@/components/ConquistaDetalheModal';
 import CrossIcon from '@/components/icons/CrossIcon';
+import IconePngColorido from '@/components/IconePngColorido';
 import {
   subscribeToUserPosts,
   subscribeToUserPrayers,
@@ -25,91 +26,44 @@ import { todayBrasilia, yesterdayBrasilia } from '@/lib/dateUtils';
 
 // Ícones das abas do Perfil (Posts/Orações/Conquistas) — PNGs recortados
 // da imagem de referência que o usuário mandou (public/icons/custom/), no
-// lugar dos ícones de lib. Como a cor vem "gravada" na imagem (não são
-// SVG com currentColor), cada um troca de arquivo pelo prop `ativo` em
-// vez de herdar cor via CSS. Pra clarear no modo escuro, os dois PNGs
-// (claro e a variante "-dark") ficam sempre os dois no DOM, e o CSS puro
-// do Tailwind (dark:) decide qual mostrar — mesmo mecanismo dos ícones do
-// nav (ver BottomNav.js) e dos ícones oficiais, sem JS/hook envolvido.
-// pointer-events-none + onContextMenu preventDefault: mesmo fix do
-// BottomNav.js — sem isso, segurar o dedo em cima do ícone abre o menu
-// "Salvar imagem" do navegador (o toque passa a ser sempre capturado pelo
-// botão da aba por trás, nunca pela <img>).
+// lugar dos ícones de lib.
+//
+// BUG CORRIGIDO (ícone preso na cor antiga em preset novo): recolorido via
+// IconePngColorido (máscara CSS + currentColor) — mesma cor
+// (text-coffee-800/text-coffee-300) que a barrinha ativa da própria aba já
+// usa (ver AbaBtn, mais abaixo), então os dois sempre acompanham o preset
+// ativo juntos, em qualquer cor escolhida — não só claro/escuro. Ver
+// comentário grande em components/IconePngColorido.js.
 function IconePosts({ size, ativo }) {
   const base = ativo ? 'post-active' : 'post-inactive';
   return (
-    <>
-      <img
-        src={`/icons/custom/${base}.png`}
-        width={size}
-        height={size}
-        alt=""
-        draggable={false}
-        onContextMenu={(e) => e.preventDefault()}
-        className="pointer-events-none select-none object-contain dark:hidden [-webkit-touch-callout:none] [-webkit-user-drag:none]"
-      />
-      <img
-        src={`/icons/custom/${base}-dark.png`}
-        width={size}
-        height={size}
-        alt=""
-        draggable={false}
-        onContextMenu={(e) => e.preventDefault()}
-        className="hidden pointer-events-none select-none object-contain dark:block [-webkit-touch-callout:none] [-webkit-user-drag:none]"
-      />
-    </>
+    <IconePngColorido
+      src={`/icons/custom/${base}.png`}
+      size={size}
+      className={ativo ? 'text-coffee-800' : 'text-coffee-300'}
+    />
   );
 }
 
 function IconeOracoesPerfil({ size, ativo }) {
   const base = ativo ? 'hands-active-perfil' : 'hands-inactive';
   return (
-    <>
-      <img
-        src={`/icons/custom/${base}.png`}
-        width={size}
-        height={size}
-        alt=""
-        draggable={false}
-        onContextMenu={(e) => e.preventDefault()}
-        className="pointer-events-none select-none object-contain dark:hidden [-webkit-touch-callout:none] [-webkit-user-drag:none]"
-      />
-      <img
-        src={`/icons/custom/${base}-dark.png`}
-        width={size}
-        height={size}
-        alt=""
-        draggable={false}
-        onContextMenu={(e) => e.preventDefault()}
-        className="hidden pointer-events-none select-none object-contain dark:block [-webkit-touch-callout:none] [-webkit-user-drag:none]"
-      />
-    </>
+    <IconePngColorido
+      src={`/icons/custom/${base}.png`}
+      size={size}
+      className={ativo ? 'text-coffee-800' : 'text-coffee-300'}
+    />
   );
 }
 
 function IconeConquistas({ size, ativo }) {
   const base = ativo ? 'medal-active' : 'medal-inactive';
   return (
-    <>
-      <img
-        src={`/icons/custom/${base}.png`}
-        width={size}
-        height={size}
-        alt=""
-        draggable={false}
-        onContextMenu={(e) => e.preventDefault()}
-        className="pointer-events-none select-none object-contain dark:hidden [-webkit-touch-callout:none] [-webkit-user-drag:none]"
-      />
-      <img
-        src={`/icons/custom/${base}-dark.png`}
-        width={size}
-        height={size}
-        alt=""
-        draggable={false}
-        onContextMenu={(e) => e.preventDefault()}
-        className="hidden pointer-events-none select-none object-contain dark:block [-webkit-touch-callout:none] [-webkit-user-drag:none]"
-      />
-    </>
+    <IconePngColorido
+      src={`/icons/custom/${base}.png`}
+      size={size}
+      className={ativo ? 'text-coffee-800' : 'text-coffee-300'}
+    />
   );
 }
 

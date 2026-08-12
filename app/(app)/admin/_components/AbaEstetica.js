@@ -14,6 +14,7 @@ import { useAppConfig } from '@/lib/useAppConfig';
 import { gerarPaletaCompleta } from '@/lib/paletaGerador';
 import { iconePascalCase } from '@/lib/missionIcons';
 import IconGalleryPicker from '@/components/IconGalleryPicker';
+import RoletaCor from '@/components/RoletaCor';
 import { useAuth } from '@/components/AuthProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
 
@@ -207,15 +208,7 @@ function CampoCor({ label, valor, onChange }) {
   return (
     <div>
       <label className="mb-1.5 block text-xs font-medium text-coffee-500">{label}</label>
-      <div className="flex items-center gap-2.5 rounded-lg border border-coffee-100 bg-cream-card px-3 py-2">
-        <input
-          type="color"
-          value={valor}
-          onChange={(e) => onChange(e.target.value.toUpperCase())}
-          className="h-8 w-8 flex-shrink-0 cursor-pointer rounded border-none bg-transparent p-0"
-        />
-        <span className="font-mono text-xs text-coffee-500">{valor}</span>
-      </div>
+      <RoletaCor valor={valor} onChange={onChange} />
     </div>
   );
 }
@@ -287,7 +280,11 @@ function PresetFormModal({ presetInicial, onFechar, onSalvo }) {
             <IconGalleryPicker value={icone} onChange={(v) => setIcone(v || 'palette')} />
           </Campo>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* Item novo — pilha de 1 coluna: a roleta de cor precisa de mais
+              espaço horizontal (roda + hex + barra de luminosidade lado a
+              lado) do que o antigo swatch simples cabia num grid de 2
+              colunas apertado. */}
+          <div className="space-y-4">
             <CampoCor label="Fundo" valor={coresBase.fundo} onChange={(v) => atualizarCor('fundo', v)} />
             <CampoCor label="Cartões" valor={coresBase.cartao} onChange={(v) => atualizarCor('cartao', v)} />
             <CampoCor

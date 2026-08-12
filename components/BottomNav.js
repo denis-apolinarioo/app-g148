@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Trophy, User } from 'lucide-react';
 import { ABAS_PRINCIPAIS } from '@/lib/constants';
+import IconePngColorido from '@/components/IconePngColorido';
 
 // Ícones do lucide-react pra Feed/Ranking/Perfil (mantidos como já estavam,
 // só maiores) — envolvidos numa função pra terem a mesma interface
@@ -22,63 +23,34 @@ function iconeLucide(Cmp) {
 
 // Missões e Oração usam os PNGs recortados da imagem de referência que o
 // usuário mandou (public/icons/custom/) — arco-e-flecha e mãos orando —
-// em vez de ícone de fonte/lib, por isso trocam de arquivo (ativo/inativo)
-// em vez de mudar de cor via CSS. Pra clarear no modo escuro (mesmo
-// desenho, só a variante "-dark" com a cor trocada) SEM depender de nenhum
-// JS: os dois PNGs (claro e escuro) ficam sempre os dois no DOM, e o CSS
-// puro do Tailwind (dark:) decide qual mostrar — exatamente o mesmo
-// mecanismo que já recolore os ícones oficiais, só que aqui trocando a
-// imagem inteira em vez da cor do texto. Sem hook, sem re-render, sem
-// atraso: muda junto com a classe `dark` do <html>, na mesma hora.
+// em vez de ícone de fonte/lib, por isso são silhuetas recortadas em vez
+// de vetor.
+//
+// BUG CORRIGIDO (ícone preso na cor antiga em preset novo): recolorido via
+// IconePngColorido (máscara CSS + currentColor) em vez de trocar de
+// arquivo PNG pela classe `dark:` — mesma classe de cor
+// (text-coffee-700/text-coffee-300) que os ícones lucide ao lado (Feed,
+// Ranking, Perfil) já usam, então os dois tipos de ícone sempre acompanham
+// o preset ativo juntos. Ver comentário grande em IconePngColorido.js.
 function IconeArcoFlecha({ size, ativo }) {
   const base = ativo ? 'bow-active' : 'bow-inactive';
   return (
-    <>
-      <img
-        src={`/icons/custom/${base}.png`}
-        width={size}
-        height={size}
-        alt=""
-        draggable={false}
-        onContextMenu={(e) => e.preventDefault()}
-        className="pointer-events-none select-none object-contain dark:hidden [-webkit-touch-callout:none] [-webkit-user-drag:none]"
-      />
-      <img
-        src={`/icons/custom/${base}-dark.png`}
-        width={size}
-        height={size}
-        alt=""
-        draggable={false}
-        onContextMenu={(e) => e.preventDefault()}
-        className="hidden pointer-events-none select-none object-contain dark:block [-webkit-touch-callout:none] [-webkit-user-drag:none]"
-      />
-    </>
+    <IconePngColorido
+      src={`/icons/custom/${base}.png`}
+      size={size}
+      className={ativo ? 'text-coffee-700' : 'text-coffee-300'}
+    />
   );
 }
 
 function IconeMaosOrando({ size, ativo }) {
   const base = ativo ? 'hands-active-nav' : 'hands-inactive';
   return (
-    <>
-      <img
-        src={`/icons/custom/${base}.png`}
-        width={size}
-        height={size}
-        alt=""
-        draggable={false}
-        onContextMenu={(e) => e.preventDefault()}
-        className="pointer-events-none select-none object-contain dark:hidden [-webkit-touch-callout:none] [-webkit-user-drag:none]"
-      />
-      <img
-        src={`/icons/custom/${base}-dark.png`}
-        width={size}
-        height={size}
-        alt=""
-        draggable={false}
-        onContextMenu={(e) => e.preventDefault()}
-        className="hidden pointer-events-none select-none object-contain dark:block [-webkit-touch-callout:none] [-webkit-user-drag:none]"
-      />
-    </>
+    <IconePngColorido
+      src={`/icons/custom/${base}.png`}
+      size={size}
+      className={ativo ? 'text-coffee-700' : 'text-coffee-300'}
+    />
   );
 }
 
