@@ -1,0 +1,328 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-destaque: 'Poppins', system-ui, -apple-system, sans-serif;
+  /* Duração/curva do fade ao trocar tema — usada tanto pela View Transition
+     (cross-fade da tela) quanto pela classe .barra-fade-tema abaixo (barras
+     sticky com backdrop-blur, que a View Transition não cobre sozinha).
+     Fica só aqui, numa variável, pra nunca mais os dois lados saírem de
+     sincronia como já aconteceu (uma trocava em 300ms, a outra em 180ms). */
+  --tema-fade-duracao: 180ms;
+  --tema-fade-curva: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ==========================================================================
+   * PALETA DO APP (aba Estética do Admin) — valores padrão daqui = preset
+   * "Claro" (o único que o app sempre teve). Cada variável guarda "R G B"
+   * (números separados por espaço, não hex) porque o tailwind.config.js usa
+   * o padrão rgb(var(--x) / opacidade) — precisa desse formato pra opacidade
+   * (bg-cream/95 etc.) funcionar.
+   *
+   * Esses valores são só o PONTO DE PARTIDA (o que aparece antes de
+   * qualquer preset carregar, e o fallback se o preset ativo falhar ao
+   * carregar). Quem troca esses valores de verdade, em runtime, é
+   * lib/theme.js -> aplicarPreset(), chamado (a) pelo script anti-flash no
+   * <head> de app/layout.js, ANTES da 1ª pintura, lendo o preset já
+   * cacheado no localStorage; e (b) toda vez que a pessoa troca de preset
+   * ou o preset ativo dela é atualizado pelo Admin.
+   * ========================================================================== */
+  --cor-cream: 250 246 239;
+  --cor-cream-soft: 243 236 224;
+  --cor-cream-card: 255 253 249;
+
+  --cor-coffee-50: 244 237 228;
+  --cor-coffee-100: 228 211 190;
+  --cor-coffee-200: 203 173 138;
+  --cor-coffee-300: 172 135 96;
+  --cor-coffee-400: 138 102 68;
+  --cor-coffee-500: 107 74 47;
+  --cor-coffee-600: 84 58 37;
+  --cor-coffee-700: 63 44 28;
+  --cor-coffee-800: 44 31 20;
+  --cor-coffee-900: 28 20 13;
+
+  /* "forte" — botão sólido/overlay/scrim: sempre escuro e saturado, NÃO
+     muda com o preset (ver comentário longo em tailwind.config.js). */
+  --cor-forte: 63 44 28;
+  --cor-forte-800: 44 31 20;
+  --cor-forte-900: 28 20 13;
+
+  --cor-gold: 184 134 59;
+  --cor-gold-soft: 217 182 121;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  /* Toque em texto não deve selecionar (comportamento de app nativo, não de
+     página web comum) — mas continua liberado em campos de digitação
+     (input/textarea) logo abaixo, senão ninguém consegue nem selecionar
+     o que já digitou pra corrigir/apagar. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+html,
+body {
+  /* cor de fundo/texto lidas da variável do preset ativo — ver bloco de
+     variáveis no :root acima. */
+  background-color: rgb(var(--cor-cream));
+  color: rgb(var(--cor-coffee-700));
+  font-family: var(--font-body);
+  overscroll-behavior-y: none;
+}
+
+/* color-scheme (afeta a aparência de controles nativos do navegador —
+   scrollbar do sistema, seleção de data, etc.) continua ligado à classe
+   `dark`, só que agora ela representa "o preset ativo é de tom escuro"
+   (`preset.ehEscuro`, ver lib/theme.js), não mais um alternador
+   claro/escuro binário fixo. */
+html.dark {
+  color-scheme: dark;
+}
+
+/* Transição suave ao trocar tema (claro/escuro). Antes, só o fundo do
+   html/body tinha uma transição de 300ms — todo o resto (cards, bordas,
+   textos, ícones) trocava de cor na hora, criando um descompasso visível
+   (o fundo "atrasado" em relação ao resto, que já tinha mudado). A classe
+   abaixo é ligada só durante a troca (ver alternar() em lib/theme.js) e
+   força TODOS os elementos a trocarem de cor juntos, no mesmo ritmo —
+   inclusive corrigindo, de quebra, a linha fina que aparecia embaixo da
+   barra de notificação no Android (o sistema anima a cor da barra de
+   status sozinho; antes só o fundo da página acompanhava esse ritmo, o
+   resto da tela não). O !important garante que nenhum componente com sua
+   própria transição (ex.: toggle switches) fique fora de sincronia durante
+   a troca de tema. */
+/* Transição suave ao trocar tema (claro/escuro), via View Transitions API
+   (ver alternar() em lib/theme.js). O navegador tira um "print" da tela
+   antes e depois da troca e cross-fadeia (opacidade) entre as 2 imagens —
+   sozinho, sem precisar animar a cor de cada elemento um por um (método
+   antigo, que travava no Android por recalcular estilo de centenas de nós
+   a cada frame). Aqui só ajustamos a duração/curva do cross-fade padrão do
+   navegador (que sem isso costuma ser meio lento, ~300ms linear). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--tema-fade-duracao);
+  animation-timing-function: var(--tema-fade-curva);
+}
+
+/* Barras sticky com backdrop-blur (TopBar, cabeçalho do Perfil): a View
+   Transition, no modo padrão, tira 1 foto só da tela inteira ("root") e
+   troca a página real por essa foto durante o cross-fade — ou seja, o
+   elemento AO VIVO fica escondido enquanto a animação roda, então uma
+   transition-colors normal nele nunca chega a aparecer (não é sobre
+   duração/curva — o elemento que animaria nem está sendo desenhado nessa
+   janela). A solução é dar um "nome" próprio pra essa barra: aí o
+   navegador tira uma foto SEPARADA só dela (antes/depois) e cruza essas
+   duas fotos com a duração/curva daqui embaixo — backdrop-blur incluso,
+   porque é uma imagem, não o efeito ao vivo. */
+.barra-fade-tema {
+  view-transition-name: barra-fade-tema;
+}
+
+::view-transition-old(barra-fade-tema),
+::view-transition-new(barra-fade-tema) {
+  animation-duration: var(--tema-fade-duracao);
+  animation-timing-function: var(--tema-fade-curva);
+}
+
+/* Foco visível pra navegação por teclado — acessibilidade básica */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgb(var(--cor-coffee-800));
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--cor-coffee-200));
+  border-radius: 999px;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ============================================================================
+ * COR DO APP (aba Estética do Admin)
+ * ----------------------------------------------------------------------------
+ * Até aqui, o modo escuro era feito sobrescrevendo, uma por uma, dezenas de
+ * classes do Tailwind por nome exato (html.dark .bg-coffee-100 {...} etc.).
+ * Isso virou as variáveis CSS lá no topo do arquivo (:root) + na aba
+ * Estética do Admin — trocar de preset (ou o Admin criar um novo) troca só o
+ * VALOR das variáveis, então toda classe que já existe no app (bg-coffee-*,
+ * text-coffee-*, border-coffee-*, bg-cream* etc.) já acompanha sozinha, sem
+ * precisar de nenhuma lista de overrides aqui.
+ *
+ * A classe `dark` na tag <html> não sumiu — ela continua existindo (agora
+ * ligada a `preset.ehEscuro`, não a um alternador claro/escuro fixo) só pra
+ * decidir `color-scheme` (controles nativos do navegador) e pra trocar os
+ * PNGs dos ícones customizados de 2 variantes (BottomNav.js/ProfileView.js
+ * usam dark:hidden/dark:block pra isso — puro CSS, sem depender de nenhuma
+ * variável de cor).
+ * ============================================================================ */
+
+/* ----------------------------------------------------------------------
+   BRILHO DOS EMBLEMAS DE CONQUISTA (tier diamante/ouro/prata/bronze/ferro)
+   ----------------------------------------------------------------------
+   Um "sweep" de luz que varre só os pixels visíveis do PNG do emblema —
+   por isso o mesmo arquivo entra como -webkit-mask-image/mask-image, pra
+   nunca vazar luz por cima do vão onde fica a foto da conquista. Cor,
+   duração e intensidade vêm de lib/emblemas.js (por tier) via variáveis
+   CSS, setadas inline em components/EmblemaConquista.js.
+   mix-blend-mode: screen faz a luz somar em cima do metal em vez de pintar
+   um retalho de cor plano por cima.
+   ---------------------------------------------------------------------- */
+.emblema-brilho {
+  background: linear-gradient(
+    115deg,
+    transparent 32%,
+    var(--brilho-cor, rgba(255, 255, 255, 0.8)) 50%,
+    transparent 68%
+  );
+  background-size: 260% 260%;
+  -webkit-mask-image: var(--brilho-mascara);
+  mask-image: var(--brilho-mascara);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  mix-blend-mode: screen;
+  opacity: var(--brilho-intensidade, 0.6);
+  animation: emblema-brilho-varredura var(--brilho-duracao, 3.2s) ease-in-out infinite;
+}
+
+@keyframes emblema-brilho-varredura {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .emblema-brilho {
+    animation: none;
+    background-position: 50% 50%;
+  }
+}
+
+/* ----------------------------------------------------------------------
+   NAVEGAÇÃO POR ARRASTAR (swipe) — troca de aba (Feed/Missões/Oração/
+   Ranking/Perfil), tanto pelo gesto quanto pelo toque normal na BottomNav.
+   Entrada leve (fade + um pequeno deslize), sem depender de nenhuma lib de
+   animação — só pra não parecer um corte seco de tela.
+   Ver: lib/useSwipeNavigation.js, app/(app)/layout.js
+
+   Entre as 5 abas principais, a entrada agora é uma "janela deslizante" de
+   verdade: quem entra vem da direita (indo pra frente na ordem das abas) ou
+   da esquerda (indo pra trás), com um fundo sólido (bg-cream) atrás pra não
+   deixar transparecer a tela anterior por baixo enquanto desliza. Fora das
+   abas principais (detalhe de post, Admin, Correio etc.) continua a entrada
+   antiga (fade + deslize vertical leve).
+   Ver: lib/useSwipeNavigation.js, app/(app)/layout.js
+   ---------------------------------------------------------------------- */
+@keyframes entrada-aba {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.entrada-aba {
+  animation: entrada-aba 0.18s ease-out;
+}
+
+@keyframes entrada-aba-frente {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes entrada-aba-voltar {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.entrada-aba-frente,
+.entrada-aba-voltar {
+  /* SEM animation-fill-mode aqui (de propósito). Com `both`/`forwards`, o
+     `transform` do fim da animação (translateX(0)) continuava aplicado na
+     div pra sempre depois que a troca de aba acabava — e QUALQUER transform
+     num ancestral, mesmo "zerado", faz todo popup `position: fixed` lá
+     dentro (foto, editar post, conquista, etc.) parar de se posicionar em
+     relação à tela e passar a se posicionar em relação a essa div (que é do
+     tamanho da página inteira, rolável) — o popup nascia lá no fim dela,
+     de baixo, exigindo rolar a tela pra ver. Sem fill-mode, o transform só
+     existe durante os ~0.26s da animação e some completo depois, sem mudar
+     em nada como o deslize entre abas se parece.
+     Bug relatado + causa raiz encontrados em conversa com o usuário. */
+  position: relative;
+  background-color: rgb(var(--cor-cream));
+  animation-duration: 0.26s;
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.entrada-aba-frente {
+  animation-name: entrada-aba-frente;
+}
+
+.entrada-aba-voltar {
+  animation-name: entrada-aba-voltar;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entrada-aba,
+  .entrada-aba-frente,
+  .entrada-aba-voltar {
+    animation: none;
+  }
+}
+

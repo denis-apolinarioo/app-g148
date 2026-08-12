@@ -1,3 +1,39 @@
+// ============================================================================
+// PALETA VIA VARIÁVEL CSS (aba Estética do Admin) — cada cor da paleta
+// (cream/coffee/gold/forte) deixou de ser um valor fixo aqui e passou a ler
+// uma variável CSS custom property (--cor-*), definida em app/globals.css
+// (:root, valores padrão do preset "Claro") e trocada em runtime pelo
+// preset ativo (ver lib/theme.js -> aplicarPreset), sem precisar de rebuild
+// nem redeploy pra uma cor nova aparecer.
+//
+// `withOpacity` é o padrão oficial do Tailwind pra variável CSS + suporte a
+// opacidade (bg-cream/95, bg-coffee-100/60 etc., já usados no app) — a
+// variável guarda "R G B" (números separados por espaço, não hex), daí o
+// `rgb(var(--x) / opacidade)`.
+//
+// `coffee` (50-900) é a escala ADAPTÁVEL: muda de verdade conforme o preset
+// (clara vira escura e vice-versa) — é a família usada pra TEXTO, borda e
+// fundo de superfície/cartão em geral.
+//
+// `forte` (DEFAULT/800/900) é NOVA — extraída do que antes eram os usos de
+// bg-coffee-700/800/900 e border-coffee-700 (botões sólidos, overlay/scrim
+// de modal, selo). Motivo de existir separada da escala `coffee`: um botão
+// com fundo escuro e texto claro (text-cream) em cima precisa continuar
+// ESCURO em QUALQUER preset (claro, escuro ou uma cor nova) — se ele
+// puxasse a mesma variável adaptável do texto, um preset escuro deixaria
+// o fundo do botão CLARO e o texto (fixo, cream) ficaria ilegível em cima.
+// `forte` sempre gera um tom escuro/saturado a partir da Cor Principal do
+// preset (ver lib/paletaGerador.js), então botões continuam legíveis com
+// texto claro em cima não importa qual preset esteja ativo.
+function withOpacity(varName) {
+  return ({ opacityValue }) => {
+    if (opacityValue !== undefined) {
+      return `rgb(var(${varName}) / ${opacityValue})`;
+    }
+    return `rgb(var(${varName}))`;
+  };
+}
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
@@ -9,25 +45,30 @@ module.exports = {
     extend: {
       colors: {
         cream: {
-          DEFAULT: '#FAF6EF',
-          soft: '#F3ECE0',
-          card: '#FFFDF9',
+          DEFAULT: withOpacity('--cor-cream'),
+          soft: withOpacity('--cor-cream-soft'),
+          card: withOpacity('--cor-cream-card'),
         },
         coffee: {
-          50: '#F4EDE4',
-          100: '#E4D3BE',
-          200: '#CBAD8A',
-          300: '#AC8760',
-          400: '#8A6644',
-          500: '#6B4A2F',
-          600: '#543A25',
-          700: '#3F2C1C',
-          800: '#2C1F14',
-          900: '#1C140D',
+          50: withOpacity('--cor-coffee-50'),
+          100: withOpacity('--cor-coffee-100'),
+          200: withOpacity('--cor-coffee-200'),
+          300: withOpacity('--cor-coffee-300'),
+          400: withOpacity('--cor-coffee-400'),
+          500: withOpacity('--cor-coffee-500'),
+          600: withOpacity('--cor-coffee-600'),
+          700: withOpacity('--cor-coffee-700'),
+          800: withOpacity('--cor-coffee-800'),
+          900: withOpacity('--cor-coffee-900'),
+        },
+        forte: {
+          DEFAULT: withOpacity('--cor-forte'),
+          800: withOpacity('--cor-forte-800'),
+          900: withOpacity('--cor-forte-900'),
         },
         gold: {
-          DEFAULT: '#B8863B',
-          soft: '#D9B679',
+          DEFAULT: withOpacity('--cor-gold'),
+          soft: withOpacity('--cor-gold-soft'),
         },
       },
       fontFamily: {

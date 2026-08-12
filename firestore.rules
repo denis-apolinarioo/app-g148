@@ -267,6 +267,30 @@ service cloud.firestore {
     }
 
     // ------------------------------------------------------------------------
+    // PRESETS DE ESTÉTICA (cor do app) — mesmo padrão de "funcoes"/
+    // "conquistas": o Admin cria/edita/ativa/apaga pelo painel (aba
+    // Estética, lib/presetsEsteticaRepo.js). Leitura liberada pra qualquer
+    // pessoa logada, porque o seletor de cor no Perfil (e a sincronização
+    // ao vivo em app/(app)/layout.js) precisa ler os presets ativos.
+    // ------------------------------------------------------------------------
+    match /presetsEstetica/{presetId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
+    // MATERIAIS (catálogo) — mesmo padrão de "conquistas"/"missoes": o Admin
+    // cria/edita/reordena/apaga pelo painel (aba Materiais,
+    // app/(app)/admin/_components/AbaMateriais.js). Leitura liberada pra
+    // qualquer pessoa logada, porque a tela de Materiais (ícone de caixa no
+    // Perfil) precisa ler o catálogo inteiro pra montar a grade.
+    // ------------------------------------------------------------------------
+    match /materiais/{materialId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------------------
     // FASE 2 — CATEGORIAS DE AÇÃO (catálogo) — mesmo padrão de "conquistas":
     // o Admin cria/edita/apaga pelo painel (aba Categorias). Leitura
     // liberada pra qualquer pessoa logada, porque o seletor de categoria ao
