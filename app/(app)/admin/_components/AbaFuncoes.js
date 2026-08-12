@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2, Plus, Pencil, Trash2, ChevronUp, ChevronDown, X } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, ChevronUp, ChevronDown, GripVertical, X } from 'lucide-react';
 import {
   getTodasAsFuncoes,
   subscribeATodasAsFuncoes,
@@ -9,9 +9,11 @@ import {
   atualizarFuncao,
   apagarFuncao,
   trocarOrdemFuncao,
+  reordenarFuncoes,
 } from '@/lib/funcoesRepo';
 import { useAuth } from '@/components/AuthProvider';
 import { useConfirm } from '@/components/ConfirmProvider';
+import { useArrastarReordenar } from './useArrastarReordenar';
 
 export default function AbaFuncoes() {
   const { perfil } = useAuth();
@@ -56,14 +58,23 @@ export default function AbaFuncoes() {
 
   async function handleMover(index, direcao) {
     const alvo = index + direcao;
-    if (!funcoes || alvo < 0 || alvo >= funcoes.length) return;
+    if (!itensVisuais || alvo < 0 || alvo >= itensVisuais.length) return;
     try {
-      await trocarOrdemFuncao(funcoes[index], funcoes[alvo]);
+      await trocarOrdemFuncao(itensVisuais[index], itensVisuais[alvo]);
       carregar();
     } catch (err) {
       console.error('Erro ao reordenar função:', err);
     }
   }
+
+  // Item novo — arrastar-e-soltar pra reordenar, mesmo padrão já usado em
+  // Ações/Conquistas/Missões/Materiais (ver useArrastarReordenar.js). As
+  // setinhas de handleMover acima continuam funcionando à parte, pra quem
+  // preferir tocar em vez de arrastar.
+  const { itensVisuais, propsDoItem, propsDaAlca } = useArrastarReordenar(
+    funcoes || [],
+    (novaOrdem) => reordenarFuncoes(novaOrdem).then(carregar)
+  );
 
   if (!funcoes) return <div className="h-40 animate-pulse rounded-xl2 bg-coffee-100/60" />;
 
@@ -84,18 +95,27 @@ export default function AbaFuncoes() {
           quem já tinha continua com ela.
         </p>
 
-        {funcoes.length === 0 && (
+        {itensVisuais.length === 0 && (
           <p className="text-xs text-coffee-300">Nenhuma função cadastrada ainda.</p>
         )}
 
         <div className="space-y-2">
-          {funcoes.map((funcao, index) => (
+          {itensVisuais.map((funcao, index) => (
             <div
               key={funcao.id}
-              className={`flex items-center gap-2 rounded-xl border border-coffee-100 bg-cream-card px-3.5 py-2.5 ${
+              {...propsDoItem(index)}
+              className={`flex items-center gap-1.5 rounded-xl border border-coffee-100 bg-cream-card px-3.5 py-2.5 ${
                 funcao.ativa === false ? 'opacity-50' : ''
               }`}
             >
+              <span
+                {...propsDaAlca(index)}
+                className="-m-1.5 flex-shrink-0 cursor-grab touch-none p-1.5 text-coffee-200 active:cursor-grabbing"
+                aria-label="Arrastar para reordenar"
+              >
+                <GripVertical size={15} />
+              </span>
+
               <div className="flex flex-shrink-0 flex-col">
                 <button
                   onClick={() => handleMover(index, -1)}
@@ -106,7 +126,7 @@ export default function AbaFuncoes() {
                 </button>
                 <button
                   onClick={() => handleMover(index, 1)}
-                  disabled={index === funcoes.length - 1}
+                  disabled={index === itensVisuais.length - 1}
                   className="text-coffee-300 disabled:opacity-20"
                 >
                   <ChevronDown size={14} />

@@ -23,48 +23,36 @@ import { useRef, useState, useEffect } from 'react';
 //     </div>
 //   ));
 //
-// REESCRITA (arraste "bugado"/precoce — item de baixo subindo antes da hora,
-// comportamento imprevisível): a versão anterior recalculava a ORDEM DO
-// ARRAY a cada movimento do dedo, e decidia a nova posição comparando a
-// posição de CADA linha (inclusive a que está sendo arrastada, que segue o
-// dedo o tempo todo) contra o ponteiro — comparar um alvo que sempre se move
-// junto com o próprio ponteiro é logicamente instável, e cada reordenação do
-// array forçava reancorar a origem do arraste, acumulando pequenos saltos.
+// REESCRITA 1 (arraste "bugado"/precoce — item de baixo subindo antes da
+// hora): a versão original recalculava a ORDEM DO ARRAY a cada movimento do
+// dedo, e decidia a nova posição comparando a posição de CADA linha
+// (inclusive a que está sendo arrastada, que segue o dedo o tempo todo)
+// contra o ponteiro — comparar um alvo que sempre se move junto com o
+// próprio ponteiro é logicamente instável. Virou: o ARRAY REAL só muda ao
+// soltar; durante o arraste as posições ORIGINAIS de todas as linhas são
+// medidas 1 vez (no pointerdown, antes de qualquer transform) e ficam
+// congeladas — comparar o dedo contra posições congeladas das OUTRAS linhas
+// (nunca contra a própria arrastada) é estável e previsível.
 //
-// Lógica nova, direta: o ARRAY REAL (itensVisuais) só muda quando solta o
-// dedo. Durante o arraste, SÓ efeito visual (transform) acontece:
-//   1) A linha arrastada segue o dedo verticalmente, sempre relativa à
-//      posição OFICIAL de início do arraste (nunca reancorada — sem saltos).
-//   2) As posições ORIGINAIS de todas as linhas são medidas 1 vez, no
-//      instante em que o dedo pressiona a alça (antes de qualquer
-//      transform) — e ficam congeladas até soltar. Comparar o dedo contra
-//      posições congeladas das OUTRAS linhas (nunca contra a própria linha
-//      arrastada) é uma comparação estável e previsível.
-//   3) A cada movimento, conta quantas outras linhas têm o meio ORIGINAL
-//      acima do dedo agora — essa contagem É o índice de destino (2 linhas
-//      acima do dedo = o item pertence à posição 2, depois delas). Sem
-//      caso especial, sem loop com "break", sem ambiguidade.
-//   4) As linhas ENTRE a origem e o destino atual deslizam (translateY,
-//      com transição suave) pra posição ORIGINAL da vizinha mais perto do
-//      buraco — "abre espaço" com uma animação de verdade, em vez de um
-//      salto seco de re-render. Funciona mesmo com linhas de altura
-//      diferente, porque usa a posição MEDIDA de cada linha, não uma altura
-//      fixa presumida.
-//   5) Só ao soltar o dedo o array de verdade é reordenado (uma vez só) e
-//      `onReordenar` é chamado — e só se a posição final for diferente da
-//      inicial.
+// REESCRITA 2 (lagzinho entre a linha arrastada e as vizinhas "abrindo
+// espaço"): a linha arrastada sempre se moveu direto no DOM (`el.style.
+// transform = ...`, fora do ciclo do React — por isso ela sempre pareceu
+// suave). As vizinhas, porém, dependiam de `setIndiceAlvo` -> re-render do
+// React -> propsDoItem recalcula o `transform` -> commit — um caminho mais
+// lento que fica meio passo atrás do dedo, especialmente com bastante item
+// na lista. Virou: o deslocamento das vizinhas TAMBÉM é escrito direto no
+// DOM, na mesma função aoMover que já move a linha arrastada — os dois
+// halves da animação agora saem do mesmo lugar, no mesmo instante, sem
+// esperar o React. O React só re-renderiza no início/fim do arraste (pra
+// aplicar a sombra na linha levantada), nunca a cada movimento do dedo.
 // ============================================================================
 export function useArrastarReordenar(lista, onReordenar) {
   const [itensVisuais, setItensVisuais] = useState(lista);
   const [arrastando, setArrastando] = useState(false);
-  // Dispara re-render sempre que o destino do arraste muda de verdade (pra
-  // recalcular quais linhas devem deslizar) — sem virar um re-render a cada
-  // pixel de movimento do dedo, só quando o índice de destino muda mesmo.
-  const [indiceAlvo, setIndiceAlvo] = useState(null);
   const indiceOrigemRef = useRef(null);
   const indiceAlvoRef = useRef(null);
   // [{ top, meio }] de cada linha, medido 1 vez no pointerdown, ANTES de
-  // qualquer transform — fica congelado até soltar (ver item 2 acima).
+  // qualquer transform — fica congelado até soltar.
   const posicoesIniciaisRef = useRef([]);
   const refsLinhas = useRef([]);
   const yInicialRef = useRef(0);
@@ -86,6 +74,35 @@ export function useArrastarReordenar(lista, onReordenar) {
     });
   }, [lista, arrastando]);
 
+  // Aplica (ou limpa, com deslocamento 0) o transform de TODAS as linhas
+  // que precisam "abrir espaço" pro alvo atual — direto no DOM, sem passar
+  // pelo React (ver REESCRITA 2 no comentário grande do topo). Chamada de
+  // dentro de aoMover a cada mudança de alvo, e de novo em aoSoltar (com
+  // alvo = origem, ou seja, zera tudo) pra garantir que nenhuma linha fique
+  // com deslocamento residual quando o array de verdade assume a posição
+  // final.
+  function aplicarDeslocamentos(origem, alvo) {
+    refsLinhas.current.forEach((el, i) => {
+      if (!el || i === origem) return;
+      const posDestaLinha = posicoesIniciaisRef.current[i];
+      if (!posDestaLinha) return;
+
+      let deslocamento = 0;
+      if (alvo > origem && i > origem && i <= alvo) {
+        // Arrastando pra baixo: as linhas entre a origem e o alvo sobem uma
+        // posição — cada uma ocupa o lugar de onde a anterior estava.
+        const posAnterior = posicoesIniciaisRef.current[i - 1];
+        if (posAnterior) deslocamento = posAnterior.top - posDestaLinha.top;
+      } else if (alvo < origem && i < origem && i >= alvo) {
+        // Arrastando pra cima: as linhas entre o alvo e a origem descem uma
+        // posição — cada uma ocupa o lugar de onde a seguinte estava.
+        const posSeguinte = posicoesIniciaisRef.current[i + 1];
+        if (posSeguinte) deslocamento = posSeguinte.top - posDestaLinha.top;
+      }
+      el.style.transform = deslocamento ? `translateY(${deslocamento}px)` : '';
+    });
+  }
+
   useEffect(() => {
     if (!arrastando) return undefined;
 
@@ -106,7 +123,7 @@ export function useArrastarReordenar(lista, onReordenar) {
 
       // Quantas OUTRAS linhas (nunca a própria arrastada) têm o meio
       // ORIGINAL acima do dedo agora? Essa contagem é o novo índice de
-      // destino — ver item 3 do comentário grande no topo do arquivo.
+      // destino — sem caso especial, sem loop com "break", sem ambiguidade.
       let novoAlvo = 0;
       posicoesIniciaisRef.current.forEach((pos, i) => {
         if (i === origem) return;
@@ -115,7 +132,9 @@ export function useArrastarReordenar(lista, onReordenar) {
 
       if (novoAlvo !== indiceAlvoRef.current) {
         indiceAlvoRef.current = novoAlvo;
-        setIndiceAlvo(novoAlvo);
+        // Direto no DOM, na mesma função que já move a linha arrastada
+        // acima — sem esperar um re-render do React (ver REESCRITA 2).
+        aplicarDeslocamentos(origem, novoAlvo);
       }
     }
 
@@ -124,14 +143,17 @@ export function useArrastarReordenar(lista, onReordenar) {
       const alvo = indiceAlvoRef.current;
       const elArrastado = refsLinhas.current[origem];
       if (elArrastado) elArrastado.style.transform = '';
+      // Zera o deslocamento de qualquer linha que ainda estivesse "aberta"
+      // — o array de verdade (abaixo) já vai assumir essa mesma posição
+      // final sem transform nenhum, então nada pode ficar deslocado depois.
+      if (origem !== null) aplicarDeslocamentos(origem, origem);
 
       setArrastando(false);
       indiceOrigemRef.current = null;
       indiceAlvoRef.current = null;
-      setIndiceAlvo(null);
 
       // Reordena o array de verdade só agora — uma vez só — e só se a
-      // posição realmente mudou (ver item 5 do comentário grande).
+      // posição realmente mudou.
       if (origem !== null && alvo !== null && origem !== alvo) {
         setItensVisuais((atual) => {
           const copia = [...atual];
@@ -155,36 +177,15 @@ export function useArrastarReordenar(lista, onReordenar) {
   }, [arrastando]);
 
   function propsDoItem(index) {
-    const origem = indiceOrigemRef.current;
-    const éLinhaArrastada = arrastando && index === origem;
-
-    // "Abre espaço": enquanto arrasta, as linhas ENTRE a origem e o alvo
-    // atual deslizam pra posição ORIGINAL da vizinha mais perto do buraco —
-    // ver item 4 do comentário grande no topo do arquivo. Usa a posição
-    // MEDIDA de cada linha (posicoesIniciaisRef), não uma altura fixa
-    // presumida, então funciona igual com linhas de altura diferente.
-    let deslocamento = 0;
-    if (arrastando && !éLinhaArrastada && origem !== null && indiceAlvo !== null) {
-      const posDestaLinha = posicoesIniciaisRef.current[index];
-      if (posDestaLinha) {
-        if (indiceAlvo > origem && index > origem && index <= indiceAlvo) {
-          // Arrastando pra baixo: as linhas entre a origem e o alvo sobem
-          // uma posição — cada uma ocupa o lugar de onde a anterior estava.
-          const posAnterior = posicoesIniciaisRef.current[index - 1];
-          if (posAnterior) deslocamento = posAnterior.top - posDestaLinha.top;
-        } else if (indiceAlvo < origem && index < origem && index >= indiceAlvo) {
-          // Arrastando pra cima: as linhas entre o alvo e a origem descem
-          // uma posição — cada uma ocupa o lugar de onde a seguinte estava.
-          const posSeguinte = posicoesIniciaisRef.current[index + 1];
-          if (posSeguinte) deslocamento = posSeguinte.top - posDestaLinha.top;
-        }
-      }
-    }
-
+    const éLinhaArrastada = arrastando && index === indiceOrigemRef.current;
     return {
       ref: (el) => {
         refsLinhas.current[index] = el;
       },
+      // Nenhum dos dois ramos mexe em `transform` — ele é 100% controlado
+      // via DOM direto (aoMover/aplicarDeslocamentos acima), nunca pelo
+      // React, então o React nunca "briga" com esses valores nem os reseta
+      // sozinho num re-render no meio do arraste (ver REESCRITA 2).
       style: éLinhaArrastada
         ? {
             position: 'relative',
@@ -192,10 +193,7 @@ export function useArrastarReordenar(lista, onReordenar) {
             boxShadow: '0 12px 28px rgba(44, 31, 20, 0.28)',
             transition: 'box-shadow 150ms ease',
           }
-        : {
-            transform: deslocamento ? `translateY(${deslocamento}px)` : undefined,
-            transition: 'transform 150ms ease, box-shadow 150ms ease',
-          },
+        : { transition: 'transform 150ms ease, box-shadow 150ms ease' },
     };
   }
 
@@ -209,14 +207,14 @@ export function useArrastarReordenar(lista, onReordenar) {
         yInicialRef.current = e.clientY;
         // Mede a posição de TODAS as linhas AGORA, antes de qualquer
         // transform ser aplicado — essas medidas ficam congeladas até o
-        // fim do arraste (ver item 2 do comentário grande no topo do
-        // arquivo), não são reconsultadas a cada movimento.
+        // fim do arraste, não são reconsultadas a cada movimento (senão
+        // ficariam contaminadas pelos próprios deslocamentos que a gente
+        // aplica durante o arraste).
         posicoesIniciaisRef.current = refsLinhas.current.map((el) => {
           if (!el) return { top: 0, meio: 0 };
           const rect = el.getBoundingClientRect();
           return { top: rect.top, meio: rect.top + rect.height / 2 };
         });
-        setIndiceAlvo(index);
         setArrastando(true);
       },
       style: { touchAction: 'none' },
