@@ -94,7 +94,7 @@ export default function EmblemaConquista({
           <Icone
             size={Math.round(size * 0.42)}
             strokeWidth={1.8}
-            className={`${travada ? 'text-coffee-200 opacity-70' : 'text-cream'} ${animRevelada}`}
+            className={`${travada ? 'text-coffee-200 opacity-70' : 'text-texto-forte'} ${animRevelada}`}
           />
         )}
         {precisaCadeado && (
@@ -106,7 +106,7 @@ export default function EmblemaConquista({
             <Lock
               size={Math.round(size * 0.3)}
               strokeWidth={2.2}
-              className={travada ? 'text-coffee-300' : 'text-cream'}
+              className={travada ? 'text-coffee-300' : 'text-texto-forte'}
             />
           </div>
         )}

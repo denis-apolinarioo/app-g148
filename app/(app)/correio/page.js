@@ -261,7 +261,7 @@ function ConfirmarLimparTudoModal({ quantidade, limpando, erro, onCancelar, onCo
           type="button"
           onClick={onConfirmar}
           disabled={limpando}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 py-2.5 text-sm font-semibold text-cream disabled:opacity-60"
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-60"
         >
           {limpando && <Loader2 size={15} className="animate-spin" />}
           {limpando ? 'Apagando...' : 'Apagar tudo'}

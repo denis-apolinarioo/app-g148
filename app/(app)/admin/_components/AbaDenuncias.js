@@ -156,7 +156,7 @@ export default function AbaDenuncias() {
                 className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
                   d.status === 'resolvida'
                     ? 'border-coffee-200 text-coffee-500'
-                    : 'border-forte bg-forte text-cream'
+                    : 'border-forte bg-forte text-texto-forte'
                 }`}
               >
                 <Check size={12} />

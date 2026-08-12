@@ -13,7 +13,7 @@ export default function ConexaoBanner() {
   if (!offline) return null;
 
   return (
-    <div className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-2 bg-forte-800 px-4 py-2 text-xs font-medium text-cream">
+    <div className="fixed inset-x-0 top-0 z-[60] flex items-center justify-center gap-2 bg-forte-800 px-4 py-2 text-xs font-medium text-texto-forte">
       <WifiOff size={14} />
       Sem conexão — tentando reconectar...
     </div>

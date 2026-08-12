@@ -361,7 +361,7 @@ function PresetFormModal({ presetInicial, onFechar, onSalvo }) {
           <button
             onClick={handleSalvar}
             disabled={!nome.trim() || salvando}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3 text-sm font-semibold text-cream disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3 text-sm font-semibold text-texto-forte disabled:opacity-40"
           >
             {salvando && <Loader2 size={14} className="animate-spin" />}
             {editando ? 'Salvar alterações' : 'Criar preset'}

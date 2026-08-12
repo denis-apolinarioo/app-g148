@@ -95,7 +95,7 @@ function ToggleConfig({ icone: Icone, titulo, descricao, ativo, salvando, onAlte
         {salvando ? (
           <Loader2
             size={14}
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin text-cream"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 animate-spin text-texto-forte"
           />
         ) : (
           <span

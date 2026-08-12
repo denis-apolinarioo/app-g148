@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Coins, Gift, Loader2, Pin, Search, Trash2, X } from 'lucide-react';
 import Avatar from '@/components/Avatar';
 import DracmaIcon from '@/components/DracmaIcon';
-import ImageCropper, { PROPORCAO_ORIGINAL } from '@/components/ImageCropper';
+import ImageCropper, { PROPORCOES_PADRAO } from '@/components/ImageCropper';
 import { useAuth } from '@/components/AuthProvider';
 import {
   getAllUsers,
@@ -20,16 +20,6 @@ import { formatarDracma } from '@/lib/dracma';
 import { useConfirm } from '@/components/ConfirmProvider';
 import { useToast } from '@/components/ToastProvider';
 import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
-
-// Item novo — igual ao Feed (CreatePostSheet.js), mas com uma 4ª opção:
-// "Original" mantém a proporção nativa da foto, sem cortar nada (ver
-// PROPORCAO_ORIGINAL em ImageCropper.js). As outras 3 são as mesmas do Feed.
-const PROPORCOES_CORREIO = [
-  { label: '1:1', w: 1, h: 1 },
-  { label: '4:5', w: 4, h: 5 },
-  { label: '3:4', w: 3, h: 4 },
-  { label: 'Original', w: PROPORCAO_ORIGINAL, h: PROPORCAO_ORIGINAL },
-];
 
 export default function AbaCorreio() {
   const confirmar = useConfirm();
@@ -87,8 +77,10 @@ export default function AbaCorreio() {
   // que já redesenha a imagem num canvas de no máximo 1600px antes de
   // qualquer outra coisa — chegando pequena na hora de comprimir/enviar,
   // do mesmo jeito que sempre funcionou bem no Feed. Única diferença: aqui
-  // são 4 opções de proporção em vez de 3 (ver PROPORCOES_CORREIO acima),
-  // com "Original" mantendo o enquadramento da foto sem cortar nada.
+  // são 4 opções de proporção (PROPORCOES_PADRAO, de components/
+  // ImageCropper.js — mesma constante compartilhada com o Feed e o
+  // comprovante de missão), com "Original" mantendo o enquadramento da
+  // foto sem cortar nada.
   function abrirCorte(arquivo) {
     setSrcCorte(URL.createObjectURL(arquivo));
   }
@@ -230,7 +222,7 @@ export default function AbaCorreio() {
       <ImageCropper
         src={srcCorte}
         razao={{ w: 4, h: 5 }}
-        opcoes={PROPORCOES_CORREIO}
+        opcoes={PROPORCOES_PADRAO}
         onConfirmar={handleCortado}
         onCancelar={fecharCorte}
       />
@@ -263,7 +255,7 @@ export default function AbaCorreio() {
         >
           <span
             className={`flex h-5 w-5 items-center justify-center rounded border ${
-              todosSelecionados ? 'border-forte bg-forte text-cream' : 'border-coffee-300'
+              todosSelecionados ? 'border-forte bg-forte text-texto-forte' : 'border-coffee-300'
             }`}
           >
             {todosSelecionados && <Check size={13} />}
@@ -289,7 +281,7 @@ export default function AbaCorreio() {
               >
                 <span
                   className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border ${
-                    marcado ? 'border-forte bg-forte text-cream' : 'border-coffee-300'
+                    marcado ? 'border-forte bg-forte text-texto-forte' : 'border-coffee-300'
                   }`}
                 >
                   {marcado && <Check size={13} />}
@@ -323,7 +315,7 @@ export default function AbaCorreio() {
               setArquivoFoto(null);
               setPreviewFoto('');
             }}
-            className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-forte-800 text-cream"
+            className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-forte-800 text-texto-forte"
           >
             <X size={12} />
           </button>
@@ -402,7 +394,7 @@ export default function AbaCorreio() {
       <button
         onClick={handleEnviar}
         disabled={selecionados.length === 0 || !texto.trim()}
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-forte py-2.5 text-sm font-semibold text-cream disabled:opacity-40"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-forte py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-40"
       >
         {enviado
           ? 'Enviado!'
@@ -477,7 +469,7 @@ function HistoricoMensagens({ usuarios }) {
           type="button"
           onClick={() => setModo('geral')}
           className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
-            modo === 'geral' ? 'bg-forte text-cream' : 'bg-cream-card text-coffee-500'
+            modo === 'geral' ? 'bg-forte text-texto-forte' : 'bg-cream-card text-coffee-500'
           }`}
         >
           Geral
@@ -486,7 +478,7 @@ function HistoricoMensagens({ usuarios }) {
           type="button"
           onClick={() => setModo('pessoa')}
           className={`flex-1 rounded-lg py-2 text-xs font-semibold ${
-            modo === 'pessoa' ? 'bg-forte text-cream' : 'bg-cream-card text-coffee-500'
+            modo === 'pessoa' ? 'bg-forte text-texto-forte' : 'bg-cream-card text-coffee-500'
           }`}
         >
           Por pessoa

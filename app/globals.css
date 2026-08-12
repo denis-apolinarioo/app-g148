@@ -50,6 +50,13 @@
   --cor-forte-800: 44 31 20;
   --cor-forte-900: 28 20 13;
 
+  /* BUG CORRIGIDO — texto/ícone em cima de "forte": antes usava --cor-cream
+     (fundo da página), sumia em qualquer preset escuro. Sempre clara,
+     companheira do forte (sempre escuro) — ver gerarTextoForte em
+     lib/paletaGerador.js. Valor abaixo = ponto de partida do preset
+     "Claro" (249 247 246 = #F9F7F6). */
+  --cor-texto-forte: 249 247 246;
+
   --cor-gold: 184 134 59;
   --cor-gold-soft: 217 182 121;
 }

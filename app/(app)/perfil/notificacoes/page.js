@@ -211,7 +211,7 @@ export default function NotificacoesPage() {
             <button
               onClick={jaAtivado ? handleDesativar : handleAtivar}
               disabled={carregando || verificandoAoAbrir || !plataforma.suportado || iosSemInstalar}
-              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-cream disabled:opacity-40"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-40"
             >
               {(carregando || verificandoAoAbrir) && <Loader2 size={15} className="animate-spin" />}
               {verificandoAoAbrir ? 'Confirmando...' : jaAtivado ? 'Desativar notificações' : 'Ativar notificações'}

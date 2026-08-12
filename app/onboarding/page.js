@@ -8,6 +8,7 @@ import Avatar from '@/components/Avatar';
 import { createUserProfile, isUsernameAvailable } from '@/lib/firestore-helpers';
 import { adicionarUsernameValidoCache } from '@/lib/usersCache';
 import { uploadFotoPerfil } from '@/lib/storage';
+import ImageCropper from '@/components/ImageCropper';
 import { Camera, Check, X, Loader2 } from 'lucide-react';
 
 export default function OnboardingPage() {
@@ -21,6 +22,11 @@ export default function OnboardingPage() {
   const [proposito, setProposito] = useState('');
   const [arquivoFoto, setArquivoFoto] = useState(null);
   const [previewFoto, setPreviewFoto] = useState('');
+  // Item novo — PADRONIZAÇÃO: a foto de perfil escolhida aqui no cadastro
+  // agora passa pelo mesmo corte quadrado fixo (1:1, sem opções) usado em
+  // Editar perfil (app/(app)/perfil/editar/page.js) — antes ia direto sem
+  // cortar, único lugar do app com foto de perfil que não cortava.
+  const [srcCorte, setSrcCorte] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const timeoutRef = useRef(null);
@@ -69,18 +75,35 @@ export default function OnboardingPage() {
 
   function handleFotoChange(e) {
     const arquivo = e.target.files?.[0];
+    e.target.value = '';
     if (!arquivo) return;
-    setArquivoFoto(arquivo);
-    setPreviewFoto(URL.createObjectURL(arquivo));
+    setSrcCorte(URL.createObjectURL(arquivo));
   }
 
-  // CORREÇÃO DE VAZAMENTO: previewFoto (blob: local) nunca era revogada.
-  // Revoga a anterior sempre que ela muda (nova foto) e também ao desmontar.
+  function fecharCorte() {
+    if (srcCorte) URL.revokeObjectURL(srcCorte);
+    setSrcCorte('');
+  }
+
+  function handleFotoCortada(blob) {
+    fecharCorte();
+    setArquivoFoto(new File([blob], 'perfil.jpg', { type: 'image/jpeg' }));
+    setPreviewFoto(URL.createObjectURL(blob));
+  }
+
+  // CORREÇÃO DE VAZAMENTO: previewFoto/srcCorte (blob: locais) nunca eram
+  // revogadas. Revoga a anterior sempre que muda (nova foto) e também ao
+  // desmontar.
   useEffect(() => {
     return () => {
       if (previewFoto) URL.revokeObjectURL(previewFoto);
     };
   }, [previewFoto]);
+  useEffect(() => {
+    return () => {
+      if (srcCorte) URL.revokeObjectURL(srcCorte);
+    };
+  }, [srcCorte]);
 
   const formValido =
     nome.trim().length >= 2 && statusUsername === 'disponivel' && dataNascimento;
@@ -127,6 +150,19 @@ export default function OnboardingPage() {
 
   if (carregando || !usuarioAuth || perfil) return <LoadingScreen />;
 
+  // Tela de corte sobrepõe tudo — corte quadrado fixo, sem opções (mesmo
+  // padrão de Editar perfil e imagem de conquista).
+  if (srcCorte) {
+    return (
+      <ImageCropper
+        src={srcCorte}
+        razao={{ w: 1, h: 1 }}
+        onConfirmar={handleFotoCortada}
+        onCancelar={fecharCorte}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-cream px-6 py-10">
       <div className="mx-auto w-full max-w-sm">
@@ -143,7 +179,7 @@ export default function OnboardingPage() {
               className="relative"
             >
               <Avatar src={previewFoto} nome={nome} tamanho="xl" />
-              <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-cream bg-forte text-cream">
+              <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-cream bg-forte text-texto-forte">
                 <Camera size={15} />
               </span>
             </button>
@@ -225,7 +261,7 @@ export default function OnboardingPage() {
           <button
             type="submit"
             disabled={!formValido || salvando}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-cream disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-texto-forte disabled:opacity-40"
           >
             {salvando && <Loader2 size={16} className="animate-spin" />}
             Entrar na comunidade

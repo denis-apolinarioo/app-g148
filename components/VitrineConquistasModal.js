@@ -159,7 +159,7 @@ export default function VitrineConquistasModal({ desbloqueadas, selecaoAtual, on
             type="button"
             onClick={confirmar}
             disabled={salvando}
-            className="flex-1 rounded-full bg-forte-800 py-3 text-sm font-semibold text-cream disabled:opacity-60"
+            className="flex-1 rounded-full bg-forte-800 py-3 text-sm font-semibold text-texto-forte disabled:opacity-60"
           >
             {salvando ? 'Salvando...' : 'Salvar'}
           </button>

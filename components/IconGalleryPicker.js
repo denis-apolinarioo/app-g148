@@ -78,7 +78,7 @@ export default function IconGalleryPicker({ value, onChange }) {
                     }}
                     className={`flex h-12 w-12 items-center justify-center rounded-xl border ${
                       selecionado
-                        ? 'border-forte bg-forte text-cream'
+                        ? 'border-forte bg-forte text-texto-forte'
                         : 'border-coffee-100 bg-cream-card text-coffee-600'
                     }`}
                     title={nome}

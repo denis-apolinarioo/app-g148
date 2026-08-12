@@ -23,6 +23,21 @@ const LADO_MAXIMO_TRABALHO = 1600; // limite de segurança pra não estourar mem
 // lado maior por segurança/compressão, igual às outras opções).
 export const PROPORCAO_ORIGINAL = 'original';
 
+// Item novo — PADRONIZAÇÃO: as 4 opções de corte (1:1, 4:5, 3:4, Original)
+// viviam repetidas em 3 arquivos diferentes (CreatePostSheet.js,
+// MissionSubmitModal.js, AbaCorreio.js), cada um com sua própria cópia
+// idêntica — risco de uma cópia ficar desatualizada sem querer. Agora é
+// uma fonte só: quem precisa das 4 opções importa PROPORCOES_PADRAO daqui;
+// quem precisa de corte quadrado fixo (foto de perfil, imagem de
+// conquista, capa de Materiais) simplesmente NÃO passa a prop `opcoes` —
+// o corte fica travado em 1:1, sem mostrar o seletor de proporção.
+export const PROPORCOES_PADRAO = [
+  { label: '1:1', w: 1, h: 1 },
+  { label: '4:5', w: 4, h: 5 },
+  { label: '3:4', w: 3, h: 4 },
+  { label: 'Original', w: PROPORCAO_ORIGINAL, h: PROPORCAO_ORIGINAL },
+];
+
 export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancelar }) {
   const [prontoParaCortar, setProntoParaCortar] = useState(false);
   const [erro, setErro] = useState('');
@@ -305,14 +320,14 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-forte-900">
       <div className="flex items-center justify-between px-4 py-3">
-        <button onClick={onCancelar} className="rounded-full p-2 text-cream/80">
+        <button onClick={onCancelar} className="rounded-full p-2 text-texto-forte/80">
           <X size={22} />
         </button>
-        <span className="text-sm font-medium text-cream/90">Ajustar foto</span>
+        <span className="text-sm font-medium text-texto-forte/90">Ajustar foto</span>
         <button
           onClick={handleConfirmar}
           disabled={!prontoParaCortar || processando}
-          className="flex items-center gap-1.5 rounded-full bg-forte px-4 py-1.5 text-sm font-semibold text-cream disabled:opacity-40"
+          className="flex items-center gap-1.5 rounded-full bg-forte px-4 py-1.5 text-sm font-semibold text-texto-forte disabled:opacity-40"
         >
           <Check size={16} />
           Usar foto
@@ -321,7 +336,7 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
 
       <div className="flex flex-1 items-center justify-center overflow-hidden px-4">
         {erro ? (
-          <p className="text-sm text-cream/80">{erro}</p>
+          <p className="text-sm text-texto-forte/80">{erro}</p>
         ) : (
           <div
             ref={frameRef}
@@ -389,8 +404,8 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
                   className={
                     'rounded-full border px-3.5 py-1.5 text-xs font-medium disabled:opacity-40 ' +
                     (selecionada
-                      ? 'border-[#FAF6EF] bg-[#FAF6EF] text-[#2C1F14]'
-                      : 'border-cream/30 text-cream/70')
+                      ? 'border-texto-forte bg-texto-forte text-forte'
+                      : 'border-texto-forte/30 text-texto-forte/70')
                   }
                 >
                   {op.label}
@@ -403,7 +418,7 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
         <div className="flex items-center justify-center gap-4">
           <button
             onClick={() => aplicarZoom(zoom - 0.2)}
-            className="rounded-full bg-cream/10 p-2 text-cream"
+            className="rounded-full bg-texto-forte/10 p-2 text-texto-forte"
           >
             <ZoomOut size={18} />
           </button>
@@ -418,7 +433,7 @@ export default function ImageCropper({ src, razao, opcoes, onConfirmar, onCancel
           />
           <button
             onClick={() => aplicarZoom(zoom + 0.2)}
-            className="rounded-full bg-cream/10 p-2 text-cream"
+            className="rounded-full bg-texto-forte/10 p-2 text-texto-forte"
           >
             <ZoomIn size={18} />
           </button>

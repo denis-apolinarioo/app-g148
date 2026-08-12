@@ -34,7 +34,7 @@ export default function OracaoPage() {
         acao={
           <button
             onClick={() => setCriando(true)}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-forte text-cream"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-forte text-texto-forte"
           >
             <Plus size={16} />
           </button>
@@ -80,7 +80,7 @@ function FiltroBtn({ ativo, onClick, label }) {
     <button
       onClick={onClick}
       className={`rounded-full px-4 py-1.5 text-xs font-semibold ${
-        ativo ? 'bg-forte text-cream' : 'bg-coffee-50 text-coffee-500'
+        ativo ? 'bg-forte text-texto-forte' : 'bg-coffee-50 text-coffee-500'
       }`}
     >
       {label}

@@ -35,7 +35,7 @@ export default function ConfirmarAcaoModal({
           type="button"
           onClick={onConfirmar}
           disabled={confirmando}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 py-2.5 text-sm font-semibold text-cream disabled:opacity-60"
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-60"
         >
           {confirmando && <Loader2 size={15} className="animate-spin" />}
           {textoConfirmar}

@@ -16,7 +16,7 @@ export default function Toast({ mensagem }) {
     <div className="pointer-events-none fixed inset-x-0 bottom-24 z-[90] flex justify-center px-5">
       <div
         role="status"
-        className="pointer-events-auto flex max-w-[85vw] items-center gap-2 rounded-full bg-forte-800 px-4 py-2.5 text-sm font-medium text-cream shadow-lg animate-popupFlutuante"
+        className="pointer-events-auto flex max-w-[85vw] items-center gap-2 rounded-full bg-forte-800 px-4 py-2.5 text-sm font-medium text-texto-forte shadow-lg animate-popupFlutuante"
       >
         <CheckCircle2 size={16} className="flex-shrink-0" />
         <span className="truncate">{mensagem}</span>

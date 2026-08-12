@@ -18,10 +18,11 @@
 // `forte` (DEFAULT/800/900) é NOVA — extraída do que antes eram os usos de
 // bg-coffee-700/800/900 e border-coffee-700 (botões sólidos, overlay/scrim
 // de modal, selo). Motivo de existir separada da escala `coffee`: um botão
-// com fundo escuro e texto claro (text-cream) em cima precisa continuar
-// ESCURO em QUALQUER preset (claro, escuro ou uma cor nova) — se ele
-// puxasse a mesma variável adaptável do texto, um preset escuro deixaria
-// o fundo do botão CLARO e o texto (fixo, cream) ficaria ilegível em cima.
+// com fundo escuro e texto claro (text-texto-forte, também sempre claro —
+// ver comentário dela abaixo) precisa continuar ESCURO em QUALQUER preset
+// (claro, escuro ou uma cor nova) — se ele puxasse a mesma variável
+// adaptável do texto, um preset escuro deixaria o fundo do botão CLARO e
+// o texto ficaria ilegível em cima.
 // `forte` sempre gera um tom escuro/saturado a partir da Cor Principal do
 // preset (ver lib/paletaGerador.js), então botões continuam legíveis com
 // texto claro em cima não importa qual preset esteja ativo.
@@ -65,6 +66,14 @@ module.exports = {
           DEFAULT: withOpacity('--cor-forte'),
           800: withOpacity('--cor-forte-800'),
           900: withOpacity('--cor-forte-900'),
+        },
+        // BUG CORRIGIDO — texto/ícone em cima de superfície "forte" (botão
+        // sólido, cartão do Verso do Dia etc.): antes usava `cream`, que é
+        // o FUNDO DA PÁGINA — funcionava por coincidência no claro, sumia
+        // no escuro. Sempre clara, companheira do `forte` (sempre escuro)
+        // — ver gerarTextoForte em lib/paletaGerador.js.
+        'texto-forte': {
+          DEFAULT: withOpacity('--cor-texto-forte'),
         },
         gold: {
           DEFAULT: withOpacity('--cor-gold'),

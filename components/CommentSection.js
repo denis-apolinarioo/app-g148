@@ -373,7 +373,7 @@ export default function CommentSection({ postId, postAutorId }) {
         <button
           type="submit"
           disabled={!texto.trim() || enviando}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-forte text-cream disabled:opacity-30"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-forte text-texto-forte disabled:opacity-30"
         >
           <Send size={14} />
         </button>

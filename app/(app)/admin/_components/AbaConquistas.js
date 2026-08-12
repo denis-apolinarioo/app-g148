@@ -502,7 +502,7 @@ function AprovarConquistaManual({ conquistas }) {
             <button
               onClick={() => handleConceder(c)}
               disabled={concedendo === c.id}
-              className="flex-shrink-0 rounded-lg bg-forte px-3 py-1.5 text-xs font-semibold text-cream disabled:opacity-40"
+              className="flex-shrink-0 rounded-lg bg-forte px-3 py-1.5 text-xs font-semibold text-texto-forte disabled:opacity-40"
             >
               {concedendo === c.id ? <Loader2 size={13} className="animate-spin" /> : 'Conceder'}
             </button>
@@ -1035,7 +1035,7 @@ function ConquistaFormModal({ conquistaInicial, missoes, categoriasAcao, onFecha
           <button
             onClick={handleSalvar}
             disabled={!nome.trim() || salvando}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3 text-sm font-semibold text-cream disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3 text-sm font-semibold text-texto-forte disabled:opacity-40"
           >
             {salvando && <Loader2 size={14} className="animate-spin" />}
             {editando ? 'Salvar alterações' : 'Criar conquista'}

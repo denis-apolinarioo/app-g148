@@ -6,6 +6,7 @@ import { updatePost } from '@/lib/firestore-helpers';
 import { uploadFotoComThumb, uploadAudio } from '@/lib/storage';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
 import AudioPlayer from '@/components/AudioPlayer';
+import ImageCropper, { PROPORCOES_PADRAO } from '@/components/ImageCropper';
 
 /**
  * Correção do bug "dá pra editar o título da missão": antes, o botão
@@ -49,10 +50,39 @@ export default function EditarPostModal({ post, onFechar }) {
   const inputFotoManualRef = useRef(null);
   const inputsFotoItemRef = useRef({});
 
+  // Item novo — PADRONIZAÇÃO: editar a foto de um post (manual ou item de
+  // missão) agora passa pelo mesmo corte (ImageCropper) usado ao CRIAR um
+  // post — antes trocava a mídia direto, sem cortar nada, inconsistente
+  // com o resto do app. `origemCorteRef` guarda pra ONDE o resultado do
+  // corte deve ir: 'manual' (a foto do post manual) ou o índice do item de
+  // missão sendo trocado — o mesmo ImageCropper serve os dois casos.
+  const [srcCorte, setSrcCorte] = useState('');
+  const origemCorteRef = useRef(null);
+
+  function fecharCorte() {
+    if (srcCorte) URL.revokeObjectURL(srcCorte);
+    setSrcCorte('');
+    origemCorteRef.current = null;
+  }
+
+  function handleCortado(blob) {
+    const origem = origemCorteRef.current;
+    fecharCorte();
+    const file = new File([blob], 'foto.jpg', { type: 'image/jpeg' });
+    if (origem === 'manual') {
+      if (previewFotoManual?.startsWith('blob:')) URL.revokeObjectURL(previewFotoManual);
+      setArquivoFotoManual(file);
+      setPreviewFotoManual(URL.createObjectURL(blob));
+    } else if (origem && typeof origem.indiceItem === 'number') {
+      handleTrocarFotoItem(origem.indiceItem, file);
+    }
+  }
+
   // Revoga prévias locais (blob:) trocadas durante a edição, sem mexer nas
   // URLs originais do Firebase Storage.
   useEffect(() => {
     return () => {
+      if (srcCorte) URL.revokeObjectURL(srcCorte);
       if (previewFotoManual?.startsWith('blob:')) URL.revokeObjectURL(previewFotoManual);
       if (previewAudioManual) URL.revokeObjectURL(previewAudioManual);
       itens?.forEach((item) => {
@@ -65,10 +95,10 @@ export default function EditarPostModal({ post, onFechar }) {
 
   function handleFotoManualChange(e) {
     const arquivo = e.target.files?.[0];
+    e.target.value = '';
     if (!arquivo) return;
-    if (previewFotoManual?.startsWith('blob:')) URL.revokeObjectURL(previewFotoManual);
-    setArquivoFotoManual(arquivo);
-    setPreviewFotoManual(URL.createObjectURL(arquivo));
+    origemCorteRef.current = 'manual';
+    setSrcCorte(URL.createObjectURL(arquivo));
   }
 
   function handleTrocarFotoItem(index, arquivo) {
@@ -81,6 +111,15 @@ export default function EditarPostModal({ post, onFechar }) {
         return { ...item, _novoArquivo: arquivo, _preview: preview };
       })
     );
+  }
+
+  // Abre a tela de corte pra um item de missão específico — o resultado
+  // (já cortado) só é aplicado de verdade em handleCortado, acima, que
+  // chama handleTrocarFotoItem com o arquivo final.
+  function abrirCorteItem(index, arquivo) {
+    if (!arquivo) return;
+    origemCorteRef.current = { indiceItem: index };
+    setSrcCorte(URL.createObjectURL(arquivo));
   }
 
   function handleTrocarAudioItem(index, blob) {
@@ -176,6 +215,19 @@ export default function EditarPostModal({ post, onFechar }) {
     } finally {
       setSalvando(false);
     }
+  }
+
+  // Tela de corte sobrepõe tudo — mesmo padrão do CreatePostSheet.js.
+  if (srcCorte) {
+    return (
+      <ImageCropper
+        src={srcCorte}
+        razao={{ w: 4, h: 5 }}
+        opcoes={PROPORCOES_PADRAO}
+        onConfirmar={handleCortado}
+        onCancelar={fecharCorte}
+      />
+    );
   }
 
   return (
@@ -303,7 +355,8 @@ export default function EditarPostModal({ post, onFechar }) {
                         accept="image/*"
                         onChange={(e) => {
                           const arquivo = e.target.files?.[0];
-                          if (arquivo) handleTrocarFotoItem(i, arquivo);
+                          e.target.value = '';
+                          abrirCorteItem(i, arquivo);
                         }}
                         className="hidden"
                       />
@@ -395,7 +448,7 @@ export default function EditarPostModal({ post, onFechar }) {
           <button
             onClick={handleSalvar}
             disabled={salvando || (itens && itens.length === 0)}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-cream disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-texto-forte disabled:opacity-50"
           >
             {salvando && <Loader2 size={16} className="animate-spin" />}
             Salvar

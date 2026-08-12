@@ -351,7 +351,7 @@ function LinhaAcaoBasica({ acao, configAtual, onSalvar, salvando, salvo }) {
         <button
           onClick={() => onSalvar(acao.id, { pontua, pontos, daDracma, dracma })}
           disabled={salvando}
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-forte text-cream disabled:opacity-40"
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-forte text-texto-forte disabled:opacity-40"
         >
           {salvando ? (
             <Loader2 size={14} className="animate-spin" />
@@ -786,7 +786,7 @@ function CategoriaFormModal({ categoriaInicial, onFechar, onSalvo }) {
           <button
             onClick={handleSalvar}
             disabled={!nome.trim() || salvando}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3 text-sm font-semibold text-cream disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3 text-sm font-semibold text-texto-forte disabled:opacity-40"
           >
             {salvando && <Loader2 size={14} className="animate-spin" />}
             {editando ? 'Salvar alterações' : 'Criar categoria'}

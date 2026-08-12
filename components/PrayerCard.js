@@ -272,7 +272,7 @@ export default function PrayerCard({ pedido }) {
               className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold ${
                 jaOrouExibido
                   ? 'bg-coffee-100 text-coffee-400'
-                  : 'bg-forte text-cream'
+                  : 'bg-forte text-texto-forte'
               }`}
             >
               <HandHeart size={13} />

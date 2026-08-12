@@ -65,7 +65,7 @@ export default function ConfirmDialog({
           type="button"
           onClick={onConfirmar}
           disabled={confirmando}
-          className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-cream disabled:opacity-60 ${
+          className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-60 ${
             perigo ? 'bg-red-700' : 'bg-forte'
           }`}
         >

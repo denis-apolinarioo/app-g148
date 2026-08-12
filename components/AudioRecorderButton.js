@@ -214,7 +214,7 @@ export default function AudioRecorderButton({ onGravado, onLimpar }) {
       >
         <div className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
           gravando ? 'bg-red-500' : 'bg-forte'
-        } text-cream shadow-sm`}>
+        } text-texto-forte shadow-sm`}>
           {gravando ? <Square size={13} fill="currentColor" /> : <Mic size={17} />}
         </div>
 

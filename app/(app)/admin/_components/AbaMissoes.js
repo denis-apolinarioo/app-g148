@@ -571,7 +571,7 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
                   onClick={() => setCategoria(c.valor)}
                   className={`flex-1 rounded-lg border py-2 text-xs font-semibold ${
                     categoria === c.valor
-                      ? 'border-forte bg-forte text-cream'
+                      ? 'border-forte bg-forte text-texto-forte'
                       : 'border-coffee-200 text-coffee-600'
                   }`}
                 >
@@ -877,7 +877,7 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
               >
                 <span
                   className={`flex h-5 w-5 items-center justify-center rounded border ${
-                    todosSelecionados ? 'border-forte bg-forte text-cream' : 'border-coffee-300'
+                    todosSelecionados ? 'border-forte bg-forte text-texto-forte' : 'border-coffee-300'
                   }`}
                 >
                   {todosSelecionados && <Check size={13} />}
@@ -898,7 +898,7 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
                     >
                       <span
                         className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border ${
-                          marcado ? 'border-forte bg-forte text-cream' : 'border-coffee-300'
+                          marcado ? 'border-forte bg-forte text-texto-forte' : 'border-coffee-300'
                         }`}
                       >
                         {marcado && <Check size={13} />}
@@ -917,7 +917,7 @@ function MissaoFormModal({ missaoInicial, categoriaPadrao, onFechar, onSalvo }) 
           <button
             onClick={handleSalvar}
             disabled={!titulo.trim() || salvando}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3 text-sm font-semibold text-cream disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3 text-sm font-semibold text-texto-forte disabled:opacity-40"
           >
             {salvando && <Loader2 size={14} className="animate-spin" />}
             {editando ? 'Salvar alterações' : 'Criar missão'}

@@ -62,7 +62,7 @@ export default function RootLayout({ children }) {
   var cache=JSON.parse(bruto);
   var p=cache&&cache.preset;
   if(!p||!p.variaveis)return;
-  var mapa={cream:'--cor-cream',creamSoft:'--cor-cream-soft',creamCard:'--cor-cream-card',coffee50:'--cor-coffee-50',coffee100:'--cor-coffee-100',coffee200:'--cor-coffee-200',coffee300:'--cor-coffee-300',coffee400:'--cor-coffee-400',coffee500:'--cor-coffee-500',coffee600:'--cor-coffee-600',coffee700:'--cor-coffee-700',coffee800:'--cor-coffee-800',coffee900:'--cor-coffee-900',forte:'--cor-forte',forte800:'--cor-forte-800',forte900:'--cor-forte-900',gold:'--cor-gold',goldSoft:'--cor-gold-soft'};
+  var mapa={cream:'--cor-cream',creamSoft:'--cor-cream-soft',creamCard:'--cor-cream-card',coffee50:'--cor-coffee-50',coffee100:'--cor-coffee-100',coffee200:'--cor-coffee-200',coffee300:'--cor-coffee-300',coffee400:'--cor-coffee-400',coffee500:'--cor-coffee-500',coffee600:'--cor-coffee-600',coffee700:'--cor-coffee-700',coffee800:'--cor-coffee-800',coffee900:'--cor-coffee-900',forte:'--cor-forte',forte800:'--cor-forte-800',forte900:'--cor-forte-900',textoForte:'--cor-texto-forte',gold:'--cor-gold',goldSoft:'--cor-gold-soft'};
   var raiz=document.documentElement;
   Object.keys(mapa).forEach(function(chave){
     var hex=p.variaveis[chave];

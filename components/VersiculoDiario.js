@@ -87,7 +87,7 @@ export default function VersiculoDiario({ uid, perfil }) {
         </span>
 
         {versiculo ? (
-          <span className="font-display text-base italic leading-snug text-cream">
+          <span className="font-display text-base italic leading-snug text-texto-forte">
             Ver o que o Senhor tem a me dizer hoje
           </span>
         ) : (
@@ -122,7 +122,7 @@ export default function VersiculoDiario({ uid, perfil }) {
             {/* Texto do verso, com o botão de recompensa embaixo, alinhado
                 à direita (antes ficava ao lado do texto, em cima). */}
             <div>
-              <p className="font-display text-lg italic leading-relaxed text-cream">{versiculo?.texto}</p>
+              <p className="font-display text-lg italic leading-relaxed text-texto-forte">{versiculo?.texto}</p>
               <p className="mt-3 text-sm font-medium text-coffee-200">
                 {versiculo?.referencia} · {versiculo?.versao || 'NAA'}
               </p>

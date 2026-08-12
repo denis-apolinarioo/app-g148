@@ -83,7 +83,7 @@ export default function CreatePrayerModal({ onFechar, onCriado }) {
           <button
             onClick={handleEnviar}
             disabled={!descricao.trim() || !prazo || enviando}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-cream disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-texto-forte disabled:opacity-40"
           >
             {enviando && <Loader2 size={16} className="animate-spin" />}
             Publicar pedido

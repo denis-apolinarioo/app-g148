@@ -93,7 +93,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col justify-center bg-cream px-6 py-10">
       <div className="mx-auto w-full max-w-sm">
         <div className="mb-10 text-center">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-forte font-display text-2xl font-semibold text-cream">
+          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-forte font-display text-2xl font-semibold text-texto-forte">
             G148
           </div>
           <h1 className="font-destaque text-2xl font-semibold text-coffee-800">Geração 148</h1>
@@ -123,7 +123,7 @@ export default function LoginPage() {
                 setAvisoVerificacao(false);
                 setModo('entrar');
               }}
-              className="mt-5 w-full rounded-xl bg-forte py-3 text-sm font-semibold text-cream"
+              className="mt-5 w-full rounded-xl bg-forte py-3 text-sm font-semibold text-texto-forte"
             >
               Já confirmei, ir para o login
             </button>
@@ -186,7 +186,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={enviando}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-cream disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-texto-forte disabled:opacity-60"
               >
                 {enviando && <Loader2 size={16} className="animate-spin" />}
                 {modo === 'criar' ? 'Criar conta' : 'Entrar'}

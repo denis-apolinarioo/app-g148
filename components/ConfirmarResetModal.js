@@ -190,7 +190,7 @@ export default function ConfirmarResetModal({ acao, alvo, titulo, descricao, onF
               <button
                 onClick={confirmarCodigo}
                 disabled={enviandoEmail || codigoDigitado.length !== 6}
-                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-cream disabled:opacity-50"
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-50"
               >
                 Confirmar código
               </button>
@@ -245,7 +245,7 @@ export default function ConfirmarResetModal({ acao, alvo, titulo, descricao, onF
                   <button
                     type="submit"
                     disabled={confirmando}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 py-2.5 text-sm font-semibold text-cream disabled:opacity-60"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-60"
                   >
                     {confirmando && <Loader2 size={15} className="animate-spin" />}
                     Confirmar e executar
@@ -257,7 +257,7 @@ export default function ConfirmarResetModal({ acao, alvo, titulo, descricao, onF
                   <button
                     onClick={confirmarComGoogle}
                     disabled={confirmando}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 py-2.5 text-sm font-semibold text-cream disabled:opacity-60"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-60"
                   >
                     {confirmando && <Loader2 size={15} className="animate-spin" />}
                     Confirmar com o Google e executar

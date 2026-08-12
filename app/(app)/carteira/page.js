@@ -203,7 +203,7 @@ export default function CarteiraPage() {
             {transferenciaAtiva && (
               <button
                 onClick={() => setModo('enviar_dracma')}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forte py-3.5 text-sm font-semibold text-cream"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-forte py-3.5 text-sm font-semibold text-texto-forte"
               >
                 <Send size={16} />
                 Enviar Dracma
@@ -366,7 +366,7 @@ function FormularioPin({ titulo, descricao, onConfirmar, onVoltar }) {
       <button
         onClick={handleSalvar}
         disabled={salvando}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-cream disabled:opacity-50"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-50"
       >
         {salvando && <Loader2 size={15} className="animate-spin" />}
         Salvar PIN
@@ -450,7 +450,7 @@ function ConfirmarEntradaCarteira({ uid, onConfirmado, onEsqueciPin, onSemPin })
       <button
         onClick={handleConfirmar}
         disabled={confirmando}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-cream disabled:opacity-50"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-50"
       >
         {confirmando && <Loader2 size={15} className="animate-spin" />}
         Entrar
@@ -501,7 +501,7 @@ function RecuperarSolicitar({ perfil, email, onEnviado, onVoltar }) {
       <button
         onClick={handleEnviar}
         disabled={enviando || !email}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-cream disabled:opacity-50"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-50"
       >
         {enviando && <Loader2 size={15} className="animate-spin" />}
         Enviar código
@@ -567,7 +567,7 @@ function RecuperarConfirmar({ uid, onConfirmado, onVoltar }) {
       <button
         onClick={handleConfirmar}
         disabled={confirmando}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-cream disabled:opacity-50"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-50"
       >
         {confirmando && <Loader2 size={15} className="animate-spin" />}
         Confirmar código
@@ -709,7 +709,7 @@ function FormularioTransferencia({ perfil, onVoltar, onEnviado, onEsqueciPin }) 
       <button
         onClick={handleEnviar}
         disabled={enviando}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-cream disabled:opacity-50"
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-2.5 text-sm font-semibold text-texto-forte disabled:opacity-50"
       >
         {enviando && <Loader2 size={15} className="animate-spin" />}
         Enviar

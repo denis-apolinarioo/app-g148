@@ -102,7 +102,7 @@ function ContaTravada() {
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col items-center justify-center px-6 text-center">
       <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-forte">
-        <Lock size={26} className="text-cream" />
+        <Lock size={26} className="text-texto-forte" />
       </div>
       <h1 className="font-destaque text-lg font-semibold text-coffee-800">Acesso travado</h1>
       <p className="mt-2 max-w-xs text-sm text-coffee-400">

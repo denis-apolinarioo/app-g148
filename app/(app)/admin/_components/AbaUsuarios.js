@@ -346,7 +346,7 @@ export default function AbaUsuarios() {
           tem slot próprio pra isso, então mostramos como um toast simples
           ancorado embaixo, sem fechar o popup em aberto. */}
       {excluindo && erroExclusao && (
-        <div className="fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-xs rounded-xl bg-red-700 px-4 py-2.5 text-center text-xs font-medium text-cream shadow-lg">
+        <div className="fixed inset-x-0 bottom-24 z-[60] mx-auto w-fit max-w-xs rounded-xl bg-red-700 px-4 py-2.5 text-center text-xs font-medium text-texto-forte shadow-lg">
           {erroExclusao}
         </div>
       )}
@@ -463,7 +463,7 @@ function AjustePopup({ usuario, tipo, onFechar, onAplicado }) {
               onClick={() => setOperacao('somar')}
               className={`flex-1 rounded-lg border py-2 text-sm font-semibold ${
                 operacao === 'somar'
-                  ? 'border-forte bg-forte text-cream'
+                  ? 'border-forte bg-forte text-texto-forte'
                   : 'border-coffee-200 text-coffee-600'
               }`}
             >
@@ -474,7 +474,7 @@ function AjustePopup({ usuario, tipo, onFechar, onAplicado }) {
               onClick={() => setOperacao('remover')}
               className={`flex-1 rounded-lg border py-2 text-sm font-semibold ${
                 operacao === 'remover'
-                  ? 'border-red-600 bg-red-600 text-cream'
+                  ? 'border-red-600 bg-red-600 text-texto-forte'
                   : 'border-coffee-200 text-coffee-600'
               }`}
             >
@@ -508,7 +508,7 @@ function AjustePopup({ usuario, tipo, onFechar, onAplicado }) {
           <button
             onClick={handleAplicar}
             disabled={!valor || salvando}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3 text-sm font-semibold text-cream disabled:opacity-40"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3 text-sm font-semibold text-texto-forte disabled:opacity-40"
           >
             {salvando && <Loader2 size={14} className="animate-spin" />}
             Aplicar

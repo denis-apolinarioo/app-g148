@@ -82,7 +82,7 @@ export default function EditarOracaoModal({ pedido, onFechar }) {
           <button
             onClick={handleSalvar}
             disabled={!descricao.trim() || !prazo || salvando}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-cream disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-texto-forte disabled:opacity-50"
           >
             {salvando && <Loader2 size={16} className="animate-spin" />}
             Salvar

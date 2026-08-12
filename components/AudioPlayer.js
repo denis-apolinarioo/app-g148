@@ -159,7 +159,7 @@ export default function AudioPlayer({ src, className = '', onExcluir }) {
         type="button"
         onClick={alternarPlay}
         aria-label={tocando ? 'Pausar áudio' : 'Tocar áudio'}
-        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-forte text-cream shadow-sm"
+        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-forte text-texto-forte shadow-sm"
       >
         {tocando ? <Pause size={15} fill="currentColor" /> : <Play size={15} fill="currentColor" className="ml-0.5" />}
       </button>

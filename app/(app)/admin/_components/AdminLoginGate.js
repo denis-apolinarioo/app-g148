@@ -79,7 +79,7 @@ export default function AdminLoginGate({ usuarioAuth, onDesbloqueado }) {
   return (
     <div className="mx-auto flex min-h-[65vh] max-w-md flex-col items-center justify-center px-6">
       <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-forte">
-        <ShieldCheck size={26} className="text-cream" />
+        <ShieldCheck size={26} className="text-texto-forte" />
       </div>
       <h1 className="font-destaque text-lg font-semibold text-coffee-800">Confirme que é você</h1>
       <p className="mt-1 text-center text-sm text-coffee-400">
@@ -127,7 +127,7 @@ export default function AdminLoginGate({ usuarioAuth, onDesbloqueado }) {
           <button
             type="submit"
             disabled={enviando}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-cream disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-texto-forte disabled:opacity-60"
           >
             {enviando && <Loader2 size={16} className="animate-spin" />}
             Entrar no Painel Admin
@@ -139,7 +139,7 @@ export default function AdminLoginGate({ usuarioAuth, onDesbloqueado }) {
           <button
             onClick={confirmarComGoogle}
             disabled={enviando}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-cream disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-texto-forte disabled:opacity-60"
           >
             {enviando && <Loader2 size={16} className="animate-spin" />}
             Confirmar com o Google

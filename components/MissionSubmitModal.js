@@ -7,17 +7,10 @@ import { submeterMissao } from '@/lib/points';
 import { verificarConquistas } from '@/lib/achievements';
 import { vibrarMissaoConcluida } from '@/lib/haptics';
 import { uploadFoto, uploadAudio } from '@/lib/storage';
-import ImageCropper, { PROPORCAO_ORIGINAL } from '@/components/ImageCropper';
+import ImageCropper, { PROPORCOES_PADRAO } from '@/components/ImageCropper';
 import AudioRecorderButton from '@/components/AudioRecorderButton';
 import { useToast } from '@/components/ToastProvider';
 import { useProtecaoCliqueDuplo } from '@/lib/useProtecaoCliqueDuplo';
-
-const PROPORCOES = [
-  { label: '1:1', w: 1, h: 1 },
-  { label: '4:5', w: 4, h: 5 },
-  { label: '3:4', w: 3, h: 4 },
-  { label: 'Original', w: PROPORCAO_ORIGINAL, h: PROPORCAO_ORIGINAL },
-];
 
 export default function MissionSubmitModal({ missao, onFechar, onConcluida, rascunhoInicial, onEnviarOtimista, onConfirmarEnviada, onErroEnviar }) {
   const { perfil } = useAuth();
@@ -160,7 +153,7 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida, rasc
       <ImageCropper
         src={srcCorte}
         razao={{ w: 1, h: 1 }}
-        opcoes={PROPORCOES}
+        opcoes={PROPORCOES_PADRAO}
         onConfirmar={handleCortado}
         onCancelar={fecharCorte}
       />
@@ -310,7 +303,7 @@ export default function MissionSubmitModal({ missao, onFechar, onConcluida, rasc
           <button
             onClick={handleConfirmar}
             disabled={!podeEnviar}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-cream disabled:opacity-40"
+            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-texto-forte disabled:opacity-40"
           >
             Enviar
           </button>

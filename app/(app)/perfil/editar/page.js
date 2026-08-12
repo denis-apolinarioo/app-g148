@@ -198,7 +198,7 @@ export default function EditarPerfilPage() {
           <button type="button" onClick={() => inputFotoRef.current?.click()} className="relative">
             {/* Foto maior na tela de edição */}
             <Avatar src={previewFoto || perfil.fotoURL} nome={nome} tamanho={88} />
-            <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-cream bg-forte text-cream">
+            <span className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-cream bg-forte text-texto-forte">
               <Camera size={15} />
             </span>
           </button>
@@ -258,7 +258,7 @@ export default function EditarPerfilPage() {
         <button
           onClick={handleSalvar}
           disabled={salvando || !nome.trim() || !tagFuncao}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-cream disabled:opacity-40"
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-forte py-3.5 text-sm font-semibold text-texto-forte disabled:opacity-40"
         >
           {salvando && <Loader2 size={16} className="animate-spin" />}
           Salvar alterações

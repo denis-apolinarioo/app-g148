@@ -92,7 +92,7 @@ export default function BuscarPage() {
             type="button"
             onClick={() => setAba('pessoas')}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold ${
-              aba === 'pessoas' ? 'bg-forte text-cream' : 'bg-cream-card text-coffee-500'
+              aba === 'pessoas' ? 'bg-forte text-texto-forte' : 'bg-cream-card text-coffee-500'
             }`}
           >
             <Users size={15} /> Pessoas
@@ -101,7 +101,7 @@ export default function BuscarPage() {
             type="button"
             onClick={() => setAba('posts')}
             className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-semibold ${
-              aba === 'posts' ? 'bg-forte text-cream' : 'bg-cream-card text-coffee-500'
+              aba === 'posts' ? 'bg-forte text-texto-forte' : 'bg-cream-card text-coffee-500'
             }`}
           >
             <MessageSquare size={15} /> Posts
