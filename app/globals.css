@@ -44,6 +44,17 @@
   --cor-coffee-800: 44 31 20;
   --cor-coffee-900: 28 20 13;
 
+  /* Item novo — escala de borda (só usada por border-coffee-100/200/300/
+     400/700, via tailwind.config.js). No claro (valor de partida abaixo)
+     é idêntica à escala normal — só o preset Escuro (aplicado via JS, ver
+     lib/theme.js) tem valor diferente aqui. Ver gerarBorda() em
+     lib/paletaGerador.js. */
+  --cor-borda-100: 228 211 190;
+  --cor-borda-200: 203 173 138;
+  --cor-borda-300: 172 135 96;
+  --cor-borda-400: 138 102 68;
+  --cor-borda-700: 63 44 28;
+
   /* "forte" — botão sólido/overlay/scrim: sempre escuro e saturado, NÃO
      muda com o preset (ver comentário longo em tailwind.config.js). */
   --cor-forte: 63 44 28;
